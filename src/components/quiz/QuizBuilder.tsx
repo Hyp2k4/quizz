@@ -482,14 +482,67 @@ export default function QuizBuilder() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 pb-20 pt-10">
-            {editId && (
-                <Button variant="ghost" onClick={() => router.back()} className="gap-2">
-                    <ArrowLeft className="h-4 w-4" /> {language === 'vi' ? 'Quay lại' : 'Back'}
-                </Button>
+            {/* Jump to Empty Button */}
+            {questions.some(q => q.correctAnswer.length === 0) && (
+                <div className="sticky top-40 z-30 flex justify-center pointer-events-none">
+                    <Button
+                        size="sm"
+                        onClick={() => {
+                            const firstEmptyIdx = questions.findIndex(q => q.correctAnswer.length === 0);
+                            const el = document.getElementById(`question-${questions[firstEmptyIdx].id}`);
+                            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }}
+                        className="pointer-events-auto rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg border-none gap-2 animate-bounce"
+                    >
+                        <Zap className="h-4 w-4" /> {t.builder.tools.jumpToEmpty}
+                    </Button>
+                </div>
             )}
 
+            {/* Sticky Action Bar */}
+            <div className="sticky top-24 z-40 -mx-4 px-4 py-2 pointer-events-none">
+                <div className="max-w-4xl mx-auto flex justify-between items-center pointer-events-auto bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-3 rounded-2xl shadow-lg border border-indigo-500/20">
+                    <div className="flex items-center gap-3">
+                        {editId && (
+                            <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 rounded-xl text-zinc-500">
+                                <ArrowLeft className="h-4 w-4" /> {language === 'vi' ? 'Quay lại' : 'Back'}
+                            </Button>
+                        )}
+                        <h2 className="font-bold text-sm hidden md:block text-zinc-400 truncate max-w-[200px]">
+                            {title || t.builder.untitled}
+                        </h2>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            variant="ghost" 
+                            className="rounded-xl h-10 px-4 hover:bg-zinc-100 dark:hover:bg-zinc-800" 
+                            disabled={isSaving} 
+                            onClick={() => router.back()}
+                        >
+                            {t.builder.cancel}
+                        </Button>
+                        <Button
+                            onClick={handleSave}
+                            className="rounded-xl px-6 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 border-0 hover:opacity-90 min-w-[120px] shadow-lg shadow-indigo-500/20"
+                            disabled={isSaving}
+                        >
+                            {isSaving ? (
+                                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                            ) : (
+                                <Save className="mr-2 h-4 w-4" />
+                            )}
+                            {isSaving
+                                ? (editId ? t.builder.alerts.updateProgress : t.builder.alerts.saveProgress)
+                                : (editId ? (language === 'vi' ? 'Cập nhật' : 'Update') : t.builder.save)
+                            }
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
             {/* Quiz Header Info */}
-            <div className="space-y-4 text-center">
+            <div className="space-y-4 text-center mt-8">
                 <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
@@ -506,23 +559,6 @@ export default function QuizBuilder() {
                     rows={1}
                 />
             </div>
-
-            {/* Jump to Empty Button */}
-            {questions.some(q => q.correctAnswer.length === 0) && (
-                <div className="sticky top-24 z-30 flex justify-center pointer-events-none">
-                    <Button
-                        size="sm"
-                        onClick={() => {
-                            const firstEmptyIdx = questions.findIndex(q => q.correctAnswer.length === 0);
-                            const el = document.getElementById(`question-${questions[firstEmptyIdx].id}`);
-                            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }}
-                        className="pointer-events-auto rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg border-none gap-2 animate-bounce"
-                    >
-                        <Zap className="h-4 w-4" /> {t.builder.tools.jumpToEmpty}
-                    </Button>
-                </div>
-            )}
 
             {/* Toolbar */}
             <div className="flex justify-between items-center gap-3">
@@ -671,30 +707,6 @@ export default function QuizBuilder() {
                 <Button onClick={addQuestion} size="lg" className="w-full md:w-auto px-8 rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
                     <Plus className="mr-2 h-5 w-5" /> {t.builder.addQuestion}
                 </Button>
-            </div>
-
-            {/* Sticky Bottom Bar */}
-            <div className="fixed bottom-6 left-0 right-0 px-6 pointer-events-none flex justify-center z-40">
-                <div className="pointer-events-auto glass-card p-2 rounded-full flex gap-2 shadow-2xl backdrop-blur-xl bg-white/50 dark:bg-black/50 border border-white/20">
-                    <Button variant="ghost" className="rounded-full hover:bg-black/5 dark:hover:bg-white/10" disabled={isSaving} onClick={() => router.back()}>
-                        {t.builder.cancel}
-                    </Button>
-                    <Button
-                        onClick={handleSave}
-                        className="rounded-full px-8 bg-gradient-to-r from-indigo-500 to-purple-600 border-0 hover:opacity-90 min-w-[140px]"
-                        disabled={isSaving}
-                    >
-                        {isSaving ? (
-                            <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                        ) : (
-                            <Save className="mr-2 h-4 w-4" />
-                        )}
-                        {isSaving
-                            ? (editId ? t.builder.alerts.updateProgress : t.builder.alerts.saveProgress)
-                            : (editId ? (language === 'vi' ? 'Cập nhật' : 'Update') : t.builder.save)
-                        }
-                    </Button>
-                </div>
             </div>
 
             <ConfirmDialog
