@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Save, Upload, FileUp, ArrowLeft, ClipboardList, Sparkles, Trash2, Eraser, Zap } from "lucide-react";
+import { Plus, Save, Upload, FileUp, ArrowLeft, ClipboardList, Sparkles, Trash2, Eraser, Zap, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Question, QuestionCard } from "@/components/quiz/QuestionCard";
@@ -52,12 +52,14 @@ export default function QuizBuilder() {
     const [deleteRangeText, setDeleteRangeText] = useState("");
     const [showAnswerKeyPaste, setShowAnswerKeyPaste] = useState(false);
     const [answerKeyPaste, setAnswerKeyPaste] = useState("");
+    const [originalQuiz, setOriginalQuiz] = useState<QuizData | null>(null);
 
     // Load quiz for editing
     useEffect(() => {
         if (editId) {
             getQuizById(editId).then(data => {
                 if (data) {
+                    setOriginalQuiz(data);
                     setTitle(data.title);
                     setDescription(data.description);
                     setQuestions(data.questions);
@@ -379,19 +381,32 @@ export default function QuizBuilder() {
         setIsSaving(true);
         let savedQuizId = editId;
         try {
-            const quizData: QuizData = {
+            const quizData: Partial<QuizData> = {
                 title,
                 description,
                 questions,
-                userId: user.uid,
-                authorName: user.displayName || "Anonymous"
             };
 
             if (editId) {
+                // If editing, make sure current user is owner or collaborator
+                if (originalQuiz &&
+                    originalQuiz.userId !== user.uid &&
+                    !originalQuiz.collaborators?.includes(user.email || "")) {
+                    toast.error("You don't have permission to edit this quiz.");
+                    setIsSaving(false);
+                    return;
+                }
+
                 await updateQuiz(editId, quizData);
                 toast.success("Quiz updated successfully!", { id: toastId });
             } else {
-                savedQuizId = await saveQuizToFirestore(quizData);
+                const newQuizData: QuizData = {
+                    ...quizData as QuizData,
+                    userId: user.uid,
+                    authorName: user.displayName || "Anonymous",
+                    collaborators: []
+                };
+                savedQuizId = await saveQuizToFirestore(newQuizData);
                 toast.success("Quiz saved successfully!", { id: toastId });
                 router.push("/my-courses");
             }
@@ -418,7 +433,24 @@ export default function QuizBuilder() {
         }
     };
 
+    const canEdit = !editId || (user && originalQuiz && (originalQuiz.userId === user.uid || originalQuiz.collaborators?.includes(user.email || "")));
+
     if (isLoading) return <div className="text-center py-20">Loading Quiz Data...</div>;
+
+    if (editId && !isLoading && !canEdit) {
+        return (
+            <div className="max-w-4xl mx-auto py-32 text-center space-y-6">
+                <div className="inline-flex p-4 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full">
+                    <X className="h-10 w-10" />
+                </div>
+                <h1 className="text-3xl font-black">Bạn không có quyền chỉnh sửa</h1>
+                <p className="text-zinc-500 max-w-md mx-auto">
+                    Có vẻ như bạn không phải là chủ sở hữu hoặc người cộng tác được mời của khóa học này.
+                </p>
+                <Button onClick={() => router.push("/my-courses")}>Quay lại Khóa học của tôi</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 pb-20 pt-10">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
-import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard } from "@/services/quizService";
+import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode } from "@/services/quizService";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
-import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap } from "lucide-react";
+import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key } from "lucide-react";
 import confetti from "canvas-confetti";
 
 // Helper to format time
@@ -263,6 +263,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const [isReadyToStart, setIsReadyToStart] = useState(false);
     const streakRef = useRef(0);
 
+    // Private Access State
+    const [isAccessGranted, setIsAccessGranted] = useState(false);
+    const [inputCode, setInputCode] = useState("");
+    const [isVerifying, setIsVerifying] = useState(false);
+
     // Timer State
     const [startTime, setStartTime] = useState<number | null>(null);
     const [elapsedTime, setElapsedTime] = useState(0); // for display only
@@ -282,12 +287,37 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                         q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
                     );
                     setQuiz({ ...data, questions: filteredQuestions });
+                    
+                    // Check if access is automatically granted
+                    const isOwner = user && data.userId === user.uid;
+                    const isCollab = user && data.collaborators?.includes(user.email || "");
+                    if (data.visibility !== 'private' || isOwner || isCollab) {
+                        setIsAccessGranted(true);
+                    }
                 }
                 setLoading(false);
             }
         }
         fetch();
-    }, [id]);
+    }, [id, user]);
+
+    // Auto-fill code from URL
+    useEffect(() => {
+        const queryParams = new URLSearchParams(window.location.search);
+        const codeFromUrl = queryParams.get('code');
+        if (codeFromUrl && !isAccessGranted) {
+            setInputCode(codeFromUrl.toUpperCase());
+            // Small delay to ensure quiz is loaded before verifying
+            const timer = setTimeout(() => {
+                if (quiz?.id) {
+                    verifyQuizAccessCode(quiz.id, codeFromUrl.toUpperCase()).then(isValid => {
+                        if (isValid) setIsAccessGranted(true);
+                    });
+                }
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [quiz?.id, isAccessGranted]);
 
     // Timer Effect
     useEffect(() => {
@@ -307,6 +337,24 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
     const handleJoinAsGuest = () => {
         if (tempName.trim()) setGuestName(tempName);
+    };
+
+    const handleVerifyCode = async () => {
+        if (!quiz?.id || !inputCode.trim()) return;
+        setIsVerifying(true);
+        try {
+            const isValid = await verifyQuizAccessCode(quiz.id, inputCode.trim().toUpperCase());
+            if (isValid) {
+                setIsAccessGranted(true);
+                toast.success("Mã truy cập chính xác!");
+            } else {
+                toast.error("Mã truy cập không đúng. Vui lòng thử lại.");
+            }
+        } catch (error) {
+            toast.error("Lỗi khi xác thực mã");
+        } finally {
+            setIsVerifying(false);
+        }
     };
 
     const handleAnswer = (qIndex: number, val: string | string[]) => {
@@ -438,6 +486,44 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
     if (loading) return <div className="min-h-screen bg-[rgb(var(--background))] flex items-center justify-center">Loading...</div>;
     if (!quiz) return <div className="min-h-screen bg-[rgb(var(--background))] flex items-center justify-center">Quiz not found</div>;
+
+    if (!isAccessGranted) {
+        return (
+            <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+                <Navbar />
+                <main className="pt-40 px-6 flex items-center justify-center">
+                    <Card className="w-full max-w-md p-8 text-center space-y-6 shadow-2xl rounded-[2.5rem] border-none bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl">
+                        <div className="mx-auto w-20 h-20 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-3xl flex items-center justify-center mb-2 shadow-inner">
+                            <Lock className="h-10 w-10" />
+                        </div>
+                        <div className="space-y-2">
+                            <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50">Khóa học này là riêng tư</h2>
+                            <p className="text-sm text-zinc-500">Vui lòng nhập mã truy cập được cung cấp bởi chủ khóa học để tiếp tục.</p>
+                        </div>
+                        <div className="space-y-4 pt-4">
+                            <div className="relative">
+                                <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
+                                <input
+                                    type="text"
+                                    placeholder="NHẬP MÃ TRUY CẬP (VD: ABC123)"
+                                    value={inputCode}
+                                    onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                                    className="w-full bg-zinc-100 dark:bg-zinc-800 border-2 border-transparent focus:border-red-500 rounded-2xl pl-12 pr-4 py-4 font-mono font-bold tracking-widest text-lg outline-none transition-all"
+                                />
+                            </div>
+                            <Button 
+                                onClick={handleVerifyCode} 
+                                disabled={isVerifying || !inputCode.trim()}
+                                className="w-full h-14 rounded-2xl text-lg font-bold bg-red-600 hover:bg-red-700 shadow-xl shadow-red-500/20"
+                            >
+                                {isVerifying ? "Đang kiểm tra..." : "Xác nhận truy cập"}
+                            </Button>
+                        </div>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
 
     const renderStartGate = () => (
         <Card className="max-w-md mx-auto p-8 text-center space-y-6 shadow-2xl border-indigo-500/20 animate-scale-in">

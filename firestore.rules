@@ -1,13 +1,56 @@
-// -------------------------------------------------------------
-// TEMPORARY: TEST MODE RULES (ALLOW ALL)
-// Use this to confirm the app works. Then switch to secure rules.
-// -------------------------------------------------------------
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Quizzes collection
+    match /quizzes/{quizId} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == resource.data.userId;
+      }
+      function isCollaborator() {
+        return request.auth != null && 
+               request.auth.token.email != null && 
+               (request.auth.token.email in resource.data.collaborators);
+      }
+      function isPublic() {
+        return resource == null || resource.data.visibility != 'private';
+      }
+      
+      allow read: if isPublic() || isOwner() || isCollaborator();
+      allow create: if request.auth != null;
+      allow update: if isOwner() || isCollaborator();
+      allow delete: if isOwner();
+    }
+    
+    // Comments
+    match /quiz_comments/{commentId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Results - allow public read for leaderboards, create for everyone
+    match /quiz_results/{resultId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // Notifications
+    match /notifications/{notifId} {
+      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if true;
+    }
+    
+    // Invitations
+    match /quiz_invitations/{invId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if true;
+    }
+    
+    // Default fallback
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }
