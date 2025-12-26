@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { Plus, Trash2, HelpCircle, Lightbulb, Image } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Lightbulb, Image, AlertTriangle, User as UserIcon } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { UserPresence } from "@/services/quizService";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export type QuestionType = "single" | "multiple" | "open" | "mixed";
 
@@ -24,13 +26,27 @@ export interface Question {
 interface QuestionCardProps {
     question: Question;
     index: number;
+    activeEditors?: UserPresence[];
     onUpdate: (id: string, updates: Partial<Question>) => void;
     onDelete: (id: string) => void;
     onDuplicate: (id: string) => void;
+    onFocus?: (id: string | null) => void;
 }
 
-export function QuestionCard({ question, index, onUpdate, onDelete, onDuplicate }: QuestionCardProps) {
+export function QuestionCard({ question, index, activeEditors = [], onUpdate, onDelete, onDuplicate, onFocus }: QuestionCardProps) {
     const { t, language } = useLanguage();
+    const [showCollisionWarning, setShowCollisionWarning] = useState(false);
+    const [isAcknowledged, setIsAcknowledged] = useState(false);
+
+    const checkCollision = (e: React.FocusEvent | React.MouseEvent) => {
+        if (activeEditors.length > 0 && !isAcknowledged) {
+            e.preventDefault();
+            setShowCollisionWarning(true);
+            return false;
+        }
+        if (onFocus) onFocus(question.id);
+        return true;
+    };
 
     const handleOptionChange = (optIndex: number, value: string) => {
         const newOptions = [...question.options];
@@ -75,12 +91,22 @@ export function QuestionCard({ question, index, onUpdate, onDelete, onDuplicate 
         <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg border-[rgb(var(--border))] group ${hasNoCorrectAnswer ? 'opacity-60 grayscale-[0.3]' : ''}`}>
             <div className="absolute top-0 left-0 w-1 h-full bg-[rgb(var(--primary))] opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgb(var(--primary))/10] text-sm font-bold text-[rgb(var(--primary))]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-[rgb(var(--border))]">
+                <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500 font-black text-xl">
                         {index + 1}
-                    </span>
-                    <CardTitle className="text-base">{t.builder.question} {index + 1}</CardTitle>
+                    </div>
+                    <div className="space-y-1">
+                        <CardTitle className="text-sm font-bold uppercase tracking-wider text-[rgb(var(--muted-foreground))] flex items-center gap-2">
+                            {t.builder.question}
+                            {activeEditors.length > 0 && (
+                                <div className="flex items-center gap-1.5 ml-2 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full lowercase text-[10px] animate-pulse normal-case">
+                                    <UserIcon className="h-2.5 w-2.5" />
+                                    {activeEditors.map(e => e.userName).join(", ")} {t.visibility.isEditing}
+                                </div>
+                            )}
+                        </CardTitle>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <Select
@@ -102,7 +128,24 @@ export function QuestionCard({ question, index, onUpdate, onDelete, onDuplicate 
                 </div>
             </CardHeader>
 
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6" onFocusCapture={(e) => {
+                const canProceed = checkCollision(e);
+                if (!canProceed) {
+                    (e.target as HTMLElement).blur();
+                }
+            }}>
+                <ConfirmDialog
+                    isOpen={showCollisionWarning}
+                    onCancel={() => setShowCollisionWarning(false)}
+                    onConfirm={() => {
+                        setIsAcknowledged(true);
+                        setShowCollisionWarning(false);
+                    }}
+                    title={t.visibility.collaborationWarning.replace("{name}", activeEditors.map(e => e.userName).join(", "))}
+                    description=""
+                    confirmText={t.common.save}
+                    variant="danger"
+                />
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
                         <label className="text-xs font-medium text-[rgb(var(--muted-foreground))] uppercase tracking-wider">{t.builder.statement}</label>

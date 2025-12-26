@@ -136,7 +136,9 @@ export const translations = {
       generateCode: "Generate New Code",
       accessCode: "Access Code",
       privateLink: "Private Link",
-      copyLink: "Copy Private Link"
+      copyLink: "Copy Private Link",
+      collaborationWarning: "This question is being edited by {name}. Are you sure you want to continue?",
+      isEditing: "is editing this question"
     },
     comments: {
       title: "Comments",
@@ -294,7 +296,9 @@ export const translations = {
       generateCode: "Tạo mã mới",
       accessCode: "Mã truy cập",
       privateLink: "Link riêng tư",
-      copyLink: "Sao chép link"
+      copyLink: "Sao chép link",
+      collaborationWarning: "Câu hỏi này đang được {name} chỉnh sửa. Bạn có chắc chắn muốn can thiệp không?",
+      isEditing: "đang sửa câu này"
     },
     comments: {
       title: "Bình luận",

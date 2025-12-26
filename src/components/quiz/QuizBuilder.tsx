@@ -15,7 +15,11 @@ import {
     getQuizById,
     updateQuiz,
     QuizData,
-    createNotification
+    createNotification,
+    updateQuizPresence,
+    subscribeToQuizPresence,
+    removeQuizPresence,
+    UserPresence
 } from "@/services/quizService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -53,6 +57,7 @@ export default function QuizBuilder() {
     const [showAnswerKeyPaste, setShowAnswerKeyPaste] = useState(false);
     const [answerKeyPaste, setAnswerKeyPaste] = useState("");
     const [originalQuiz, setOriginalQuiz] = useState<QuizData | null>(null);
+    const [presences, setPresences] = useState<UserPresence[]>([]);
 
     // Load quiz for editing
     useEffect(() => {
@@ -66,8 +71,30 @@ export default function QuizBuilder() {
                 }
                 setIsLoading(false);
             }).catch(() => setIsLoading(false));
+
+            // Presence management
+            const unsubscribe = subscribeToQuizPresence(editId, (data) => {
+                const now = Date.now();
+                setPresences(data.filter(p => {
+                    if (p.userId === user?.uid) return false;
+                    // Filter stale presence (older than 1 minute)
+                    const lastActive = p.lastActive?.toMillis?.() || p.lastActive;
+                    return (now - lastActive) < 60000;
+                }));
+            });
+
+            return () => {
+                unsubscribe();
+                if (user) removeQuizPresence(editId, user.uid);
+            };
         }
-    }, [editId]);
+    }, [editId, user]);
+
+    const handleFocusQuestion = async (questionId: string | null) => {
+        if (editId && user) {
+            await updateQuizPresence(editId, user.uid, user.displayName || user.email || "Anonymous", questionId);
+        }
+    };
 
     const addQuestion = () => {
         const newQuestion: Question = {
@@ -466,12 +493,14 @@ export default function QuizBuilder() {
                 <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    onFocus={() => handleFocusQuestion(null)}
                     className="w-full text-center text-4xl font-extrabold bg-transparent border-none focus:outline-none placeholder-[rgb(var(--muted-foreground))] text-[rgb(var(--foreground))]"
                     placeholder={t.builder.untitled}
                 />
                 <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    onFocus={() => handleFocusQuestion(null)}
                     className="w-full max-w-2xl mx-auto text-center border-none resize-none shadow-none text-[rgb(var(--muted-foreground))] bg-transparent focus:ring-0"
                     placeholder={t.builder.descPlaceholder}
                     rows={1}
@@ -628,9 +657,11 @@ export default function QuizBuilder() {
                         <QuestionCard
                             index={index}
                             question={q}
+                            activeEditors={presences.filter(p => p.editingQuestionId === q.id)}
                             onUpdate={updateQuestion}
                             onDelete={deleteQuestion}
                             onDuplicate={duplicateQuestion}
+                            onFocus={handleFocusQuestion}
                         />
                     </div>
                 ))}
@@ -658,8 +689,8 @@ export default function QuizBuilder() {
                         ) : (
                             <Save className="mr-2 h-4 w-4" />
                         )}
-                        {isSaving 
-                            ? (editId ? t.builder.alerts.updateProgress : t.builder.alerts.saveProgress) 
+                        {isSaving
+                            ? (editId ? t.builder.alerts.updateProgress : t.builder.alerts.saveProgress)
                             : (editId ? (language === 'vi' ? 'Cập nhật' : 'Update') : t.builder.save)
                         }
                     </Button>

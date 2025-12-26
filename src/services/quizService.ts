@@ -11,7 +11,9 @@ import {
     deleteDoc,
     updateDoc,
     orderBy,
-    limit
+    limit,
+    onSnapshot,
+    setDoc
 } from "firebase/firestore";
 import { Question } from "@/components/quiz/QuestionCard";
 
@@ -58,6 +60,13 @@ export interface Reply {
   userEmail?: string;
   text: string;
   createdAt: any;
+}
+
+export interface UserPresence {
+  userId: string;
+  userName: string;
+  editingQuestionId: string | null;
+  lastActive: any;
 }
 
 export interface Notification {
@@ -347,4 +356,28 @@ export const acceptQuizInvitation = async (invitationId: string, userEmail: stri
 export const markNotificationAsRead = async (id: string) => {
     const docRef = doc(db, "notifications", id);
     await updateDoc(docRef, { read: true });
+};
+
+export const updateQuizPresence = async (quizId: string, userId: string, userName: string, editingQuestionId: string | null) => {
+    const presenceRef = doc(db, "quiz_presence", `${quizId}_${userId}`);
+    await setDoc(presenceRef, {
+        quizId,
+        userId,
+        userName,
+        editingQuestionId,
+        lastActive: serverTimestamp()
+    });
+};
+
+export const subscribeToQuizPresence = (quizId: string, callback: (presences: UserPresence[]) => void) => {
+    const q = query(collection(db, "quiz_presence"), where("quizId", "==", quizId));
+    return onSnapshot(q, (snapshot) => {
+        const presences = snapshot.docs.map(doc => doc.data() as UserPresence);
+        callback(presences);
+    });
+};
+
+export const removeQuizPresence = async (quizId: string, userId: string) => {
+    const presenceRef = doc(db, "quiz_presence", `${quizId}_${userId}`);
+    await deleteDoc(presenceRef);
 };
