@@ -24,6 +24,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function QuizBuilder() {
     const { t, language } = useLanguage();
@@ -482,53 +483,65 @@ export default function QuizBuilder() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 pb-20 pt-10">
-            {/* Jump to Empty Button */}
-            {questions.some(q => q.correctAnswer.length === 0) && (
-                <div className="sticky top-40 z-30 flex justify-center pointer-events-none">
-                    <Button
-                        size="sm"
-                        onClick={() => {
-                            const firstEmptyIdx = questions.findIndex(q => q.correctAnswer.length === 0);
-                            const el = document.getElementById(`question-${questions[firstEmptyIdx].id}`);
-                            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }}
-                        className="pointer-events-auto rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg border-none gap-2 animate-bounce"
-                    >
-                        <Zap className="h-4 w-4" /> {t.builder.tools.jumpToEmpty}
-                    </Button>
-                </div>
-            )}
-
-            {/* Sticky Action Bar */}
+            {/* Consolidated Sticky Action Bar */}
             <div className="sticky top-24 z-40 -mx-4 px-4 py-2 pointer-events-none">
-                <div className="max-w-4xl mx-auto flex justify-between items-center pointer-events-auto bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-3 rounded-2xl shadow-lg border border-indigo-500/20">
-                    <div className="flex items-center gap-3">
-                        {editId && (
-                            <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 rounded-xl text-zinc-500">
-                                <ArrowLeft className="h-4 w-4" /> {language === 'vi' ? 'Quay lại' : 'Back'}
-                            </Button>
-                        )}
-                        <h2 className="font-bold text-sm hidden md:block text-zinc-400 truncate max-w-[200px]">
-                            {title || t.builder.untitled}
-                        </h2>
+                <div className="max-w-4xl mx-auto flex items-center justify-between pointer-events-auto bg-white/70 dark:bg-zinc-900/80 backdrop-blur-xl p-2 md:p-3 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white/20 dark:border-white/5">
+                    <div className="flex items-center gap-2 md:gap-3 pl-2">
+                        <Button variant="ghost" size="sm" onClick={() => router.back()} className="h-10 w-10 p-0 rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-90">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                        <div className="hidden md:block overflow-hidden">
+                            <h2 className="font-black text-sm text-zinc-900 dark:text-zinc-100 truncate max-w-[200px]">
+                                {title || t.builder.untitled}
+                            </h2>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                                {editId ? (language === 'vi' ? 'Đang chỉnh sửa' : 'Editing') : (language === 'vi' ? 'Tạo mới' : 'New Quiz')}
+                            </p>
+                        </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                        <Button 
-                            variant="ghost" 
-                            className="rounded-xl h-10 px-4 hover:bg-zinc-100 dark:hover:bg-zinc-800" 
-                            disabled={isSaving} 
+
+                    {/* Jump to Empty (Integrated & Animated) */}
+                    <AnimatePresence>
+                        {questions.some(q => q.correctAnswer.length === 0) && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                                className="absolute left-1/2 -translate-x-1/2"
+                            >
+                                <Button
+                                    size="sm"
+                                    onClick={() => {
+                                        const firstEmptyIdx = questions.findIndex(q => q.correctAnswer.length === 0);
+                                        const el = document.getElementById(`question-${questions[firstEmptyIdx].id}`);
+                                        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }}
+                                    className="rounded-full bg-amber-500/10 hover:bg-amber-500 text-amber-600 hover:text-white border border-amber-500/20 gap-2 h-9 px-4 text-[10px] md:text-xs font-black transition-all hover:shadow-lg hover:shadow-amber-500/20 active:scale-95"
+                                >
+                                    <Zap className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">{t.builder.tools.jumpToEmpty}</span>
+                                    <span className="sm:hidden">{questions.filter(q => q.correctAnswer.length === 0).length}</span>
+                                </Button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <div className="flex items-center gap-2 pr-1 ml-auto">
+                        <Button
+                            variant="ghost"
+                            className="rounded-full h-10 px-4 text-xs md:text-sm font-bold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                            disabled={isSaving}
                             onClick={() => router.back()}
                         >
                             {t.builder.cancel}
                         </Button>
                         <Button
                             onClick={handleSave}
-                            className="rounded-xl px-6 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 border-0 hover:opacity-90 min-w-[120px] shadow-lg shadow-indigo-500/20"
+                            className="rounded-full px-6 h-11 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-black text-xs md:text-sm border-0 hover:opacity-90 min-w-[100px] md:min-w-[140px] shadow-xl transition-all hover:scale-[1.02] active:scale-95"
                             disabled={isSaving}
                         >
                             {isSaving ? (
-                                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                                <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mr-2" />
                             ) : (
                                 <Save className="mr-2 h-4 w-4" />
                             )}
