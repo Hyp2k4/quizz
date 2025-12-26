@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function CoursesPage() {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const [quizzes, setQuizzes] = useState<QuizData[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedQuiz, setSelectedQuiz] = useState<QuizData | null>(null);
@@ -50,13 +50,13 @@ export default function CoursesPage() {
         try {
             const quiz = await getQuizByAccessCode(joinCode.trim());
             if (quiz) {
-                toast.success(`Tìm thấy khóa học: ${quiz.title}`);
+                toast.success(`${language === 'vi' ? 'Tìm thấy khóa học' : 'Course found'}: ${quiz.title}`);
                 router.push(`/courses/${quiz.id}?code=${joinCode.trim().toUpperCase()}`);
             } else {
-                toast.error("Mã truy cập không hợp lệ hoặc không tồn tại.");
+                toast.error(language === 'vi' ? "Mã truy cập không hợp lệ hoặc không tồn tại." : "Invalid or non-existent access code.");
             }
         } catch (error) {
-            toast.error("Lỗi khi kiểm tra mã truy cập.");
+            toast.error(language === 'vi' ? "Lỗi khi kiểm tra mã truy cập." : "Error verifying access code.");
         } finally {
             setIsJoining(false);
         }
@@ -69,7 +69,7 @@ export default function CoursesPage() {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                     <div className="space-y-2">
                         <div className="flex items-center gap-2 text-indigo-500 font-bold text-sm uppercase tracking-widest">
-                            <Sparkles className="h-4 w-4" /> Khám phá tri thức
+                            <Sparkles className="h-4 w-4" /> {language === 'vi' ? 'Khám phá tri thức' : 'Discover Knowledge'}
                         </div>
                         <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
                             {t.navbar.allCourses}
@@ -80,7 +80,7 @@ export default function CoursesPage() {
                         <div className="relative group flex-1 sm:w-80">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" />
                             <input
-                                placeholder="Tìm kiếm khóa học..."
+                                placeholder={language === 'vi' ? "Tìm kiếm khóa học..." : "Search courses..."}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full h-12 pl-12 pr-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 focus:border-indigo-500 rounded-2xl text-sm outline-none transition-all shadow-sm"
@@ -91,7 +91,7 @@ export default function CoursesPage() {
                             <div className="relative flex-1">
                                 <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
                                 <input
-                                    placeholder="Mã riêng tư..."
+                                    placeholder={t.visibility.accessCode + "..."}
                                     value={joinCode}
                                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                                     className="w-full h-12 pl-12 pr-4 bg-indigo-50 dark:bg-indigo-950/20 border-2 border-indigo-100 dark:border-indigo-900/30 focus:border-indigo-500 rounded-2xl text-sm outline-none transition-all"
@@ -102,7 +102,7 @@ export default function CoursesPage() {
                                 onClick={handleJoinWithCode}
                                 className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
                             >
-                                {isJoining ? "..." : "Vào"}
+                                {isJoining ? "..." : (language === 'vi' ? "Vào" : "Join")}
                             </Button>
                         </div>
                     </div>
@@ -125,14 +125,18 @@ export default function CoursesPage() {
                                 <div className="mx-auto w-20 h-20 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 rounded-3xl flex items-center justify-center mb-6">
                                     <Filter className="h-10 w-10" />
                                 </div>
-                                <h3 className="text-xl font-bold mb-2 text-zinc-900 dark:text-zinc-50">Không tìm thấy khóa học nào</h3>
-                                <p className="text-zinc-500 max-w-xs mx-auto">Hãy thử thay đổi từ khóa tìm kiếm hoặc kiểm tra lại mã truy cập riêng tư của bạn.</p>
+                                <h3 className="text-xl font-bold mb-2 text-zinc-900 dark:text-zinc-50">
+                                    {language === 'vi' ? 'Không tìm thấy khóa học nào' : 'No courses found'}
+                                </h3>
+                                <p className="text-zinc-500 max-w-xs mx-auto">
+                                    {language === 'vi' ? 'Hãy thử thay đổi từ khóa tìm kiếm hoặc kiểm tra lại mã truy cập riêng tư của bạn.' : 'Try changing your search keywords or checking your private access code.'}
+                                </p>
                                 <Button 
                                     variant="ghost" 
                                     className="mt-6 text-indigo-600 font-bold"
                                     onClick={() => { setSearchQuery(""); setJoinCode(""); }}
                                 >
-                                    Xóa tất cả lọc
+                                    {language === 'vi' ? 'Xóa tất cả lọc' : 'Clear all filters'}
                                 </Button>
                             </motion.div>
                         ) : (
@@ -153,7 +157,7 @@ export default function CoursesPage() {
                                                             <BookOpen className="h-7 w-7" />
                                                         </div>
                                                         <div className="px-3 py-1 bg-zinc-50 dark:bg-zinc-800 text-zinc-500 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                                            {quiz.questions?.length || 0} CÂU HỎI
+                                                            {quiz.questions?.length || 0} {language === 'vi' ? 'CÂU HỎI' : 'QUESTIONS'}
                                                         </div>
                                                     </div>
                                                     <CardTitle className="text-xl font-bold line-clamp-2 leading-tight min-h-[56px] group-hover:text-indigo-600 transition-colors">
@@ -162,13 +166,13 @@ export default function CoursesPage() {
                                                 </CardHeader>
                                                 <CardContent className="px-8 pt-0 flex-1">
                                                     <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-3 leading-relaxed mb-6">
-                                                        {quiz.description || "Khóa học này chưa có mô tả chi tiết từ tác giả."}
+                                                        {quiz.description || (language === 'vi' ? "Khóa học này chưa có mô tả chi tiết từ tác giả." : "This course doesn't have a detailed description yet.")}
                                                     </p>
                                                     <div className="flex items-center gap-2 mb-4">
                                                         <div className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold">
                                                             {quiz.authorName?.[0] || 'A'}
                                                         </div>
-                                                        <span className="text-xs text-zinc-400 font-medium">Tác giả: {quiz.authorName || "Ẩn danh"}</span>
+                                                        <span className="text-xs text-zinc-400 font-medium">{language === 'vi' ? 'Tác giả' : 'Author'}: {quiz.authorName || (language === 'vi' ? "Ẩn danh" : "Anonymous")}</span>
                                                     </div>
                                                 </CardContent>
                                                 <CardFooter className="p-8 pt-0 flex gap-3">
@@ -180,11 +184,11 @@ export default function CoursesPage() {
                                                             setIsDetailsOpen(true);
                                                         }}
                                                     >
-                                                        Chi tiết
+                                                        {t.common.details}
                                                     </Button>
                                                     <Link href={`/courses/${quiz.id}`} className="flex-[1.5]">
                                                         <Button className="w-full h-12 gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-500/20">
-                                                            Làm bài <ArrowRight className="h-4 w-4" />
+                                                            {language === 'vi' ? 'Làm bài' : 'Start'} <ArrowRight className="h-4 w-4" />
                                                         </Button>
                                                     </Link>
                                                 </CardFooter>

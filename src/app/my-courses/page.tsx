@@ -16,7 +16,7 @@ import { CourseDetailsModal } from "@/components/quiz/CourseDetailsModal";
 import { Info } from "lucide-react";
 
 export default function MyCoursesPage() {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const { user, loading: authLoading } = useAuth();
     const [quizzes, setQuizzes] = useState<QuizData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -54,36 +54,36 @@ export default function MyCoursesPage() {
 
     const handleJoin = () => {
         if (!joinLink.trim()) return;
-        
+
         // Extract ID from link if it's a full URL, or use as is if it's just the ID
         let inviteId = joinLink.trim();
         if (inviteId.includes("/accept-invite/")) {
             inviteId = inviteId.split("/accept-invite/").pop() || "";
         }
-        
+
         if (inviteId) {
             router.push(`/accept-invite/${inviteId}`);
         } else {
-            toast.error("Link không hợp lệ");
+            toast.error(language === 'vi' ? "Link không hợp lệ" : "Invalid link");
         }
     };
 
     const confirmDelete = async () => {
         if (!deleteId) return;
 
-        const toastId = toast.loading("Deleting...");
+        const toastId = toast.loading(language === 'vi' ? "Đang xóa..." : "Deleting...");
         try {
             await deleteQuiz(deleteId);
             setQuizzes(quizzes.filter(q => q.id !== deleteId));
-            toast.success("Quiz deleted successfully", { id: toastId });
+            toast.success(language === 'vi' ? "Đã xóa thành công" : "Quiz deleted successfully", { id: toastId });
         } catch (error) {
-            toast.error("Failed to delete quiz. Check permissions.", { id: toastId });
+            toast.error(language === 'vi' ? "Lỗi khi xóa bài trắc nghiệm" : "Failed to delete quiz. Check permissions.", { id: toastId });
         } finally {
             setDeleteId(null);
         }
     };
 
-    if (authLoading) return <div className="min-h-screen pt-32 text-center">Loading...</div>;
+    if (authLoading) return <div className="min-h-screen pt-32 text-center">{t.common.loading}</div>;
 
     return (
         <div className="min-h-screen bg-[rgb(var(--background))]">
@@ -97,7 +97,7 @@ export default function MyCoursesPage() {
                             className="gap-2 rounded-full border-indigo-500/30 text-indigo-600 hover:bg-indigo-50"
                             onClick={() => setIsJoinModalOpen(true)}
                         >
-                            <UserPlus className="h-4 w-4" /> Tham gia cộng tác
+                            <UserPlus className="h-4 w-4" /> {t.collaboration.join}
                         </Button>
                         <Link href="/questionbuilder">
                             <Button className="gap-2 rounded-full">
@@ -117,9 +117,13 @@ export default function MyCoursesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {quizzes.length === 0 ? (
                             <div className="col-span-3 text-center py-20 bg-[rgb(var(--card))] rounded-3xl border border-dashed border-[rgb(var(--border))]">
-                                <p className="text-[rgb(var(--muted-foreground))] mb-4">You haven't created any quizzes yet.</p>
+                                <p className="text-[rgb(var(--muted-foreground))] mb-4">
+                                    {language === 'vi' ? 'Bạn chưa tạo bài trắc nghiệm nào.' : "You haven't created any quizzes yet."}
+                                </p>
                                 <Link href="/questionbuilder">
-                                    <Button variant="outline">Create your first quiz</Button>
+                                    <Button variant="outline">
+                                        {language === 'vi' ? 'Tạo bài trắc nghiệm đầu tiên' : 'Create your first quiz'}
+                                    </Button>
                                 </Link>
                             </div>
                         ) : (
@@ -147,19 +151,19 @@ export default function MyCoursesPage() {
                                             {quiz.title}
                                             {quiz.userId !== user?.uid && (
                                                 <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full border border-amber-200">
-                                                    Cộng tác
+                                                    {t.collaboration.title}
                                                 </span>
                                             )}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                         <p className="text-sm text-[rgb(var(--muted-foreground))] line-clamp-2 min-h-[40px]">
-                                            {quiz.description || "No description provided."}
+                                            {quiz.description || (language === 'vi' ? "Không có mô tả." : "No description provided.")}
                                         </p>
                                         <div className="mt-4 flex items-center gap-2 text-xs font-medium text-[rgb(var(--muted-foreground))]">
-                                            <span>{quiz.questions?.length || 0} Questions</span>
+                                            <span>{quiz.questions?.length || 0} {language === 'vi' ? 'Câu hỏi' : 'Questions'}</span>
                                             <span>•</span>
-                                            <span>{new Date(quiz.createdAt?.seconds * 1000).toLocaleDateString()}</span>
+                                            <span>{new Date(quiz.createdAt?.seconds * 1000).toLocaleDateString(language === 'vi' ? 'vi-VN' : 'en-US')}</span>
                                         </div>
                                     </CardContent>
                                     <CardFooter className="flex gap-2">
@@ -171,11 +175,11 @@ export default function MyCoursesPage() {
                                                 setIsDetailsOpen(true);
                                             }}
                                         >
-                                            <Info className="h-4 w-4" /> Chi tiết
+                                            <Info className="h-4 w-4" /> {t.common.details}
                                         </Button>
                                         <Link href={`/questionbuilder?edit=${quiz.id}`} className="flex-1">
                                             <Button variant="secondary" className="w-full gap-2 rounded-xl">
-                                                <Edit className="h-4 w-4" /> Sửa
+                                                <Edit className="h-4 w-4" /> {t.common.save}
                                             </Button>
                                         </Link>
                                     </CardFooter>
@@ -187,10 +191,10 @@ export default function MyCoursesPage() {
 
                 <ConfirmDialog
                     isOpen={!!deleteId}
-                    title="Delete Quiz"
-                    description="Are you sure you want to delete this quiz? This action cannot be undone."
-                    confirmText="Delete"
-                    cancelText="Cancel"
+                    title={language === 'vi' ? "Xóa bài trắc nghiệm?" : "Delete Quiz"}
+                    description={language === 'vi' ? "Bạn có chắc chắn muốn xóa bài trắc nghiệm này? Hành động này không thể hoàn tác." : "Are you sure you want to delete this quiz? This action cannot be undone."}
+                    confirmText={t.common.delete}
+                    cancelText={t.common.cancel}
                     variant="danger"
                     onConfirm={confirmDelete}
                     onCancel={() => setDeleteId(null)}
@@ -213,13 +217,13 @@ export default function MyCoursesPage() {
                             <div className="mx-auto w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 transform -rotate-3">
                                 <LinkIcon className="h-8 w-8" />
                             </div>
-                            <h2 className="text-2xl font-black">Tham gia cộng tác</h2>
-                            <p className="text-sm text-zinc-500">Dán link mời nhận được từ chủ khóa học để bắt đầu đồng hành cùng họ.</p>
+                            <h2 className="text-2xl font-black">{t.collaboration.join}</h2>
+                            <p className="text-sm text-zinc-500">{t.collaboration.inputLink}</p>
                         </div>
 
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase text-zinc-400 px-1">Link mời</label>
+                                <label className="text-xs font-bold uppercase text-zinc-400 px-1">{t.collaboration.inviteLink}</label>
                                 <input
                                     autoFocus
                                     placeholder="https://example.com/accept-invite/..."
@@ -230,10 +234,10 @@ export default function MyCoursesPage() {
                             </div>
                             <div className="flex flex-col gap-2">
                                 <Button onClick={handleJoin} className="w-full h-12 rounded-2xl font-bold flex gap-2">
-                                    Tiếp tục <ExternalLink className="h-4 w-4" />
+                                    {language === 'vi' ? 'Tiếp tục' : 'Continue'} <ExternalLink className="h-4 w-4" />
                                 </Button>
                                 <Button variant="ghost" onClick={() => setIsJoinModalOpen(false)} className="w-full h-12 rounded-2xl text-zinc-400">
-                                    Hủy bỏ
+                                    {t.common.cancel}
                                 </Button>
                             </div>
                         </div>

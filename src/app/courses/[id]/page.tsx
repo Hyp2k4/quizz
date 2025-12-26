@@ -11,11 +11,11 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
-import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key } from "lucide-react";
+import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers } from "lucide-react";
 import confetti from "canvas-confetti";
 
 // Helper to format time
-const formatTime = (ms: number) => {
+const formatTime = (ms: number, language: string = 'vi') => {
     const seconds = Math.floor(ms / 1000);
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -31,7 +31,7 @@ const arraysEqual = (a: any[], b: any[]) => {
     return sortedA.every((val, index) => val === sortedB[index]);
 };
 
-function Leaderboard({ quizId }: { quizId: string }) {
+function Leaderboard({ quizId, language = 'vi' }: { quizId: string, language?: string }) {
     const [results, setResults] = useState<QuizResult[]>([]);
 
     useEffect(() => {
@@ -41,7 +41,7 @@ function Leaderboard({ quizId }: { quizId: string }) {
     return (
         <div className="w-full max-w-sm mx-auto mt-8 bg-white dark:bg-white/5 rounded-xl p-4 shadow-inner">
             <h3 className="text-center font-bold mb-4 flex items-center justify-center gap-2">
-                <Trophy className="h-4 w-4 text-yellow-500" /> Leaderboard
+                <Trophy className="h-4 w-4 text-yellow-500" /> {language === 'vi' ? 'Bảng xếp hạng' : 'Leaderboard'}
             </h3>
             <div className="space-y-2">
                 {results.map((r, i) => (
@@ -54,11 +54,10 @@ function Leaderboard({ quizId }: { quizId: string }) {
                         </div>
                         <div className="flex gap-3 text-xs text-[rgb(var(--muted-foreground))]">
                             <span className="font-bold text-[rgb(var(--foreground))]">{r.score}/{r.totalQuestions}</span>
-                            <span>{formatTime(r.timeTakenMs)}</span>
                         </div>
                     </div>
                 ))}
-                {results.length === 0 && <p className="text-center text-xs text-gray-400">Be the first to finish!</p>}
+                {results.length === 0 && <p className="text-center text-xs text-gray-400">{language === 'vi' ? 'Hãy là người đầu tiên hoàn thành!' : 'Be the first to finish!'}</p>}
             </div>
         </div>
     );
@@ -72,7 +71,8 @@ function QuestionTaker({
     readOnly = false,
     isCorrect = undefined,
     onCheck,
-    isRevealed = false
+    isRevealed = false,
+    language = 'vi'
 }: {
     question: any,
     index: number,
@@ -81,7 +81,8 @@ function QuestionTaker({
     readOnly?: boolean,
     isCorrect?: boolean,
     onCheck?: () => void,
-    isRevealed?: boolean
+    isRevealed?: boolean,
+    language?: string
 }) {
     const isMultiple = question.type === 'multiple';
     const isOpen = question.type === 'open';
@@ -113,25 +114,40 @@ function QuestionTaker({
                     </div>
                     <div className="w-full">
                         <h3 className="font-semibold text-lg mb-4">{question.text}</h3>
+                        
+                        {question.imageUrl && (
+                            <div className="mb-6 rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
+                                <img src={question.imageUrl} alt="Question media" className="max-h-[400px] w-auto mx-auto object-contain" />
+                            </div>
+                        )}
 
                         <div className="space-y-3">
                             {isOpen ? (
                                 <div className="space-y-2">
                                     <textarea
                                         className="w-full p-3 rounded-lg border bg-white dark:bg-black/20 min-h-[100px]"
-                                        placeholder="Type your answer here..."
+                                        placeholder={language === 'vi' ? "Nhập câu trả lời của bạn vào đây..." : "Type your answer here..."}
                                         value={selected as string || ''}
                                         onChange={(e) => !showResult && onChange(e.target.value)}
                                         disabled={showResult}
                                     />
                                     {!showResult && (selected as string)?.length > 0 && (
                                         <div className="flex justify-end">
-                                            <Button size="sm" onClick={onCheck} className="rounded-full">Kiểm tra</Button>
+                                            <Button size="sm" onClick={onCheck} className="rounded-full">
+                                                {language === 'vi' ? 'Kiểm tra' : 'Check'}
+                                            </Button>
                                         </div>
                                     )}
                                     {showResult && (
-                                        <div className="text-sm text-[rgb(var(--muted-foreground))]">
-                                            <strong>Model Answer:</strong> {question.correctAnswer?.[0] || "No model answer provided"}
+                                        <div className="space-y-4 pt-2">
+                                            {question.answerImageUrl && (
+                                                <div className="rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
+                                                    <img src={question.answerImageUrl} alt="Answer media" className="max-h-[300px] w-auto mx-auto object-contain" />
+                                                </div>
+                                            )}
+                                            <div className="text-sm text-[rgb(var(--muted-foreground))]">
+                                                <strong>{language === 'vi' ? 'Đáp án mẫu' : 'Model Answer'}:</strong> {question.correctAnswer?.[0] || (language === 'vi' ? "Chưa có đáp án mẫu" : "No model answer provided")}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -191,14 +207,16 @@ function QuestionTaker({
                         </div>
                         {isMultiple && !showResult && (selected as string[])?.length > 0 && (
                             <div className="mt-4 flex justify-end">
-                                <Button size="sm" variant="secondary" onClick={onCheck} className="rounded-full">Xác nhận đáp án</Button>
+                                <Button size="sm" variant="secondary" onClick={onCheck} className="rounded-full">
+                                    {language === 'vi' ? 'Xác nhận đáp án' : 'Confirm Answer'}
+                                </Button>
                             </div>
                         )}
                         {showResult && !isCorrect && question.explanation && (
                             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-lg text-sm flex gap-2">
                                 <AlertCircle className="h-5 w-5 shrink-0" />
                                 <div>
-                                    <span className="font-bold">Explanation:</span> {question.explanation}
+                                    <span className="font-bold">{language === 'vi' ? 'Giải thích' : 'Explanation'}:</span> {question.explanation}
                                 </div>
                             </div>
                         )}
@@ -210,7 +228,7 @@ function QuestionTaker({
 }
 
 // Result Graph Component
-function ScorePath({ score, total }: { score: number, total: number }) {
+function ScorePath({ score, total, language = 'vi' }: { score: number, total: number, language?: string }) {
     const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
 
     return (
@@ -229,12 +247,12 @@ function ScorePath({ score, total }: { score: number, total: number }) {
 
             <div className="flex items-center justify-center gap-4">
                 <div className="text-center">
-                    <p className="text-sm text-gray-500">Correct Answers</p>
+                    <p className="text-sm text-gray-500">{language === 'vi' ? 'Số câu đúng' : 'Correct Answers'}</p>
                     <p className="text-4xl font-bold">{score} <span className="text-lg text-gray-400">/ {total}</span></p>
                 </div>
                 <div className="h-12 w-[1px] bg-gray-300" />
                 <div className="text-center">
-                    <p className="text-sm text-gray-500">Your Score</p>
+                    <p className="text-sm text-gray-500">{language === 'vi' ? 'Điểm của bạn' : 'Your Score'}</p>
                     <p className={`text-4xl font-bold ${percentage >= 80 ? 'text-green-600' : percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
                         {percentage}
                     </p>
@@ -246,8 +264,9 @@ function ScorePath({ score, total }: { score: number, total: number }) {
 
 export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const router = useRouter();
     const { user, guestName, setGuestName, login } = useAuth();
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const [quiz, setQuiz] = useState<QuizData | null>(null);
     const [loading, setLoading] = useState(true);
     const [tempName, setTempName] = useState("");
@@ -287,7 +306,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                         q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
                     );
                     setQuiz({ ...data, questions: filteredQuestions });
-                    
+
                     // Check if access is automatically granted
                     const isOwner = user && data.userId === user.uid;
                     const isCollab = user && data.collaborators?.includes(user.email || "");
@@ -346,12 +365,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             const isValid = await verifyQuizAccessCode(quiz.id, inputCode.trim().toUpperCase());
             if (isValid) {
                 setIsAccessGranted(true);
-                toast.success("Mã truy cập chính xác!");
+                toast.success(language === 'vi' ? "Mã truy cập chính xác!" : "Correct access code!");
             } else {
-                toast.error("Mã truy cập không đúng. Vui lòng thử lại.");
+                toast.error(t.visibility.invalidCode);
             }
         } catch (error) {
-            toast.error("Lỗi khi xác thực mã");
+            toast.error(language === 'vi' ? "Lỗi khi xác thực mã" : "Error authenticating code");
         } finally {
             setIsVerifying(false);
         }
@@ -392,7 +411,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             streakRef.current = streakRef.current + 1;
             if (streakRef.current >= 5) {
                 triggerConfetti();
-                toast.success(`TUYỆT VỜI! Chuỗi ${streakRef.current} câu đúng liên tiếp! 🔥`, { duration: 4000 });
+                toast.success(language === 'vi' ? `TUYỆT VỜI! Chuỗi ${streakRef.current} câu đúng liên tiếp! 🔥` : `AMAZING! Streak of ${streakRef.current} correct answers! 🔥`, { duration: 4000 });
             }
         } else {
             streakRef.current = 0;
@@ -452,15 +471,37 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             timeTakenMs: infoTime
         });
 
-        // Create notification for course owner
+        // Create notification and send email for course owner
         if (quiz.userId) {
             await createNotification({
                 userId: quiz.userId,
                 type: 'quiz_complete',
-                title: 'Bản tin Lustio: Có người hoàn thành bài thi!',
-                message: `${user?.displayName || guestName || "Khách"} vừa hoàn thành "${quiz.title}" với số điểm ${calculatedScore}/${quiz.questions.length}`,
+                title: language === 'vi' ? 'Bản tin Lustio: Có người hoàn thành bài thi!' : 'Lustio News: Quiz Completed!',
+                message: `${user?.displayName || guestName || (language === 'vi' ? "Khách" : "Guest")} ${language === 'vi' ? 'vừa hoàn thành' : 'just completed'} "${quiz.title}" ${language === 'vi' ? 'với số điểm' : 'with score'} ${calculatedScore}/${quiz.questions.length}`,
                 link: `/courses/${id}`
             });
+
+            // Send email to author if email exists
+            if (quiz.authorEmail) {
+                const completionTime = (infoTime / 1000 / 60).toFixed(1) + " " + (language === 'vi' ? 'phút' : 'mins');
+                fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'completion',
+                        to: quiz.authorEmail,
+                        language: language,
+                        data: {
+                            userName: user?.displayName || guestName || (language === 'vi' ? "Khách" : "Guest"),
+                            quizTitle: quiz.title,
+                            score: calculatedScore,
+                            total: quiz.questions.length,
+                            time: completionTime,
+                            link: `${window.location.origin}/courses/${id}`
+                        }
+                    })
+                }).catch(err => console.error("Error sending completion email notification:", err));
+            }
         }
     };
 
@@ -511,8 +552,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     className="w-full bg-zinc-100 dark:bg-zinc-800 border-2 border-transparent focus:border-red-500 rounded-2xl pl-12 pr-4 py-4 font-mono font-bold tracking-widest text-lg outline-none transition-all"
                                 />
                             </div>
-                            <Button 
-                                onClick={handleVerifyCode} 
+                            <Button
+                                onClick={handleVerifyCode}
                                 disabled={isVerifying || !inputCode.trim()}
                                 className="w-full h-14 rounded-2xl text-lg font-bold bg-red-600 hover:bg-red-700 shadow-xl shadow-red-500/20"
                             >
@@ -531,18 +572,32 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 <PlayCircle className="h-10 w-10 text-indigo-600" />
             </div>
             <div>
-                <h2 className="text-2xl font-black mb-2">Bạn đã sẵn sàng chưa?</h2>
+                <h2 className="text-2xl font-black mb-2">{language === 'vi' ? 'Bạn đã sẵn sàng chưa?' : 'Are you ready?'}</h2>
                 <p className="text-[rgb(var(--muted-foreground))] leading-relaxed">
-                    Bài trắc nghiệm "<span className="font-bold text-indigo-600">{quiz.title}</span>" đang chờ bạn chinh phục. Bạn sẽ biết ngay kết quả sau mỗi câu trả lời!
+                    {language === 'vi'
+                        ? `Bài trắc nghiệm "${quiz.title}" đang chờ bạn chinh phục. Bạn sẽ biết ngay kết quả sau mỗi câu trả lời!`
+                        : `The quiz "${quiz.title}" is waiting for you. You will see the results after each answer!`
+                    }
                 </p>
             </div>
-            <Button
-                size="lg"
-                className="w-full rounded-full py-6 text-lg font-bold shadow-lg shadow-indigo-500/40 hover:scale-105 transition-transform"
-                onClick={() => setIsReadyToStart(true)}
-            >
-                Bắt đầu ngay!
-            </Button>
+            <div className="flex flex-col gap-3">
+                <Button
+                    size="lg"
+                    className="w-full rounded-full py-6 text-lg font-bold shadow-lg shadow-indigo-500/40 hover:scale-[1.02] transition-transform"
+                    onClick={() => setIsReadyToStart(true)}
+                >
+                    {language === 'vi' ? 'Làm bài ngay!' : 'Start Now!'}
+                </Button>
+                <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full rounded-full py-6 text-lg font-bold border-2 border-indigo-100 hover:border-indigo-500 hover:text-indigo-600 transition-all gap-2"
+                    onClick={() => router.push(`/courses/${id}/flashcards`)}
+                >
+                    <Layers className="h-5 w-5" />
+                    {t.flashcards.study}
+                </Button>
+            </div>
         </Card>
     );
 
@@ -588,11 +643,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     <div className="space-y-6 animation-fade-in">
                         {/* Header Info */}
                         <div className="flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg sticky top-20 z-10 backdrop-blur-md shadow-sm">
-                            <span className="font-medium">Player: <span className="font-bold text-indigo-600 dark:text-indigo-400">{user ? user.displayName : guestName}</span></span>
+                            <span className="font-medium">{language === 'vi' ? 'Người chơi' : 'Player'}: <span className="font-bold text-indigo-600 dark:text-indigo-400">{user ? user.displayName : guestName}</span></span>
 
                             <div className="flex items-center gap-4">
                                 <span className={`font-mono text-xl font-bold ${isSubmitted ? 'text-green-600' : 'text-indigo-600'}`}>
-                                    {isSubmitted ? formatTime(finalTimeMs) : formatTime(elapsedTime)}
+                                    {isSubmitted ? formatTime(finalTimeMs, language) : formatTime(elapsedTime, language)}
                                 </span>
                                 {!isSubmitted && (
                                     <span className="text-sm text-[rgb(var(--muted-foreground))]">
@@ -608,14 +663,14 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     <div className="h-16 w-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center animate-bounce">
                                         <Trophy className="h-8 w-8" />
                                     </div>
-                                    <h2 className="text-2xl font-bold">Quiz Completed!</h2>
-                                    <p className="text-[rgb(var(--muted-foreground))]">Time: {formatTime(finalTimeMs)}</p>
-                                    <ScorePath score={score} total={quiz.questions.length} />
+                                    <h2 className="text-2xl font-bold">{language === 'vi' ? 'Đã hoàn thành!' : 'Quiz Completed!'}</h2>
+                                    <p className="text-[rgb(var(--muted-foreground))]">{language === 'vi' ? 'Thời gian' : 'Time'}: {formatTime(finalTimeMs, language)}</p>
+                                    <ScorePath score={score} total={quiz.questions.length} language={language} />
 
-                                    <Leaderboard quizId={quiz.id!} />
+                                    <Leaderboard quizId={quiz.id!} language={language} />
 
                                     <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">
-                                        Retake Quiz
+                                        {language === 'vi' ? 'Làm lại' : 'Retake Quiz'}
                                     </Button>
                                 </div>
                             </div>
@@ -646,6 +701,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     isRevealed={revealed[i]}
                                     isCorrect={isCorrect}
                                     onCheck={() => handleCheckIndividual(i)}
+                                    language={language}
                                 />
                             );
                         })}
@@ -657,19 +713,19 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     className="rounded-full px-12 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1"
                                     onClick={onPreSubmit}
                                 >
-                                    Nộp kết quả cuối cùng
+                                    {language === 'vi' ? 'Nộp kết quả cuối cùng' : 'Submit Final Result'}
                                 </Button>
                             </div>
                         )}
 
                         <ConfirmDialog
                             isOpen={confirmOpen}
-                            title="Nộp bài?"
+                            title={language === 'vi' ? "Nộp bài?" : "Submit Quiz?"}
                             description={unansweredCount > 0
-                                ? `Bạn còn ${unansweredCount} câu chưa hoàn thành. Bạn có chắc chắn muốn kết thúc?`
-                                : "Bạn có chắc chắn muốn hoàn thành bài trắc nghiệm?"
+                                ? (language === 'vi' ? `Bạn còn ${unansweredCount} câu chưa hoàn thành. Bạn có chắc chắn muốn kết thúc?` : `You have ${unansweredCount} unanswered questions. Are you sure you want to exit?`)
+                                : (language === 'vi' ? "Bạn có chắc chắn muốn hoàn thành bài trắc nghiệm?" : "Are you sure you want to finish the quiz?")
                             }
-                            confirmText="Nộp bài"
+                            confirmText={language === 'vi' ? "Nộp bài" : "Submit"}
                             variant={unansweredCount > 0 ? 'danger' : 'info'}
                             onConfirm={handleSubmit}
                             onCancel={() => setConfirmOpen(false)}

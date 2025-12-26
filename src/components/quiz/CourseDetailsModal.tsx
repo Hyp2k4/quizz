@@ -18,9 +18,10 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Send, MessageCircle, User, CornerDownRight, Clock, AlertCircle, Users, UserPlus, UserMinus, Copy, Check, Lock, Globe, Key } from "lucide-react";
+import { X, Send, MessageCircle, User, CornerDownRight, Clock, AlertCircle, Users, UserPlus, UserMinus, Copy, Check, Lock, Globe, Key, Share2, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CourseDetailsModalProps {
     isOpen: boolean;
@@ -30,6 +31,7 @@ interface CourseDetailsModalProps {
 
 export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModalProps) {
     const { user, login } = useAuth();
+    const { t, language } = useLanguage();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -79,60 +81,97 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
 
     const handleAddComment = async () => {
         if (!user) {
-            toast.error("Vui lòng đăng nhập để bình luận");
+            toast.error(language === 'vi' ? "Vui lòng đăng nhập để bình luận" : "Please login to comment");
             login();
             return;
         }
         if (!newComment.trim() || !currentQuiz?.id) return;
 
         try {
-            await addQuizComment(currentQuiz.id, newComment, user.uid, user.displayName || "Anonymous");
+            await addQuizComment(currentQuiz.id, newComment, user.uid, user.displayName || "Anonymous", user.email || undefined);
 
-            // Create notification for course owner
+            // Create notification and send email for course owner
             if (currentQuiz.userId && currentQuiz.userId !== user.uid) {
                 await createNotification({
                     userId: currentQuiz.userId,
                     type: 'comment',
-                    title: 'Bình luận mới!',
-                    message: `${user.displayName || "Ai đó"} vừa bình luận trong "${currentQuiz.title}": "${newComment.substring(0, 30)}..."`,
+                    title: language === 'vi' ? 'Bình luận mới!' : 'New comment!',
+                    message: `${user.displayName || (language === 'vi' ? "Ai đó" : "Someone")} ${language === 'vi' ? 'vừa bình luận trong' : 'just commented in'} "${currentQuiz.title}": "${newComment.substring(0, 30)}..."`,
                     link: `#`
                 });
+
+                // Send email to owner if they have an email
+                if (currentQuiz.authorEmail) {
+                    fetch('/api/send-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: 'comment',
+                            to: currentQuiz.authorEmail,
+                            language: language,
+                            data: {
+                                userName: user.displayName || user.email || "Anonymous",
+                                quizTitle: currentQuiz.title,
+                                commentText: newComment,
+                                link: `${window.location.origin}/courses/${currentQuiz.id}`
+                            }
+                        })
+                    }).catch(err => console.error("Error sending comment email notification:", err));
+                }
             }
 
             setNewComment("");
             loadComments();
-            toast.success("Đã gửi bình luận!");
+            toast.success(t.common.success);
         } catch (error) {
-            toast.error("Lỗi khi gửi bình luận");
+            toast.error(t.common.error);
         }
     };
 
     const handleAddReply = async (commentId: string) => {
         if (!user) {
-            toast.error("Vui lòng đăng nhập để phản hồi");
+            toast.error(language === 'vi' ? "Vui lòng đăng nhập để phản hồi" : "Please login to reply");
             login();
             return;
         }
         if (!replyText.trim()) return;
 
         try {
-            await addCommentReply(commentId, replyText, user.uid, user.displayName || "Anonymous");
+            await addCommentReply(commentId, replyText, user.uid, user.displayName || "Anonymous", user.email || undefined);
 
-            // Notification logic for reply could be added here if needed (e.g. notify comment owner)
+            // Find matching comment to notify the original author
+            const originalComment = comments.find(c => c.id === commentId);
+            if (originalComment && originalComment.userId !== user.uid && originalComment.userEmail) {
+                fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'reply',
+                        to: originalComment.userEmail,
+                        language: language,
+                        data: {
+                            userName: user.displayName || user.email || "Anonymous",
+                            quizTitle: currentQuiz?.title || "Course",
+                            replyText: replyText,
+                            link: `${window.location.origin}/courses/${currentQuiz?.id}`
+                        }
+                    })
+                }).catch(err => console.error("Error sending reply email notification:", err));
+            }
 
             setReplyText("");
             setReplyingTo(null);
             loadComments();
-            toast.success("Đã gửi phản hồi!");
+            toast.success(t.common.success);
         } catch (error) {
-            toast.error("Lỗi khi gửi phản hồi");
+            toast.error(t.common.error);
         }
     };
 
     const handleInviteCollab = async () => {
         if (!currentQuiz?.id || !collabEmail.trim() || !user) return;
         if (!collabEmail.includes("@")) {
-            toast.error("Email không hợp lệ");
+            toast.error(language === 'vi' ? "Email không hợp lệ" : "Invalid email");
             return;
         }
 
@@ -149,10 +188,33 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
             const fullLink = `${origin}/accept-invite/${inviteId}`;
             setInviteLink(fullLink);
 
-            toast.success(`Đã tạo lời mời cho ${collabEmail}`);
+            // Gửi email mời thông qua API
+            fetch('/api/send-invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    inviteeEmail: collabEmail.trim().toLowerCase(),
+                    inviterName: user.displayName || user.email || (language === 'vi' ? "Một người dùng" : "A user"),
+                    quizTitle: currentQuiz.title,
+                    inviteLink: fullLink,
+                    language: language
+                })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    toast.success(`${language === 'vi' ? 'Đã gửi mail mời tới' : 'Invitation email sent to'} ${collabEmail}`);
+                } else {
+                    console.warn("Email alert:", data.error);
+                    // Thông báo cho người dùng cấu hình Env nếu lỗi
+                    if (data.error?.includes("RESEND_API_KEY")) {
+                        toast.error(language === 'vi' ? "Vui lòng cấu hình RESEND_API_KEY trong .env để thực hiện gửi mail." : "Please configure RESEND_API_KEY in .env to send emails.");
+                    }
+                }
+            }).catch(e => console.error("Email error:", e));
+
+            toast.success(`${language === 'vi' ? 'Đã tạo lời mời cho' : 'Invitation created for'} ${collabEmail}`);
             setCollabEmail("");
         } catch (error) {
-            toast.error("Lỗi khi tạo lời mời");
+            toast.error(t.common.error);
         } finally {
             setIsCollabLoading(false);
         }
@@ -161,7 +223,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
         setCopied(true);
-        toast.success("Đã sao chép link mời!");
+        toast.success(t.common.copied);
         setTimeout(() => setCopied(false), 2000);
     };
 
@@ -170,10 +232,10 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
 
         try {
             await removeCollaborator(currentQuiz.id, email);
-            toast.success(`Đã xóa ${email} khỏi danh sách cộng tác`);
+            toast.success(t.common.success);
             await refreshQuiz();
         } catch (error) {
-            toast.error("Lỗi khi xóa người cộng tác");
+            toast.error(t.common.error);
         }
     };
 
@@ -183,9 +245,9 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
         try {
             await updateQuizVisibility(currentQuiz.id, visibility);
             await refreshQuiz();
-            toast.success(`Đã chuyển khóa học sang chế độ ${visibility === 'public' ? 'Công khai' : 'Riêng tư'}`);
+            toast.success(t.common.success);
         } catch (error) {
-            toast.error("Lỗi khi thay đổi trạng thái hiển thị");
+            toast.error(t.common.error);
         } finally {
             setIsVisibilityLoading(false);
         }
@@ -196,7 +258,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
     const formatDate = (date: any) => {
         if (!date) return "";
         const d = date.toDate ? date.toDate() : new Date(date);
-        return d.toLocaleDateString("vi-VN", { hour: '2-digit', minute: '2-digit' });
+        return d.toLocaleDateString(language === 'vi' ? "vi-VN" : "en-US", { hour: '2-digit', minute: '2-digit' });
     };
 
     return createPortal(
@@ -222,15 +284,15 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                         <p className="text-zinc-500 dark:text-zinc-400 mt-1">{currentQuiz.description}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-3 text-sm font-medium">
                             <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full">
-                                {currentQuiz.questions.length} câu hỏi
+                                {currentQuiz.questions.length} {language === 'vi' ? 'câu hỏi' : 'questions'}
                             </span>
                             {currentQuiz.questions.filter(q => q.type !== 'open' && q.correctAnswer.length === 0).length > 0 && (
                                 <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center gap-1.5 border border-amber-200 dark:border-amber-800 animate-pulse">
                                     <AlertCircle className="h-3.5 w-3.5" />
-                                    {currentQuiz.questions.filter(q => q.type !== 'open' && q.correctAnswer.length === 0).length} câu thiếu đáp án
+                                    {currentQuiz.questions.filter(q => q.type !== 'open' && q.correctAnswer.length === 0).length} {language === 'vi' ? 'câu thiếu đáp án' : 'questions missing answers'}
                                 </span>
                             )}
-                            <span className="text-zinc-400">Tác giả: {currentQuiz.authorName || "Ẩn danh"}</span>
+                            <span className="text-zinc-400">{language === 'vi' ? 'Tác giả' : 'Author'}: {currentQuiz.authorName || (language === 'vi' ? "Ẩn danh" : "Anonymous")}</span>
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800">
@@ -244,34 +306,34 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                         <button
                             onClick={() => setActiveTab('comments')}
                             className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'comments'
-                                    ? 'border-indigo-500 text-indigo-500'
-                                    : 'border-transparent text-zinc-500 hover:text-zinc-700'
+                                ? 'border-indigo-500 text-indigo-500'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
                             <span className="flex items-center gap-2">
-                                <MessageCircle className="h-4 w-4" /> Bình luận
+                                <MessageCircle className="h-4 w-4" /> {t.comments.title}
                             </span>
                         </button>
                         <button
                             onClick={() => setActiveTab('collaboration')}
                             className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'collaboration'
-                                    ? 'border-indigo-500 text-indigo-500'
-                                    : 'border-transparent text-zinc-500 hover:text-zinc-700'
+                                ? 'border-indigo-500 text-indigo-500'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
                             <span className="flex items-center gap-2">
-                                <Users className="h-4 w-4" /> Cộng tác
+                                <Users className="h-4 w-4" /> {t.collaboration.title}
                             </span>
                         </button>
                         <button
                             onClick={() => setActiveTab('visibility')}
                             className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'visibility'
-                                    ? 'border-indigo-500 text-indigo-500'
-                                    : 'border-transparent text-zinc-500 hover:text-zinc-700'
+                                ? 'border-indigo-500 text-indigo-500'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
                             <span className="flex items-center gap-2">
-                                <Lock className="h-4 w-4" /> Hiển thị
+                                <Lock className="h-4 w-4" /> {t.visibility.title}
                             </span>
                         </button>
                     </div>
@@ -289,7 +351,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                             >
                                 <h3 className="text-lg font-bold flex items-center gap-2">
                                     <MessageCircle className="h-5 w-5 text-indigo-500" />
-                                    Nhận xét từ cộng đồng ({comments.length})
+                                    {language === 'vi' ? 'Nhận xét từ cộng đồng' : 'Community Comments'} ({comments.length})
                                 </h3>
 
                                 {/* Comment Input */}
@@ -299,14 +361,14 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                     </div>
                                     <div className="flex-1 space-y-2">
                                         <Textarea
-                                            placeholder="Viết nhận xét của bạn..."
+                                            placeholder={t.comments.writeComment}
                                             value={newComment}
                                             onChange={(e) => setNewComment(e.target.value)}
                                             className="min-h-[80px] rounded-2xl resize-none bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-800"
                                         />
                                         <div className="flex justify-end">
                                             <Button onClick={handleAddComment} size="sm" className="rounded-full gap-2 px-6">
-                                                Gửi <Send className="h-4 w-4" />
+                                                {t.comments.post} <Send className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </div>
@@ -315,10 +377,10 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                 {/* Comments List */}
                                 <div className="space-y-6 mt-8">
                                     {isLoading ? (
-                                        <div className="text-center py-10 text-zinc-400">Đang tải nhận xét...</div>
+                                        <div className="text-center py-10 text-zinc-400">{t.common.loading}</div>
                                     ) : comments.length === 0 ? (
                                         <div className="text-center py-10 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-3xl text-zinc-400">
-                                            Chưa có nhận xét nào. Hãy là người đầu tiên!
+                                            {language === 'vi' ? 'Chưa có nhận xét nào. Hãy là người đầu tiên!' : 'No comments yet. Be the first!'}
                                         </div>
                                     ) : (
                                         comments.map(comment => (
@@ -344,7 +406,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                                                 onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id!)}
                                                                 className="text-xs font-bold text-indigo-500 hover:text-indigo-600 transition-colors"
                                                             >
-                                                                Phản hồi
+                                                                {t.comments.reply}
                                                             </button>
                                                         </div>
 
@@ -379,17 +441,17 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                                                 >
                                                                     <div className="flex items-center gap-2 text-xs font-bold text-zinc-400 mb-1">
                                                                         <CornerDownRight className="h-3 w-3" />
-                                                                        Phản hồi cho {comment.userName}
+                                                                        {language === 'vi' ? 'Phản hồi cho' : 'Reply to'} {comment.userName}
                                                                     </div>
                                                                     <Textarea
-                                                                        placeholder="Viết phản hồi của bạn..."
+                                                                        placeholder={t.comments.writeComment}
                                                                         value={replyText}
                                                                         onChange={(e) => setReplyText(e.target.value)}
                                                                         className="min-h-[60px] rounded-xl text-sm"
                                                                     />
                                                                     <div className="flex justify-end gap-2 text-xs">
-                                                                        <Button variant="ghost" size="sm" onClick={() => setReplyingTo(null)}>Hủy</Button>
-                                                                        <Button onClick={() => handleAddReply(comment.id!)} size="sm" className="rounded-full px-4">Gửi phản hồi</Button>
+                                                                        <Button variant="ghost" size="sm" onClick={() => setReplyingTo(null)}>{t.common.cancel}</Button>
+                                                                        <Button onClick={() => handleAddReply(comment.id!)} size="sm" className="rounded-full px-4">{t.comments.post}</Button>
                                                                     </div>
                                                                 </motion.div>
                                                             )}
@@ -412,15 +474,15 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                 <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-3xl border border-indigo-100 dark:border-indigo-800">
                                     <h3 className="text-lg font-bold flex items-center gap-2 text-indigo-700 dark:text-indigo-400 mb-2">
                                         <UserPlus className="h-5 w-5" />
-                                        Mời người cộng tác
+                                        {t.collaboration.invite}
                                     </h3>
                                     <p className="text-sm text-indigo-600/70 dark:text-indigo-400/70 mb-4">
-                                        Người cộng tác có thể chỉnh sửa câu hỏi, thay đổi tiêu đề và quản lý nội dung khóa học này.
+                                        {t.collaboration.inviteDesc}
                                     </p>
                                     <div className="flex gap-2">
                                         <input
                                             type="email"
-                                            placeholder="Nhập email người cần mời..."
+                                            placeholder={t.collaboration.placeholder}
                                             value={collabEmail}
                                             onChange={(e) => setCollabEmail(e.target.value)}
                                             className="flex-1 bg-white dark:bg-zinc-800 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 ring-indigo-500/20"
@@ -430,7 +492,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                             disabled={isCollabLoading || !collabEmail}
                                             className="rounded-xl px-6"
                                         >
-                                            {isCollabLoading ? "Đang tạo..." : "Tạo lời mời"}
+                                            {isCollabLoading ? t.common.loading : t.collaboration.sendInvite}
                                         </Button>
                                     </div>
 
@@ -442,7 +504,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
                                                 className="p-4 bg-white dark:bg-zinc-800 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-indigo-800/50 overflow-hidden"
                                             >
-                                                <p className="text-xs font-bold text-indigo-500 mb-2 uppercase tracking-wide">Link mời cộng tác:</p>
+                                                <p className="text-xs font-bold text-indigo-500 mb-2 uppercase tracking-wide">{t.collaboration.inviteLink}</p>
                                                 <div className="flex gap-2">
                                                     <input
                                                         readOnly
@@ -458,7 +520,40 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                                         {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
                                                     </Button>
                                                 </div>
-                                                <p className="text-[10px] text-zinc-400 mt-2 italic">* Chỉ người dùng có email khớp với lời mời mới có thể chấp nhận.</p>
+                                                <div className="flex gap-2 mt-3">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex-1 gap-2 rounded-xl text-xs h-9 border-indigo-200"
+                                                        onClick={() => {
+                                                            const subject = encodeURIComponent(language === 'vi' ? `[Lustio] Mời cộng tác khóa học: ${currentQuiz.title}` : `[Lustio] Course Collaboration Invite: ${currentQuiz.title}`);
+                                                            const body = encodeURIComponent(language === 'vi'
+                                                                ? `Chào bạn,\n\n${user?.displayName || 'Tôi'} đã mời bạn cộng tác trong khóa học "${currentQuiz.title}" trên Lustio Quizz.\n\nNhấn vào link này để chấp nhận: ${inviteLink}\n\nTrân trọng!`
+                                                                : `Hello,\n\n${user?.displayName || 'I'} have invited you to collaborate on the course "${currentQuiz.title}" on Lustio Quizz.\n\nClick here to accept: ${inviteLink}\n\nBest regards!`);
+                                                            window.location.href = `mailto:${collabEmail}?subject=${subject}&body=${body}`;
+                                                        }}
+                                                    >
+                                                        <Mail className="h-3.5 w-3.5" /> {language === 'vi' ? 'Gửi qua Email cá nhân' : 'Send via Personal Email'}
+                                                    </Button>
+
+                                                    {typeof navigator.share !== 'undefined' && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="flex-1 gap-2 rounded-xl text-xs h-9 border-indigo-200"
+                                                            onClick={() => {
+                                                                navigator.share({
+                                                                    title: currentQuiz.title,
+                                                                    text: language === 'vi' ? `Cộng tác với tôi trong khóa học ${currentQuiz.title}` : `Collaborate with me on ${currentQuiz.title}`,
+                                                                    url: inviteLink
+                                                                }).catch(() => { });
+                                                            }}
+                                                        >
+                                                            <Share2 className="h-3.5 w-3.5" /> {language === 'vi' ? 'Chia sẻ khác' : 'Other Share'}
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-zinc-400 mt-3 italic">{t.collaboration.securityNote}</p>
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
@@ -466,12 +561,12 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
 
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider px-2">
-                                        Danh sách cộng tác viên ({currentQuiz.collaborators?.length || 0})
+                                        {t.collaboration.list} ({currentQuiz.collaborators?.length || 0})
                                     </h3>
                                     <div className="space-y-2">
                                         {(!currentQuiz.collaborators || currentQuiz.collaborators.length === 0) ? (
                                             <div className="text-center py-10 bg-zinc-50 dark:bg-zinc-800/30 rounded-3xl border-2 border-dashed border-zinc-100 dark:border-zinc-800 text-zinc-400 text-sm">
-                                                Chưa có người cộng tác nào.
+                                                {t.collaboration.noCollabs}
                                             </div>
                                         ) : (
                                             currentQuiz.collaborators.map(email => (
@@ -505,22 +600,22 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                 className="space-y-6"
                             >
                                 <div className="space-y-4">
-                                    <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider px-2">Cài đặt hiển thị</h3>
+                                    <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider px-2">{t.visibility.title}</h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         <button
                                             disabled={isVisibilityLoading}
                                             onClick={() => handleToggleVisibility('public')}
                                             className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${currentQuiz.visibility !== 'private'
-                                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400'
-                                                    : 'border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700'
+                                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400'
+                                                : 'border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700'
                                                 }`}
                                         >
                                             <div className={`p-3 rounded-2xl ${currentQuiz.visibility !== 'private' ? 'bg-indigo-500 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>
                                                 <Globe className="h-6 w-6" />
                                             </div>
                                             <div className="text-center">
-                                                <div className="font-bold">Công khai</div>
-                                                <div className="text-xs opacity-70">Ai cũng có thể tìm và xem</div>
+                                                <div className="font-bold">{t.visibility.public}</div>
+                                                <div className="text-xs opacity-70">{t.visibility.publicDesc}</div>
                                             </div>
                                         </button>
 
@@ -528,16 +623,16 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                             disabled={isVisibilityLoading}
                                             onClick={() => handleToggleVisibility('private')}
                                             className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${currentQuiz.visibility === 'private'
-                                                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                                                    : 'border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700'
+                                                ? 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                                                : 'border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700'
                                                 }`}
                                         >
                                             <div className={`p-3 rounded-2xl ${currentQuiz.visibility === 'private' ? 'bg-red-500 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>
                                                 <Lock className="h-6 w-6" />
                                             </div>
                                             <div className="text-center">
-                                                <div className="font-bold">Riêng tư</div>
-                                                <div className="text-xs opacity-70">Chỉ chia sẻ qua mã bí mật</div>
+                                                <div className="font-bold">{t.visibility.private}</div>
+                                                <div className="text-xs opacity-70">{t.visibility.privateDesc}</div>
                                             </div>
                                         </button>
                                     </div>
@@ -551,12 +646,12 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                     >
                                         <div className="flex items-center gap-3 text-amber-700 dark:text-amber-400 font-bold">
                                             <Key className="h-5 w-5" />
-                                            Mã truy cập riêng tư
+                                            {t.visibility.accessCode}
                                         </div>
                                         <div className="flex gap-2">
                                             <input
                                                 readOnly
-                                                value={currentQuiz.accessCode || "Chưa có mã"}
+                                                value={currentQuiz.accessCode || (language === 'vi' ? "Chưa có mã" : "No code")}
                                                 className="flex-1 bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-lg font-mono tracking-widest text-center"
                                             />
                                             <Button
@@ -569,11 +664,11 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                                 }}
                                                 className="rounded-xl px-6 border-amber-300 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
                                             >
-                                                Tạo mã mới
+                                                {t.visibility.generateCode}
                                             </Button>
                                         </div>
                                         <p className="text-xs text-amber-600/70 dark:text-amber-400/70 text-center italic">
-                                            Gửi mã này hoặc đường dẫn riêng tư dưới đây cho người học:
+                                            {language === 'vi' ? 'Gửi mã này hoặc đường dẫn riêng tư dưới đây cho người học:' : 'Send this code or the private link below to learners:'}
                                         </p>
                                         <div className="flex gap-2">
                                             <input
@@ -587,7 +682,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                                 onClick={() => {
                                                     const link = `${window.location.origin}/courses/${currentQuiz.id}?code=${currentQuiz.accessCode || ''}`;
                                                     navigator.clipboard.writeText(link);
-                                                    toast.success("Đã sao chép link riêng tư!");
+                                                    toast.success(language === 'vi' ? "Đã sao chép link riêng tư!" : "Private link copied!");
                                                 }}
                                                 className="rounded-lg h-9 w-9 p-0"
                                             >

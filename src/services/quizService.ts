@@ -33,6 +33,7 @@ export interface QuizData {
   questions: Question[];
   userId?: string;
   authorName?: string;
+  authorEmail?: string;
   collaborators?: string[]; // Array of user emails
   createdAt?: any;
   visibility?: 'public' | 'private';
@@ -44,6 +45,7 @@ export interface Comment {
   quizId: string;
   userId: string;
   userName: string;
+  userEmail?: string;
   text: string;
   replies?: Reply[];
   createdAt: any;
@@ -53,6 +55,7 @@ export interface Reply {
   id?: string;
   userId: string;
   userName: string;
+  userEmail?: string;
   text: string;
   createdAt: any;
 }
@@ -249,19 +252,20 @@ export const getQuizComments = async (quizId: string): Promise<Comment[]> => {
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Comment));
 };
 
-export const addQuizComment = async (quizId: string, text: string, userId: string, userName: string) => {
+export const addQuizComment = async (quizId: string, text: string, userId: string, userName: string, userEmail?: string) => {
     const docRef = await addDoc(collection(db, "quiz_comments"), {
         quizId,
         text,
         userId,
         userName,
+        userEmail,
         replies: [],
         createdAt: serverTimestamp()
     });
     return docRef.id;
 };
 
-export const addCommentReply = async (commentId: string, text: string, userId: string, userName: string) => {
+export const addCommentReply = async (commentId: string, text: string, userId: string, userName: string, userEmail?: string) => {
     const commentRef = doc(db, "quiz_comments", commentId);
     const commentSnap = await getDoc(commentRef);
     if (!commentSnap.exists()) return;
@@ -272,8 +276,9 @@ export const addCommentReply = async (commentId: string, text: string, userId: s
         id: Math.random().toString(36).substr(2, 9),
         userId,
         userName,
+        userEmail,
         text,
-        createdAt: new Date() // Firebase doesn't support nested serverTimestamp in array easily
+        createdAt: new Date()
     };
 
     await updateDoc(commentRef, {

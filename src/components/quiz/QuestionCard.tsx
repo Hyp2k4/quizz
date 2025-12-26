@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { Plus, Trash2, HelpCircle, Lightbulb } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Lightbulb, Image } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export type QuestionType = "single" | "multiple" | "open" | "mixed";
@@ -17,6 +17,8 @@ export interface Question {
     correctAnswer: string[]; // Array of correct options
     hint: string;
     explanation: string;
+    imageUrl?: string;
+    answerImageUrl?: string;
 }
 
 interface QuestionCardProps {
@@ -28,11 +30,11 @@ interface QuestionCardProps {
 }
 
 export function QuestionCard({ question, index, onUpdate, onDelete, onDuplicate }: QuestionCardProps) {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
 
     const handleOptionChange = (optIndex: number, value: string) => {
         const newOptions = [...question.options];
-        const oldOption = newOptions[optIndex]; 
+        const oldOption = newOptions[optIndex];
         newOptions[optIndex] = value;
 
         let newCorrect = [...question.correctAnswer];
@@ -91,7 +93,7 @@ export function QuestionCard({ question, index, onUpdate, onDelete, onDuplicate 
                         <option value="open">{t.builder.types.open}</option>
                         <option value="mixed">{t.builder.types.mixed}</option>
                     </Select>
-                    <Button variant="ghost" size="icon" onClick={() => onDuplicate(question.id)} className="h-8 w-8 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50" title="Duplicate">
+                    <Button variant="ghost" size="icon" onClick={() => onDuplicate(question.id)} className="h-8 w-8 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50" title={language === 'vi' ? 'Nhân bản' : 'Duplicate'}>
                         <Plus className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => onDelete(question.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
@@ -102,7 +104,19 @@ export function QuestionCard({ question, index, onUpdate, onDelete, onDuplicate 
 
             <CardContent className="space-y-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-[rgb(var(--muted-foreground))] uppercase tracking-wider">{t.builder.statement}</label>
+                    <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-[rgb(var(--muted-foreground))] uppercase tracking-wider">{t.builder.statement}</label>
+                        <div className="flex items-center gap-2">
+                            <Image className="h-3 w-3 text-indigo-500" />
+                            <input 
+                                type="text" 
+                                placeholder="Image URL (optional)" 
+                                value={question.imageUrl || ""} 
+                                onChange={(e) => onUpdate(question.id, { imageUrl: e.target.value })}
+                                className="text-[10px] bg-transparent border-b border-zinc-200 focus:border-indigo-500 outline-none w-32 md:w-48"
+                            />
+                        </div>
+                    </div>
                     <Textarea
                         placeholder={t.builder.statementPlaceholder}
                         value={question.text}
@@ -110,6 +124,19 @@ export function QuestionCard({ question, index, onUpdate, onDelete, onDuplicate 
                         className="text-lg font-medium resize-none bg-transparent focus:bg-[rgb(var(--secondary))/30] transition-colors"
                         rows={2}
                     />
+                    {question.imageUrl && (
+                        <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-100 group/img max-w-sm mx-auto">
+                            <img src={question.imageUrl} alt="Question" className="w-full h-full object-contain" />
+                            <Button 
+                                variant="destructive" 
+                                size="icon" 
+                                className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                                onClick={() => onUpdate(question.id, { imageUrl: "" })}
+                            >
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 {(question.type === "single" || question.type === "multiple" || question.type === "mixed") && (
@@ -128,9 +155,9 @@ export function QuestionCard({ question, index, onUpdate, onDelete, onDuplicate 
                                             onClick={() => toggleAnswer(opt)}
                                         >
                                             {isSelected && opt !== "" && (
-                                                question.type === 'multiple' 
-                                                ? <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                                                : <div className="h-2 w-2 rounded-full bg-white" />
+                                                question.type === 'multiple'
+                                                    ? <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                                    : <div className="h-2 w-2 rounded-full bg-white" />
                                             )}
                                         </div>
 
@@ -169,15 +196,40 @@ export function QuestionCard({ question, index, onUpdate, onDelete, onDuplicate 
 
                 {question.type === "open" && (
                     <div className="space-y-2 pt-4 border-t border-dashed border-[rgb(var(--border))]">
-                        <label className="text-xs font-medium text-[rgb(var(--muted-foreground))] uppercase tracking-wider">
-                            {t.builder.modelAnswer}
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium text-[rgb(var(--muted-foreground))] uppercase tracking-wider">
+                                {t.builder.modelAnswer}
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <Image className="h-3 w-3 text-emerald-500" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Answer Image URL (optional)" 
+                                    value={question.answerImageUrl || ""} 
+                                    onChange={(e) => onUpdate(question.id, { answerImageUrl: e.target.value })}
+                                    className="text-[10px] bg-transparent border-b border-zinc-200 focus:border-indigo-500 outline-none w-32 md:w-48"
+                                />
+                            </div>
+                        </div>
                         <Textarea
                             placeholder={t.builder.userAnswerPlaceholder}
                             value={question.correctAnswer[0] || ""}
                             onChange={(e) => onUpdate(question.id, { correctAnswer: [e.target.value] })}
                             className="bg-[rgb(var(--secondary))/30]"
                         />
+                        {question.answerImageUrl && (
+                            <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-100 group/ansimg max-w-sm mx-auto">
+                                <img src={question.answerImageUrl} alt="Answer" className="w-full h-full object-contain" />
+                                <Button 
+                                    variant="destructive" 
+                                    size="icon" 
+                                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover/ansimg:opacity-100 transition-opacity"
+                                    onClick={() => onUpdate(question.id, { answerImageUrl: "" })}
+                                >
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 )}
 

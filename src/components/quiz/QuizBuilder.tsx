@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { useSearchParams, useRouter } from "next/navigation";
 
 export default function QuizBuilder() {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const { user, login } = useAuth();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -352,13 +352,13 @@ export default function QuizBuilder() {
 
             if (newQuestions.length > 0) {
                 setQuestions(prev => [...prev.filter(q => q.text !== ""), ...newQuestions]);
-                toast.success(`Đã nhập thành công ${newQuestions.length} câu hỏi!`, { id: toastId });
+                toast.success(t.builder.alerts.importSuccess.replace('{count}', String(newQuestions.length)), { id: toastId });
             } else {
-                toast.error("Không tìm thấy câu hỏi hợp lệ trong file.", { id: toastId });
+                toast.error(t.builder.alerts.importError, { id: toastId });
             }
         } catch (error) {
             console.error("Failed to parse DOCX", error);
-            toast.error("Lỗi khi đọc file DOCX", { id: toastId });
+            toast.error(t.builder.alerts.docxError, { id: toastId });
         } finally {
             setIsImporting(false);
             if (e.target) e.target.value = '';
@@ -367,17 +367,17 @@ export default function QuizBuilder() {
 
     const handleSave = async () => {
         if (!user) {
-            toast.error("You must be logged in to save a quiz.");
+            toast.error(t.builder.alerts.loginReq);
             login();
             return;
         }
 
         if (!title.trim()) {
-            toast.warning("Please enter a quiz title");
+            toast.warning(t.builder.alerts.noTitle);
             return;
         }
 
-        const toastId = toast.loading(editId ? "Updating quiz..." : "Saving quiz...");
+        const toastId = toast.loading(editId ? t.builder.alerts.updateProgress : t.builder.alerts.saveProgress);
         setIsSaving(true);
         let savedQuizId = editId;
         try {
@@ -392,22 +392,23 @@ export default function QuizBuilder() {
                 if (originalQuiz &&
                     originalQuiz.userId !== user.uid &&
                     !originalQuiz.collaborators?.includes(user.email || "")) {
-                    toast.error("You don't have permission to edit this quiz.");
+                    toast.error(t.builder.alerts.permissionDenied);
                     setIsSaving(false);
                     return;
                 }
 
                 await updateQuiz(editId, quizData);
-                toast.success("Quiz updated successfully!", { id: toastId });
+                toast.success(t.builder.alerts.updateSuccess, { id: toastId });
             } else {
                 const newQuizData: QuizData = {
                     ...quizData as QuizData,
                     userId: user.uid,
-                    authorName: user.displayName || "Anonymous",
+                    authorName: user.displayName || (language === 'vi' ? "Ẩn danh" : "Anonymous"),
+                    authorEmail: user.email || undefined,
                     collaborators: []
                 };
                 savedQuizId = await saveQuizToFirestore(newQuizData);
-                toast.success("Quiz saved successfully!", { id: toastId });
+                toast.success(t.builder.alerts.saveSuccess, { id: toastId });
                 router.push("/my-courses");
             }
 
@@ -417,17 +418,17 @@ export default function QuizBuilder() {
                 await createNotification({
                     userId: user.uid,
                     type: 'missing_answer',
-                    title: 'Lustio Alert: Khóa học còn thiếu đáp án!',
-                    message: `Khóa học "${title}" của bạn còn thiếu đáp án ở các câu: ${missingIdx.join(', ')}. Hãy bổ sung để người học nhìn thấy chúng nhé!`,
+                    title: t.builder.alerts.missingAnswersTitle,
+                    message: t.builder.alerts.missingAnswersMsg.replace('{title}', title).replace('{indices}', missingIdx.join(', ')),
                     link: `/questionbuilder?edit=${savedQuizId}`
                 });
             }
         } catch (error: any) {
             console.error("Save error:", error);
             const msg = error.code === 'permission-denied'
-                ? "Permission denied. Please check your Firestore Rules."
-                : error.message || "Failed to save.";
-            toast.error("Error: " + msg, { id: toastId });
+                ? t.builder.alerts.permissionDenied
+                : error.message || t.common.error;
+            toast.error(msg, { id: toastId });
         } finally {
             setIsSaving(false);
         }
@@ -435,7 +436,7 @@ export default function QuizBuilder() {
 
     const canEdit = !editId || (user && originalQuiz && (originalQuiz.userId === user.uid || originalQuiz.collaborators?.includes(user.email || "")));
 
-    if (isLoading) return <div className="text-center py-20">Loading Quiz Data...</div>;
+    if (isLoading) return <div className="text-center py-20">{t.common.loading}</div>;
 
     if (editId && !isLoading && !canEdit) {
         return (
@@ -443,11 +444,11 @@ export default function QuizBuilder() {
                 <div className="inline-flex p-4 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full">
                     <X className="h-10 w-10" />
                 </div>
-                <h1 className="text-3xl font-black">Bạn không có quyền chỉnh sửa</h1>
+                <h1 className="text-3xl font-black">{t.builder.tools.noPermissionTitle}</h1>
                 <p className="text-zinc-500 max-w-md mx-auto">
-                    Có vẻ như bạn không phải là chủ sở hữu hoặc người cộng tác được mời của khóa học này.
+                    {t.builder.tools.noPermissionDesc}
                 </p>
-                <Button onClick={() => router.push("/my-courses")}>Quay lại Khóa học của tôi</Button>
+                <Button onClick={() => router.push("/my-courses")}>{t.builder.tools.backToMyCourses}</Button>
             </div>
         );
     }
@@ -456,7 +457,7 @@ export default function QuizBuilder() {
         <div className="max-w-4xl mx-auto space-y-8 pb-20 pt-10">
             {editId && (
                 <Button variant="ghost" onClick={() => router.back()} className="gap-2">
-                    <ArrowLeft className="h-4 w-4" /> Back
+                    <ArrowLeft className="h-4 w-4" /> {language === 'vi' ? 'Quay lại' : 'Back'}
                 </Button>
             )}
 
@@ -489,7 +490,7 @@ export default function QuizBuilder() {
                         }}
                         className="pointer-events-auto rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg border-none gap-2 animate-bounce"
                     >
-                        <Zap className="h-4 w-4" /> Nhảy tới câu chưa có đáp án
+                        <Zap className="h-4 w-4" /> {t.builder.tools.jumpToEmpty}
                     </Button>
                 </div>
             )}
@@ -503,7 +504,7 @@ export default function QuizBuilder() {
                         className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2 rounded-full"
                         onClick={() => setShowDeleteAllDialog(true)}
                     >
-                        <Trash2 className="h-4 w-4" /> Xóa tất cả
+                        <Trash2 className="h-4 w-4" /> {t.builder.tools.deleteAll}
                     </Button>
                     <Button
                         variant="ghost"
@@ -511,7 +512,7 @@ export default function QuizBuilder() {
                         className="text-[rgb(var(--muted-foreground))] hover:bg-[rgb(var(--secondary))/50] gap-2 rounded-full"
                         onClick={() => setShowRangeDeleteInput(!showRangeDeleteInput)}
                     >
-                        <Eraser className="h-4 w-4" /> Xóa theo số
+                        <Eraser className="h-4 w-4" /> {t.builder.tools.deleteRange}
                     </Button>
                 </div>
 
@@ -522,7 +523,7 @@ export default function QuizBuilder() {
                         onClick={() => setShowQuickPaste(!showQuickPaste)}
                     >
                         <ClipboardList className="h-4 w-4" />
-                        {showQuickPaste ? "Ẩn công cụ dán" : "Dán văn bản nhanh"}
+                        {showQuickPaste ? t.builder.tools.quickPasteHide : t.builder.tools.quickPaste}
                     </Button>
                     <Button
                         variant="outline"
@@ -530,7 +531,7 @@ export default function QuizBuilder() {
                         onClick={() => setShowAnswerKeyPaste(!showAnswerKeyPaste)}
                     >
                         <Sparkles className="h-4 w-4" />
-                        {showAnswerKeyPaste ? "Ẩn bảng đáp án" : "Nhập bảng đáp án"}
+                        {showAnswerKeyPaste ? t.builder.tools.answerKeyHide : t.builder.tools.answerKey}
                     </Button>
                     <div className="relative">
                         <input
@@ -552,16 +553,16 @@ export default function QuizBuilder() {
                 <Card className="bg-red-50/30 dark:bg-red-950/10 border-red-500/20 animation-scale-in">
                     <CardContent className="pt-6 flex gap-4 items-end">
                         <div className="flex-1 space-y-2">
-                            <label className="text-xs font-bold uppercase text-red-600">Xóa câu hỏi theo thứ tự</label>
+                            <label className="text-xs font-bold uppercase text-red-600">{t.builder.tools.deleteRangeLabel}</label>
                             <Input
-                                placeholder="Ví dụ: 1-5, 8, 10"
+                                placeholder={t.builder.tools.deleteRangePlaceholder}
                                 value={deleteRangeText}
                                 onChange={(e) => setDeleteRangeText(e.target.value)}
                                 className="bg-white dark:bg-black/20"
                             />
                         </div>
                         <Button variant="destructive" onClick={deleteByRange} disabled={!deleteRangeText.trim()}>
-                            Xóa ngay
+                            {t.builder.tools.deleteBtn}
                         </Button>
                     </CardContent>
                 </Card>
@@ -573,21 +574,21 @@ export default function QuizBuilder() {
                     <CardContent className="pt-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-bold flex items-center gap-2">
-                                <Sparkles className="h-4 w-4 text-emerald-500" /> Nhập nhanh bảng đáp án
+                                <Sparkles className="h-4 w-4 text-emerald-500" /> {t.builder.tools.answerKey}
                             </h3>
                             <span className="text-xs text-[rgb(var(--muted-foreground))]">
-                                Dán nội dung đáp án (có kèm A. B. hoặc không), hệ thống sẽ tự tìm lựa chọn khớp nhất.
+                                {t.builder.tools.answerKeyHelp}
                             </span>
                         </div>
                         <Textarea
                             className="min-h-[100px] font-mono text-sm bg-white dark:bg-black/20"
-                            placeholder="Dán bảng đáp án vào đây: 1A, 2.B, 3:C, 4-D..."
+                            placeholder={t.builder.tools.answerKeyPlaceholder}
                             value={answerKeyPaste}
                             onChange={(e) => setAnswerKeyPaste(e.target.value)}
                         />
                         <div className="flex justify-end">
                             <Button onClick={handleApplyAnswerKey} disabled={!answerKeyPaste.trim()} className="rounded-full px-8 bg-emerald-600 hover:bg-emerald-700 text-white border-0">
-                                Áp dụng đáp án
+                                {t.builder.tools.applyAnswerBtn}
                             </Button>
                         </div>
                     </CardContent>
@@ -600,21 +601,21 @@ export default function QuizBuilder() {
                     <CardContent className="pt-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-bold flex items-center gap-2">
-                                <Sparkles className="h-4 w-4 text-indigo-500" /> Nhập liệu nhanh từ văn bản
+                                <Sparkles className="h-4 w-4 text-indigo-500" /> {t.builder.tools.quickPaste}
                             </h3>
                             <span className="text-xs text-[rgb(var(--muted-foreground))]">
-                                Hỗ trợ: Câu 1, A., B., C., D. (Dấu * cho đáp án đúng hoặc Bảng đáp án ở cuối)
+                                {t.builder.tools.quickPasteHelp}
                             </span>
                         </div>
                         <Textarea
                             className="min-h-[200px] font-mono text-sm bg-white dark:bg-black/20"
-                            placeholder="Ví dụ:&#10;Câu 1: Thủ đô của Việt Nam là gì?&#10;A. TP.HCM&#10;*B. Hà Nội&#10;C. Đà Nẵng&#10;D. Cần Thơ"
+                            placeholder={t.builder.tools.quickPastePlaceholder}
                             value={quickPaste}
                             onChange={(e) => setQuickPaste(e.target.value)}
                         />
                         <div className="flex justify-end">
                             <Button onClick={handleQuickPaste} disabled={!quickPaste.trim()} className="rounded-full px-8">
-                                Phân tích & Thêm câu hỏi
+                                {t.builder.tools.applyBtn}
                             </Button>
                         </div>
                     </CardContent>
@@ -657,17 +658,20 @@ export default function QuizBuilder() {
                         ) : (
                             <Save className="mr-2 h-4 w-4" />
                         )}
-                        {isSaving ? (editId ? "Updating..." : "Saving...") : (editId ? "Update Quiz" : t.builder.save)}
+                        {isSaving 
+                            ? (editId ? t.builder.alerts.updateProgress : t.builder.alerts.saveProgress) 
+                            : (editId ? (language === 'vi' ? 'Cập nhật' : 'Update') : t.builder.save)
+                        }
                     </Button>
                 </div>
             </div>
 
             <ConfirmDialog
                 isOpen={showDeleteAllDialog}
-                title="Xóa tất cả câu hỏi?"
-                description="Hành động này sẽ xóa toàn bộ danh sách câu hỏi hiện tại. Bạn không thể hoàn tác thao tác này."
-                confirmText="Xóa hết"
-                cancelText="Hủy"
+                title={t.builder.dialogs.deleteAllTitle}
+                description={t.builder.dialogs.deleteAllDesc}
+                confirmText={t.builder.dialogs.deleteConfirm}
+                cancelText={t.builder.cancel}
                 variant="danger"
                 onConfirm={deleteAllQuestions}
                 onCancel={() => setShowDeleteAllDialog(false)}
