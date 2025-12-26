@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --background: 255, 255, 255;
+  --foreground: 10, 10, 10;
+  
+  --primary: 99, 102, 241; /* Indigo 500 */
+  --primary-foreground: 255, 255, 255;
+  
+  --secondary: 243, 244, 246;
+  --secondary-foreground: 17, 24, 39;
+  
+  --muted: 229, 231, 235;
+  --muted-foreground: 107, 114, 128;
+  
+  --card: 255, 255, 255;
+  --card-foreground: 10, 10, 10;
+  
+  --border: 229, 231, 235;
+  --input: 229, 231, 235;
+  --radius: 0.75rem;
+  
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 10, 10, 10;
+    --foreground: 250, 250, 250;
+    
+    --primary: 99, 102, 241;
+    --primary-foreground: 255, 255, 255;
+    
+    --secondary: 38, 38, 38;
+    --secondary-foreground: 250, 250, 250;
+    
+    --muted: 38, 38, 38;
+    --muted-foreground: 163, 163, 163;
+    
+    --card: 23, 23, 23;
+    --card-foreground: 250, 250, 250;
+    
+    --border: 38, 38, 38;
+    --input: 38, 38, 38;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: rgb(var(--background));
+  color: rgb(var(--foreground));
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Utilities for Glassmorphism */
+.glass {
+  background: rgba(var(--card), 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(var(--border), 0.5);
+}
+
+.glass-card {
+  background: rgba(var(--card), 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(var(--border), 0.4);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+@keyframes gradient-x {
+  0%, 100% {
+    background-size: 200% 200%;
+    background-position: left center;
+  }
+  50% {
+    background-size: 200% 200%;
+    background-position: right center;
+  }
+}
+
+.animate-gradient-x {
+  animation: gradient-x 3s ease infinite;
+}
+
+@keyframes blur-reveal {
+  from {
+    opacity: 0;
+    filter: blur(15px);
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-blur-reveal {
+  animation: blur-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
