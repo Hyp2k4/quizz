@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Send, MessageCircle, User, CornerDownRight, Clock, AlertCircle, Users, UserPlus, UserMinus, Copy, Check, Lock, Globe, Key, Share2, Mail } from "lucide-react";
+import { X, Send, MessageCircle, User, CornerDownRight, Clock, AlertCircle, Users, UserPlus, UserMinus, Copy, Check, Lock, Globe, Key, Share2, Mail, BarChart3, Trophy, Users2, Target, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -38,13 +38,15 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
     const [replyText, setReplyText] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
-    const [activeTab, setActiveTab] = useState<'comments' | 'collaboration' | 'visibility'>('comments');
+    const [activeTab, setActiveTab] = useState<'comments' | 'collaboration' | 'visibility' | 'analytics'>('comments');
     const [collabEmail, setCollabEmail] = useState("");
     const [currentQuiz, setCurrentQuiz] = useState<QuizData | null>(quiz);
     const [isCollabLoading, setIsCollabLoading] = useState(false);
     const [inviteLink, setInviteLink] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [isVisibilityLoading, setIsVisibilityLoading] = useState(false);
+    const [results, setResults] = useState<any[]>([]);
+    const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
 
     const isOwner = user && currentQuiz?.userId === user.uid;
 
@@ -52,13 +54,14 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
         setMounted(true);
         if (isOpen && quiz?.id) {
             setCurrentQuiz(quiz);
-            loadComments();
+            if (activeTab === 'comments') loadComments();
+            if (activeTab === 'analytics') loadAnalytics();
             document.body.style.overflow = "hidden";
         } else {
             document.body.style.overflow = "unset";
         }
         return () => { document.body.style.overflow = "unset"; };
-    }, [isOpen, quiz]);
+    }, [isOpen, quiz, activeTab]);
 
     const refreshQuiz = async () => {
         if (!quiz?.id) return;
@@ -76,6 +79,19 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
             console.error("Error loading comments:", error);
         } finally {
             setIsLoading(false);
+        }
+    };
+    const loadAnalytics = async () => {
+        if (!quiz?.id) return;
+        setIsAnalyticsLoading(true);
+        try {
+            const { getQuizResults } = await import("@/services/quizService");
+            const data = await getQuizResults(quiz.id);
+            setResults(data);
+        } catch (error) {
+            console.error("Error loading analytics:", error);
+        } finally {
+            setIsAnalyticsLoading(false);
         }
     };
 
@@ -336,6 +352,17 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                 <Lock className="h-4 w-4" /> {t.visibility.title}
                             </span>
                         </button>
+                        <button
+                            onClick={() => setActiveTab('analytics')}
+                            className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'analytics'
+                                ? 'border-indigo-500 text-indigo-500'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-700'
+                                }`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <BarChart3 className="h-4 w-4" /> {t.analytics.title}
+                            </span>
+                        </button>
                     </div>
                 )}
 
@@ -591,7 +618,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                     </div>
                                 </div>
                             </motion.div>
-                        ) : (
+                        ) : activeTab === 'visibility' ? (
                             <motion.div
                                 key="visibility"
                                 initial={{ opacity: 0, x: 10 }}
@@ -690,6 +717,104 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                             </Button>
                                         </div>
                                     </motion.div>
+                                )}
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="analytics"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-6"
+                            >
+                                {isAnalyticsLoading ? (
+                                    <div className="text-center py-20 text-zinc-400">{t.common.loading}</div>
+                                ) : results.length === 0 ? (
+                                    <div className="text-center py-20 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-3xl text-zinc-400">
+                                        <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                                        <p>{t.analytics.noData}</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Stats Cards */}
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
+                                                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
+                                                    <Users2 className="h-4 w-4" />
+                                                    <span className="text-xs font-bold uppercase">{t.analytics.visitors}</span>
+                                                </div>
+                                                <div className="text-2xl font-black">{results.length}</div>
+                                            </div>
+                                            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
+                                                    <Eye className="h-4 w-4" />
+                                                    <span className="text-xs font-bold uppercase">{language === 'vi' ? 'Người xem' : 'Views'}</span>
+                                                </div>
+                                                <div className="text-2xl font-black">{currentQuiz?.views || 0}</div>
+                                            </div>
+                                            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
+                                                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-2">
+                                                    <Target className="h-4 w-4" />
+                                                    <span className="text-xs font-bold uppercase">{t.analytics.averageScore}</span>
+                                                </div>
+                                                <div className="text-2xl font-black">
+                                                    {results.length > 0 ? (Math.round(results.reduce((acc, r) => acc + (r.score / r.totalQuestions) * 10, 0) / results.length * 10) / 10) : 0}/10
+                                                </div>
+                                            </div>
+                                            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-2xl border border-amber-100 dark:border-amber-900/30 col-span-2 md:col-span-1">
+                                                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+                                                    <Trophy className="h-4 w-4" />
+                                                    <span className="text-xs font-bold uppercase">{t.analytics.highestScore}</span>
+                                                </div>
+                                                <div className="text-2xl font-black">
+                                                    {results.length > 0 ? (Math.max(...results.map(r => Math.round((r.score / r.totalQuestions) * 100) / 10))) : 0}/10
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Ranking Table */}
+                                        <div className="space-y-4">
+                                            <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider px-2">
+                                                {t.analytics.ranking}
+                                            </h3>
+                                            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+                                                <table className="w-full text-sm text-left">
+                                                    <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 font-bold">
+                                                        <tr>
+                                                            <th className="px-4 py-3">#</th>
+                                                            <th className="px-4 py-3">{t.analytics.user}</th>
+                                                            <th className="px-4 py-3 text-right">{t.analytics.score}</th>
+                                                            <th className="px-4 py-3 text-right">{t.analytics.date}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y dark:divide-zinc-800">
+                                                        {[...results]
+                                                            .sort((a, b) => (b.score / b.totalQuestions) - (a.score / a.totalQuestions))
+                                                            .map((result, index) => (
+                                                                <tr key={result.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                                                                    <td className="px-4 py-3 font-bold text-zinc-400">{index + 1}</td>
+                                                                    <td className="px-4 py-3">
+                                                                        <div className="font-bold">{result.userName}</div>
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-right">
+                                                                        <span className={`px-2 py-1 rounded-lg font-mono font-bold ${
+                                                                            (result.score / result.totalQuestions) >= 0.8 ? 'bg-emerald-100 text-emerald-600' :
+                                                                            (result.score / result.totalQuestions) >= 0.5 ? 'bg-amber-100 text-amber-600' :
+                                                                            'bg-red-100 text-red-600'
+                                                                        }`}>
+                                                                            {result.score}/{result.totalQuestions}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-right text-zinc-400 text-xs">
+                                                                        {formatDate(result.createdAt)}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
                             </motion.div>
                         )}

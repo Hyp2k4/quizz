@@ -40,7 +40,9 @@ export interface QuizData {
   createdAt?: any;
   visibility?: 'public' | 'private';
   accessCode?: string; // Optional code for private access
+  views?: number;
 }
+
 
 export interface Comment {
   id?: string;
@@ -115,6 +117,36 @@ export const getQuizLeaderboard = async (quizId: string): Promise<QuizResult[]> 
         return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as QuizResult));
     } catch (error) {
         console.error("Error fetching leaderboard. Make sure indexes are created.", error);
+        return [];
+    }
+};
+
+export const getQuizResults = async (quizId: string): Promise<QuizResult[]> => {
+    try {
+        const q = query(
+            collection(db, "quiz_results"), 
+            where("quizId", "==", quizId),
+            orderBy("createdAt", "desc")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as QuizResult));
+    } catch (error) {
+        console.error("Error fetching results:", error);
+        return [];
+    }
+};
+
+export const getUserQuizResults = async (userId: string): Promise<QuizResult[]> => {
+    try {
+        const q = query(
+            collection(db, "quiz_results"), 
+            where("userId", "==", userId),
+            orderBy("createdAt", "desc")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as QuizResult));
+    } catch (error) {
+        console.error("Error fetching user results:", error);
         return [];
     }
 };
@@ -203,6 +235,18 @@ export const updateQuiz = async (id: string, quiz: Partial<QuizData>) => {
         ...data,
         updatedAt: serverTimestamp()
     });
+};
+
+export const incrementQuizViews = async (quizId: string) => {
+    try {
+        const quizRef = doc(db, "quizzes", quizId);
+        const { increment } = await import("firebase/firestore");
+        await updateDoc(quizRef, {
+            views: increment(1)
+        });
+    } catch (error) {
+        console.error("Error incrementing views:", error);
+    }
 };
 
 export const saveQuizToFirestore = async (quiz: QuizData) => {

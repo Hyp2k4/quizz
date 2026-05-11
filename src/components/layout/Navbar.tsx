@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { Zap, LogIn, LogOut, User as UserIcon, Menu, X, PlusCircle, LayoutDashboard, Settings, BookOpen } from "lucide-react";
+import { Zap, LogIn, LogOut, User as UserIcon, Menu, X, PlusCircle, LayoutDashboard, Settings, BookOpen, Shield } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
@@ -13,7 +13,7 @@ import { NotificationInbox } from "@/components/quiz/NotificationInbox";
 
 export function Navbar() {
     const { t, language, setLanguage } = useLanguage();
-    const { user, login, logout } = useAuth();
+    const { user, login, logout, isAdmin } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,6 +42,10 @@ export function Navbar() {
         { name: t.navbar.features, href: "/", icon: Zap },
         { name: t.navbar.community, href: "/", icon: UserIcon },
     ];
+
+    if (isAdmin) {
+        navLinks.push({ name: t.admin.title, href: "/admin/dashboard", icon: Shield });
+    }
 
     return (
         <>

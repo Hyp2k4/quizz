@@ -289,8 +289,14 @@ export default function QuizBuilder() {
 
         // Giai đoạn 1: Tách câu hỏi và lựa chọn
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line) continue;
+            const originalLine = lines[i];
+            if (!originalLine) continue;
+
+            // Phát hiện marker đáp án đúng: gạch chân (từ HTML) hoặc marker tùy chỉnh
+            const isUnderlined = originalLine.includes('<u>') || originalLine.includes('<ins>') || originalLine.includes('__u__');
+
+            // Làm sạch dòng để so khớp (xóa tag gạch chân)
+            const line = originalLine.replace(/<\/?(u|ins)>/g, "").replace(/__u__/g, "").trim();
 
             const questionMatch = line.match(/^(Câu|Question|Q)?\s*(\d+)[\.\:\/\-)]\s*(.*)/i);
             // Hỗ trợ A., B), [A], *A., **A.**
@@ -310,11 +316,19 @@ export default function QuizBuilder() {
                 };
             } else if (currentQ) {
                 if (optionMatch) {
-                    // Nhận diện đáp án đúng inline: *A, [A], **A**
-                    const isInlineCorrect = line.startsWith('*') || line.includes('**') || (line.startsWith('[') && line.includes(']'));
+                    // Nhận diện đáp án đúng inline: *A, [A], **A**, Gạch chân
+                    const isInlineCorrect = line.startsWith('*') ||
+                        line.includes('**') ||
+                        (line.startsWith('[') && line.includes(']')) ||
+                        isUnderlined;
                     const optText = optionMatch[2];
                     currentQ.options?.push(optText);
-                    if (isInlineCorrect) currentQ.correctAnswer = [optText];
+                    if (isInlineCorrect) {
+                        if (!currentQ.correctAnswer) currentQ.correctAnswer = [];
+                        if (!currentQ.correctAnswer.includes(optText)) {
+                            currentQ.correctAnswer.push(optText);
+                        }
+                    }
                 } else if (answerLineMatch) {
                     const ansChar = answerLineMatch[2].toUpperCase();
                     const charCode = ansChar.charCodeAt(0) - 65;
@@ -375,8 +389,27 @@ export default function QuizBuilder() {
         const toastId = toast.loading("Đang phân tích tài liệu...");
         try {
             const arrayBuffer = await file.arrayBuffer();
-            const result = await mammoth.extractRawText({ arrayBuffer });
-            const newQuestions = parseTextToQuestions(result.value);
+
+            // Sử dụng convertToHtml để giữ lại định dạng như gạch chân
+            const result = await mammoth.convertToHtml(
+                { arrayBuffer },
+                {
+                    styleMap: [
+                        "u => u",
+                        "strike => s"
+                    ]
+                }
+            );
+
+            // Chuyển đổi HTML thành định dạng văn bản theo dòng mà parseTextToQuestions mong đợi
+            let text = result.value
+                .replace(/<\/p>/g, "\n")
+                .replace(/<p[^>]*>/g, "")
+                .replace(/<br\s*\/?>/g, "\n")
+                // Giữ lại tag <u> và <ins>, loại bỏ các tag HTML khác
+                .replace(/<(?!(\/)?(u|ins)\b)[^>]+>/g, "");
+
+            const newQuestions = parseTextToQuestions(text);
 
             if (newQuestions.length > 0) {
                 setQuestions(prev => [...prev.filter(q => q.text !== ""), ...newQuestions]);
@@ -516,9 +549,9 @@ export default function QuizBuilder() {
                                         const el = document.getElementById(`question-${questions[firstEmptyIdx].id}`);
                                         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                     }}
-                                    className="rounded-full bg-amber-500/10 hover:bg-amber-500 text-amber-600 hover:text-white border border-amber-500/20 gap-2 h-9 px-4 text-[10px] md:text-xs font-black transition-all hover:shadow-lg hover:shadow-amber-500/20 active:scale-95"
+                                    className="rounded-full bg-amber-500/10 hover:bg-amber-500 text-amber-600 hover:text-white border border-amber-500/20 gap-1.5 h-8 md:h-9 px-3 md:px-4 text-[9px] md:text-xs font-black transition-all hover:shadow-lg hover:shadow-amber-500/20 active:scale-95"
                                 >
-                                    <Zap className="h-3.5 w-3.5" />
+                                    <Zap className="h-3 w-3 md:h-3.5 md:w-3.5" />
                                     <span className="hidden sm:inline">{t.builder.tools.jumpToEmpty}</span>
                                     <span className="sm:hidden">{questions.filter(q => q.correctAnswer.length === 0).length}</span>
                                 </Button>
@@ -527,9 +560,13 @@ export default function QuizBuilder() {
                     </AnimatePresence>
 
                     <div className="flex items-center gap-2 pr-1 ml-auto">
+                        <div className="hidden lg:flex flex-col items-end mr-2 pr-2 border-r border-zinc-200 dark:border-white/5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 leading-none">Total</span>
+                            <span className="text-sm font-black text-zinc-900 dark:text-white">{questions.length}</span>
+                        </div>
                         <Button
                             variant="ghost"
-                            className="rounded-full h-10 px-4 text-xs md:text-sm font-bold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                            className="rounded-full h-9 md:h-10 px-3 md:px-4 text-xs font-bold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                             disabled={isSaving}
                             onClick={() => router.back()}
                         >
@@ -537,78 +574,82 @@ export default function QuizBuilder() {
                         </Button>
                         <Button
                             onClick={handleSave}
-                            className="rounded-full px-6 h-11 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-black text-xs md:text-sm border-0 hover:opacity-90 min-w-[100px] md:min-w-[140px] shadow-xl transition-all hover:scale-[1.02] active:scale-95"
+                            className="rounded-full px-4 md:px-6 h-10 md:h-11 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-black text-xs md:text-sm border-0 hover:opacity-90 min-w-[80px] md:min-w-[140px] shadow-xl transition-all hover:scale-[1.02] active:scale-95"
                             disabled={isSaving}
                         >
                             {isSaving ? (
-                                <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mr-2" />
+                                <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin sm:mr-2" />
                             ) : (
-                                <Save className="mr-2 h-4 w-4" />
+                                <Save className="sm:mr-2 h-4 w-4" />
                             )}
-                            {isSaving
-                                ? (editId ? t.builder.alerts.updateProgress : t.builder.alerts.saveProgress)
-                                : (editId ? (language === 'vi' ? 'Cập nhật' : 'Update') : t.builder.save)
-                            }
+                            <span className="hidden sm:inline">
+                                {isSaving
+                                    ? (editId ? t.builder.alerts.updateProgress : t.builder.alerts.saveProgress)
+                                    : (editId ? (language === 'vi' ? 'Cập nhật' : 'Update') : t.builder.save)
+                                }
+                            </span>
                         </Button>
                     </div>
                 </div>
             </div>
 
             {/* Quiz Header Info */}
-            <div className="space-y-4 text-center mt-8">
+            <div className="space-y-4 text-center mt-8 px-4">
                 <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     onFocus={() => handleFocusQuestion(null)}
-                    className="w-full text-center text-4xl font-extrabold bg-transparent border-none focus:outline-none placeholder-[rgb(var(--muted-foreground))] text-[rgb(var(--foreground))]"
+                    className="w-full text-center text-2xl md:text-5xl font-black bg-transparent border-none focus:outline-none placeholder-zinc-300 dark:placeholder-zinc-700 text-zinc-900 dark:text-white transition-all tracking-tight"
                     placeholder={t.builder.untitled}
                 />
                 <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     onFocus={() => handleFocusQuestion(null)}
-                    className="w-full max-w-2xl mx-auto text-center border-none resize-none shadow-none text-[rgb(var(--muted-foreground))] bg-transparent focus:ring-0"
+                    className="w-full max-w-2xl mx-auto text-center border-none resize-none shadow-none text-zinc-400 font-medium bg-transparent focus:ring-0 text-sm md:text-base"
                     placeholder={t.builder.descPlaceholder}
                     rows={1}
                 />
             </div>
 
-            {/* Toolbar */}
-            <div className="flex justify-between items-center gap-3">
-                <div className="flex gap-2">
+            {/* Toolbar - Optimized for Responsive */}
+            <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-3xl border border-zinc-200/50 dark:border-white/5 mx-4">
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2 rounded-full"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2 rounded-full h-10 px-4"
                         onClick={() => setShowDeleteAllDialog(true)}
                     >
-                        <Trash2 className="h-4 w-4" /> {t.builder.tools.deleteAll}
+                        <Trash2 className="h-4 w-4" />
+                        <span className="text-xs font-bold uppercase tracking-wide">{t.builder.tools.deleteAll}</span>
                     </Button>
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="text-[rgb(var(--muted-foreground))] hover:bg-[rgb(var(--secondary))/50] gap-2 rounded-full"
+                        className="text-zinc-500 hover:bg-zinc-100 gap-2 rounded-full h-10 px-4"
                         onClick={() => setShowRangeDeleteInput(!showRangeDeleteInput)}
                     >
-                        <Eraser className="h-4 w-4" /> {t.builder.tools.deleteRange}
+                        <Eraser className="h-4 w-4" />
+                        <span className="text-xs font-bold uppercase tracking-wide">{t.builder.tools.deleteRange}</span>
                     </Button>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-2 justify-center md:justify-end">
                     <Button
                         variant="outline"
-                        className="gap-2 border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                        className="gap-2 border-indigo-500/20 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-full h-10 px-4 text-xs font-bold"
                         onClick={() => setShowQuickPaste(!showQuickPaste)}
                     >
-                        <ClipboardList className="h-4 w-4" />
+                        <ClipboardList className="h-4 w-4 text-indigo-500" />
                         {showQuickPaste ? t.builder.tools.quickPasteHide : t.builder.tools.quickPaste}
                     </Button>
                     <Button
                         variant="outline"
-                        className="gap-2 border-indigo-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                        className="gap-2 border-emerald-500/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-full h-10 px-4 text-xs font-bold"
                         onClick={() => setShowAnswerKeyPaste(!showAnswerKeyPaste)}
                     >
-                        <Sparkles className="h-4 w-4" />
+                        <Sparkles className="h-4 w-4 text-emerald-500" />
                         {showAnswerKeyPaste ? t.builder.tools.answerKeyHide : t.builder.tools.answerKey}
                     </Button>
                     <div className="relative">
@@ -618,8 +659,8 @@ export default function QuizBuilder() {
                             onChange={handleFileUpload}
                             className="absolute inset-0 opacity-0 cursor-pointer"
                         />
-                        <Button variant="outline" className="gap-2">
-                            <FileUp className="h-4 w-4" />
+                        <Button variant="outline" className="gap-2 border-zinc-200/50 rounded-full h-10 px-4 text-xs font-bold bg-white dark:bg-zinc-800 shadow-sm">
+                            <FileUp className="h-4 w-4 text-zinc-500" />
                             {isImporting ? t.builder.importing : t.builder.importBtn}
                         </Button>
                     </div>

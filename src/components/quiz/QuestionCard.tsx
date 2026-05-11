@@ -91,40 +91,45 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
         <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg border-[rgb(var(--border))] group ${hasNoCorrectAnswer ? 'opacity-60 grayscale-[0.3]' : ''}`}>
             <div className="absolute top-0 left-0 w-1 h-full bg-[rgb(var(--primary))] opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-[rgb(var(--border))]">
-                <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500 font-black text-xl">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-100 dark:border-white/5">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-black text-xl shadow-lg shadow-indigo-500/20">
                         {index + 1}
                     </div>
-                    <div className="space-y-1">
-                        <CardTitle className="text-sm font-bold uppercase tracking-wider text-[rgb(var(--muted-foreground))] flex items-center gap-2">
+                    <div className="space-y-1 overflow-hidden">
+                        <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
                             {t.builder.question}
                             {activeEditors.length > 0 && (
-                                <div className="flex items-center gap-1.5 ml-2 bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full lowercase text-[10px] animate-pulse normal-case">
+                                <span className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full text-[9px] animate-pulse normal-case font-bold">
                                     <UserIcon className="h-2.5 w-2.5" />
-                                    {activeEditors.map(e => e.userName).join(", ")} {t.visibility.isEditing}
-                                </div>
+                                    {activeEditors.map(e => e.userName).join(", ")}
+                                </span>
                             )}
                         </CardTitle>
+                        <p className="text-xs text-zinc-500 font-bold sm:hidden truncate">
+                            {t.builder.types[question.type]}
+                        </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto bg-zinc-50 dark:bg-zinc-900/50 p-1 sm:p-0 rounded-xl sm:bg-transparent sm:dark:bg-transparent">
                     <Select
                         value={question.type}
                         onChange={(e) => onUpdate(question.id, { type: e.target.value as QuestionType, correctAnswer: [] })}
-                        className="w-40 h-8 text-xs font-medium"
+                        className="flex-1 sm:w-40 h-9 sm:h-8 text-xs font-black uppercase tracking-wider bg-white dark:bg-zinc-800 border-zinc-200/50 dark:border-white/5"
                     >
                         <option value="single">{t.builder.types.single}</option>
                         <option value="multiple">{t.builder.types.multiple}</option>
                         <option value="open">{t.builder.types.open}</option>
                         <option value="mixed">{t.builder.types.mixed}</option>
                     </Select>
-                    <Button variant="ghost" size="icon" onClick={() => onDuplicate(question.id)} className="h-8 w-8 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50" title={language === 'vi' ? 'Nhân bản' : 'Duplicate'}>
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(question.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 sm:gap-2 border-l border-zinc-200 dark:border-white/5 ml-1 pl-1">
+                        <Button variant="ghost" size="icon" onClick={() => onDuplicate(question.id)} className="h-9 w-9 sm:h-8 sm:w-8 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title={language === 'vi' ? 'Nhân bản' : 'Duplicate'}>
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => onDelete(question.id)} className="h-9 w-9 sm:h-8 sm:w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
 
@@ -164,7 +169,7 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                         placeholder={t.builder.statementPlaceholder}
                         value={question.text}
                         onChange={(e) => onUpdate(question.id, { text: e.target.value })}
-                        className="text-lg font-medium resize-none bg-transparent focus:bg-[rgb(var(--secondary))/30] transition-colors"
+                        className="text-base md:text-xl font-bold leading-relaxed resize-none bg-transparent border-none focus:ring-0 px-0 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-700"
                         rows={2}
                     />
                     {question.imageUrl && (
@@ -208,7 +213,7 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                                             value={opt}
                                             onChange={(e) => handleOptionChange(i, e.target.value)}
                                             placeholder={`${t.builder.optionPlaceholder} ${i + 1}`}
-                                            className="flex-1 bg-[rgb(var(--secondary))/30] border-transparent hover:border-[rgb(var(--input))] focus:border-[rgb(var(--primary))] focus:bg-transparent transition-all"
+                                            className="flex-1 bg-zinc-50 dark:bg-zinc-900/50 border-zinc-100 dark:border-white/5 hover:border-indigo-500/50 focus:border-indigo-500 focus:bg-white dark:focus:bg-zinc-900 transition-all h-11 sm:h-10 text-sm font-medium rounded-xl"
                                         />
                                         <Button variant="ghost" size="icon" onClick={() => removeOption(i)} className="h-8 w-8 opacity-0 group-hover/opt:opacity-100 transition-opacity">
                                             <Trash2 className="h-4 w-4 text-[rgb(var(--muted-foreground))]" />
@@ -276,30 +281,30 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t border-[rgb(var(--border))]">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-xs font-bold text-[rgb(var(--muted-foreground))]">
-                            <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-zinc-100 dark:border-white/5">
+                    <div className="space-y-2 group/hint">
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-zinc-400 group-focus-within/hint:text-amber-500 transition-colors">
+                            <Lightbulb className="h-3.5 w-3.5" />
                             {t.builder.hint}
                         </div>
                         <Input
                             value={question.hint}
                             onChange={(e) => onUpdate(question.id, { hint: e.target.value })}
                             placeholder={t.builder.hintPlaceholder}
-                            className="text-sm bg-[rgb(var(--secondary))/20]"
+                            className="text-xs bg-zinc-50 dark:bg-zinc-900/50 border-transparent focus:border-amber-500/50 rounded-xl transition-all h-10"
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-xs font-bold text-[rgb(var(--muted-foreground))]">
-                            <HelpCircle className="h-3.5 w-3.5 text-blue-500" />
+                    <div className="space-y-2 group/expl">
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-zinc-400 group-focus-within/expl:text-blue-500 transition-colors">
+                            <HelpCircle className="h-3.5 w-3.5" />
                             {t.builder.explanation}
                         </div>
                         <Input
                             value={question.explanation}
                             onChange={(e) => onUpdate(question.id, { explanation: e.target.value })}
                             placeholder={t.builder.explanationPlaceholder}
-                            className="text-sm bg-[rgb(var(--secondary))/20]"
+                            className="text-xs bg-zinc-50 dark:bg-zinc-900/50 border-transparent focus:border-blue-500/50 rounded-xl transition-all h-10"
                         />
                     </div>
                 </div>

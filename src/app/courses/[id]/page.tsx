@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
-import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode } from "@/services/quizService";
+import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, incrementQuizViews } from "@/services/quizService";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
@@ -306,6 +306,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                         q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
                     );
                     setQuiz({ ...data, questions: filteredQuestions });
+                    
+                    // Increment views
+                    incrementQuizViews(id);
 
                     // Check if access is automatically granted
                     const isOwner = user && data.userId === user.uid;

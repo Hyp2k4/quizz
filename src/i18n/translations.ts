@@ -79,7 +79,7 @@ export const translations = {
          quickPaste: "Quick text paste",
          quickPasteHide: "Hide paste tool",
          quickPastePlaceholder: "Example:\nQuestion 1: What is the capital of France?\nA. Lyon\n*B. Paris",
-         quickPasteHelp: "Supports: Q1, A. B. C. D. (* for correct answer or answer key at the end)",
+         quickPasteHelp: "Supports: Q1, A. B. C. D. (* or underline for correct answer, or answer key at the end)",
          applyBtn: "Analyze & Add",
          answerKey: "Enter answer key",
          answerKeyHide: "Hide answer key",
@@ -159,6 +159,36 @@ export const translations = {
       back: "Back to Course",
       frontLabel: "Front",
       backLabel: "Back"
+    },
+    analytics: {
+      title: "Analytics",
+      visitors: "Attempts",
+      averageScore: "Avg Score",
+      highestScore: "Top Score",
+      lastAttempt: "Last Attempt",
+      recentActivity: "Recent Activity",
+      noData: "No data available yet.",
+      ranking: "Ranking",
+      user: "User",
+      score: "Score",
+      date: "Date"
+    },
+    admin: {
+      title: "Admin Dashboard",
+      stats: "System Stats",
+      users: "User Management",
+      quizzes: "All Quizzes",
+      totalUsers: "Total Users",
+      totalQuizzes: "Total Quizzes",
+      totalAttempts: "Total Attempts",
+      role: "Role",
+      actions: "Actions",
+      makeAdmin: "Make Admin",
+      removeAdmin: "Remove Admin",
+      deleteUser: "Delete Profile",
+      confirmDelete: "Are you sure you want to delete this?",
+      noUsers: "No users found.",
+      noQuizzes: "No quizzes found."
     }
   },
   vi: {
@@ -239,7 +269,7 @@ export const translations = {
          quickPaste: "Dán văn bản nhanh",
          quickPasteHide: "Ẩn công cụ dán",
          quickPastePlaceholder: "Ví dụ:\nCâu 1: Thủ đô của Pháp là gì?\nA. Lyon\n*B. Paris",
-         quickPasteHelp: "Hỗ trợ: Câu 1, A. B. C. D. (Dấu * cho đáp án đúng hoặc Bảng đáp án ở cuối)",
+         quickPasteHelp: "Hỗ trợ: Câu 1, A. B. C. D. (Dấu * hoặc gạch chân cho đáp án đúng, hoặc Bảng đáp án ở cuối)",
          applyBtn: "Phân tích & Thêm câu hỏi",
          answerKey: "Nhập bảng đáp án",
          answerKeyHide: "Ẩn bảng đáp án",
@@ -319,6 +349,36 @@ export const translations = {
       back: "Quay lại khóa học",
       frontLabel: "Mặt trước",
       backLabel: "Mặt sau"
+    },
+    analytics: {
+      title: "Thống kê",
+      visitors: "Lượt làm bài",
+      averageScore: "Điểm trung bình",
+      highestScore: "Điểm cao nhất",
+      lastAttempt: "Lần gần nhất",
+      recentActivity: "Hoạt động gần đây",
+      noData: "Chưa có dữ liệu thống kê.",
+      ranking: "Bảng xếp hạng",
+      user: "Người dùng",
+      score: "Điểm số",
+      date: "Ngày làm"
+    },
+    admin: {
+      title: "Quản trị hệ thống",
+      stats: "Thống kê hệ thống",
+      users: "Quản lý người dùng",
+      quizzes: "Quản lý bài Quiz",
+      totalUsers: "Tổng người dùng",
+      totalQuizzes: "Tổng bài Quiz",
+      totalAttempts: "Tổng lượt làm bài",
+      role: "Vai trò",
+      actions: "Hành động",
+      makeAdmin: "Cấp quyền Admin",
+      removeAdmin: "Gỡ quyền Admin",
+      deleteUser: "Xóa hồ sơ",
+      confirmDelete: "Bạn có chắc chắn muốn xóa không?",
+      noUsers: "Không tìm thấy người dùng nào.",
+      noQuizzes: "Không tìm thấy bài Quiz nào."
     }
   }
 };
