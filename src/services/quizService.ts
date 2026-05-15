@@ -143,10 +143,25 @@ export const getQuizLeaderboard = async (quizId: string): Promise<QuizResult[]> 
             where("quizId", "==", quizId),
             orderBy("score", "desc"),
             orderBy("timeTakenMs", "asc"),
-            limit(10)
+            limit(50) // Fetch more to filter unique users
         );
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as QuizResult));
+        const allResults = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as QuizResult));
+        
+        // Filter unique users, keeping the best (first one due to ordering)
+        const uniqueResults: QuizResult[] = [];
+        const seenUsers = new Set<string>();
+        
+        for (const res of allResults) {
+            const userKey = (res.userId && res.userId !== "guest") ? res.userId : `guest-${res.userName}`;
+            if (!seenUsers.has(userKey)) {
+                seenUsers.add(userKey);
+                uniqueResults.push(res);
+            }
+            if (uniqueResults.length >= 10) break;
+        }
+        
+        return uniqueResults;
     } catch (error) {
         console.error("Error fetching leaderboard. Make sure indexes are created.", error);
         return [];
