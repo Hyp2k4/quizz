@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
-import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers, Flag, LogIn, ArrowLeft, BookOpen } from "lucide-react";
+import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers, Flag, LogIn, ArrowLeft, BookOpen, RotateCcw } from "lucide-react";
 import confetti from "canvas-confetti";
 
 // Helper to format time
@@ -309,6 +309,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const [elapsedTime, setElapsedTime] = useState(0); // for display only
     const [finalTimeMs, setFinalTimeMs] = useState(0);
     const [relatedQuizzes, setRelatedQuizzes] = useState<QuizData[]>([]);
+    const [wrongQuestionIndices, setWrongQuestionIndices] = useState<number[]>([]);
+    const [isRetakeMode, setIsRetakeMode] = useState(false);
+    const [originalQuestions, setOriginalQuestions] = useState<any[]>([]);
 
     // Access Check
     const hasAccess = !!user || !!guestName;
@@ -324,6 +327,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                         const filteredQuestions = data.questions.filter(q =>
                             q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
                         );
+                        setOriginalQuestions(filteredQuestions);
                         setQuiz({ ...data, questions: filteredQuestions });
                         
                         // Check if access is automatically granted
@@ -470,8 +474,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         const infoTime = startTime ? Date.now() - startTime : 0;
         setFinalTimeMs(infoTime);
 
-        let calculatedScore = 0;
-
+        const wrongIndices: number[] = [];
         quiz.questions.forEach((q, index) => {
             const userAns = answers[index];
             const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
@@ -487,10 +490,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
             if (isItemCorrect) {
                 calculatedScore++;
+            } else {
+                wrongIndices.push(index);
             }
         });
 
         setScore(calculatedScore);
+        setWrongQuestionIndices(wrongIndices);
         setIsSubmitted(true);
 
         toast.success(`Quiz submitted! Score: ${calculatedScore}/${quiz.questions.length}`);
@@ -538,6 +544,40 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 }).catch(err => console.error("Error sending completion email notification:", err));
             }
         }
+    };
+
+    const handleRetakeWrong = () => {
+        if (!quiz || wrongQuestionIndices.length === 0) return;
+        
+        const wrongQuestions = quiz.questions.filter((_, i) => wrongQuestionIndices.includes(i));
+        
+        setQuiz(prev => prev ? { ...prev, questions: wrongQuestions } : null);
+        setAnswers({});
+        setIsSubmitted(false);
+        setScore(0);
+        setRevealed({});
+        setStartTime(Date.now());
+        setElapsedTime(0);
+        setWrongQuestionIndices([]);
+        setIsRetakeMode(true);
+        streakRef.current = 0;
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleRestartFull = () => {
+        if (!quiz) return;
+        setQuiz(prev => prev ? { ...prev, questions: originalQuestions } : null);
+        setAnswers({});
+        setIsSubmitted(false);
+        setScore(0);
+        setRevealed({});
+        setStartTime(Date.now());
+        setElapsedTime(0);
+        setWrongQuestionIndices([]);
+        setIsRetakeMode(false);
+        streakRef.current = 0;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleReportSubmit = async (reason: string) => {
@@ -766,9 +806,19 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
                                     <Leaderboard quizId={quiz.id!} language={language} />
 
-                                    <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">
-                                        {language === 'vi' ? 'Làm lại' : 'Retake Quiz'}
-                                    </Button>
+                                    <div className="flex flex-wrap justify-center gap-4 mt-4">
+                                        <Button onClick={handleRestartFull} variant="outline" className="gap-2 rounded-full px-6">
+                                            <RotateCcw className="h-4 w-4" />
+                                            {language === 'vi' ? 'Làm lại từ đầu' : 'Retake Full Quiz'}
+                                        </Button>
+
+                                        {wrongQuestionIndices.length > 0 && (
+                                            <Button onClick={handleRetakeWrong} className="gap-2 rounded-full px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/20">
+                                                <XCircle className="h-4 w-4" />
+                                                {language === 'vi' ? `Làm lại ${wrongQuestionIndices.length} câu sai` : `Retake ${wrongQuestionIndices.length} Wrong Questions`}
+                                            </Button>
+                                        )}
+                                    </div>
 
                                     {relatedQuizzes.length > 0 && (
                                         <div className="w-full mt-12 space-y-6">
