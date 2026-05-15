@@ -359,7 +359,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
 
                 <ConfirmDialog
                     isOpen={confirmOpen}
-                    onClose={() => setConfirmOpen(false)}
+                    onCancel={() => setConfirmOpen(false)}
                     onConfirm={() => {
                         setConfirmOpen(false);
                         handleSubmit();
