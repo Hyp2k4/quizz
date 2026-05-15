@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Save, Upload, FileUp, ArrowLeft, ClipboardList, Sparkles, Trash2, Eraser, Zap, X } from "lucide-react";
+import { Plus, Save, Upload, FileUp, ArrowLeft, ClipboardList, Sparkles, Trash2, Eraser, Zap, X, Search } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Question, QuestionCard } from "@/components/quiz/QuestionCard";
@@ -59,6 +59,7 @@ export default function QuizBuilder() {
     const [answerKeyPaste, setAnswerKeyPaste] = useState("");
     const [originalQuiz, setOriginalQuiz] = useState<QuizData | null>(null);
     const [presences, setPresences] = useState<UserPresence[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
 
     // Load quiz for editing
     useEffect(() => {
@@ -69,6 +70,20 @@ export default function QuizBuilder() {
                     setTitle(data.title);
                     setDescription(data.description);
                     setQuestions(data.questions);
+                    
+                    // Scroll to specific question if requested
+                    const targetQId = searchParams.get("questionId");
+                    if (targetQId) {
+                        setTimeout(() => {
+                            const el = document.getElementById(`question-${targetQId}`);
+                            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Highlight the question briefly
+                            el?.classList.add('ring-2', 'ring-indigo-500', 'ring-offset-8', 'rounded-3xl');
+                            setTimeout(() => {
+                                el?.classList.remove('ring-2', 'ring-indigo-500', 'ring-offset-8');
+                            }, 3000);
+                        }, 500);
+                    }
                 }
                 setIsLoading(false);
             }).catch(() => setIsLoading(false));
@@ -665,6 +680,24 @@ export default function QuizBuilder() {
                         </Button>
                     </div>
                 </div>
+
+                <div className="flex-1 min-w-[200px] relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                    <Input
+                        placeholder={language === 'vi' ? "Tìm kiếm câu hỏi..." : "Search questions..."}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 h-10 rounded-full bg-white dark:bg-zinc-800 border-zinc-200/50 dark:border-white/5 focus:ring-indigo-500/20 transition-all text-xs font-medium"
+                    />
+                    {searchQuery && (
+                        <button 
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Range Delete Input */}
@@ -742,19 +775,37 @@ export default function QuizBuilder() {
             )}
 
             <div className="grid gap-6">
-                {questions.map((q, index) => (
-                    <div id={`question-${q.id}`} key={q.id}>
-                        <QuestionCard
-                            index={index}
-                            question={q}
-                            activeEditors={presences.filter(p => p.editingQuestionId === q.id)}
-                            onUpdate={updateQuestion}
-                            onDelete={deleteQuestion}
-                            onDuplicate={duplicateQuestion}
-                            onFocus={handleFocusQuestion}
-                        />
+                {questions
+                    .map((q, idx) => ({ q, idx }))
+                    .filter(({ q }) => 
+                        q.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        q.options.some(opt => opt.toLowerCase().includes(searchQuery.toLowerCase()))
+                    )
+                    .map(({ q, idx }) => (
+                        <div id={`question-${q.id}`} key={q.id}>
+                            <QuestionCard
+                                index={idx}
+                                question={q}
+                                activeEditors={presences.filter(p => p.editingQuestionId === q.id)}
+                                onUpdate={updateQuestion}
+                                onDelete={deleteQuestion}
+                                onDuplicate={duplicateQuestion}
+                                onFocus={handleFocusQuestion}
+                            />
+                        </div>
+                    ))}
+                {searchQuery && questions.filter(q => 
+                    q.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    q.options.some(opt => opt.toLowerCase().includes(searchQuery.toLowerCase()))
+                ).length === 0 && (
+                    <div className="text-center py-20 bg-zinc-50 dark:bg-zinc-900/30 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-white/5">
+                        <Search className="h-10 w-10 mx-auto mb-4 text-zinc-300" />
+                        <p className="text-zinc-500 font-bold">{language === 'vi' ? 'Không tìm thấy câu hỏi nào khớp với từ khóa' : 'No questions match your search'}</p>
+                        <Button variant="link" onClick={() => setSearchQuery("")} className="text-indigo-500 mt-2">
+                            {language === 'vi' ? 'Xóa tìm kiếm' : 'Clear search'}
+                        </Button>
                     </div>
-                ))}
+                )}
             </div>
 
             <div className="flex flex-col items-center gap-4 mt-8">

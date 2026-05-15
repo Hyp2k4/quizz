@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
-import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, incrementQuizViews } from "@/services/quizService";
+import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, reportQuestionIssue, recordQuizView } from "@/services/quizService";
+import { ReportDialog } from "@/components/quiz/ReportDialog";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
@@ -11,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
-import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers } from "lucide-react";
+import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers, Flag, LogIn } from "lucide-react";
 import confetti from "canvas-confetti";
 
 // Helper to format time
@@ -72,7 +73,8 @@ function QuestionTaker({
     isCorrect = undefined,
     onCheck,
     isRevealed = false,
-    language = 'vi'
+    language = 'vi',
+    onReport
 }: {
     question: any,
     index: number,
@@ -82,7 +84,8 @@ function QuestionTaker({
     isCorrect?: boolean,
     onCheck?: () => void,
     isRevealed?: boolean,
-    language?: string
+    language?: string,
+    onReport?: () => void
 }) {
     const isMultiple = question.type === 'multiple';
     const isOpen = question.type === 'open';
@@ -161,7 +164,7 @@ function QuestionTaker({
                                         ? question.correctAnswer?.includes(opt)
                                         : question.correctAnswer?.[0] === opt);
 
-                                    let optionClass = `flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${showResult ? 'cursor-default' : 'hover:bg-indigo-50 dark:hover:bg-zinc-800'}`;
+                                    let optionClass = `flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${showResult ? 'cursor-default' : 'hover:bg-indigo-50 dark:hover:bg-zinc-800'}`;
 
                                     if (showResult) {
                                         if (isActuallyCorrect) {
@@ -185,18 +188,18 @@ function QuestionTaker({
                                             <input
                                                 type={isMultiple ? "checkbox" : "radio"}
                                                 name={`question-${index}`}
-                                                className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                                                className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 shrink-0 mt-0.5"
                                                 checked={!!isSelected}
                                                 onChange={() => !showResult && (isMultiple ? handleMultiChange(opt, !isSelected) : onChange(opt))}
                                                 disabled={showResult}
                                             />
-                                            <div className="flex-1 flex items-center justify-between gap-2 overflow-hidden">
-                                                <span className="text-sm truncate">{opt}</span>
+                                            <div className="flex-1 flex items-start justify-between gap-2">
+                                                <span className="text-sm break-words">{opt}</span>
                                                 {showResult && (
                                                     isActuallyCorrect ? (
-                                                        <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                                                        <CheckCircle className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
                                                     ) : isSelected ? (
-                                                        <XCircle className="h-4 w-4 text-red-600 shrink-0" />
+                                                        <XCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
                                                     ) : null
                                                 )}
                                             </div>
@@ -220,6 +223,17 @@ function QuestionTaker({
                                 </div>
                             </div>
                         )}
+                        <div className="mt-4 flex justify-end">
+                            <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={onReport}
+                                className="text-zinc-400 hover:text-red-500 gap-1 rounded-full px-3"
+                            >
+                                <Flag className="h-4 w-4" />
+                                {language === 'vi' ? 'Báo cáo / Nhận xét' : 'Report / Comment'}
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </CardContent>
@@ -278,6 +292,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const [unansweredCount, setUnansweredCount] = useState(0);
     const [revealed, setRevealed] = useState<Record<number, boolean>>({});
 
+    const [reportOpen, setReportOpen] = useState(false);
+    const [reportingIndex, setReportingIndex] = useState<number | null>(null);
+
     // New state for starting the quiz
     const [isReadyToStart, setIsReadyToStart] = useState(false);
     const streakRef = useRef(0);
@@ -298,30 +315,39 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     // Fetch Quiz
     useEffect(() => {
         async function fetch() {
-            if (id) {
-                const data = await getQuizById(id);
-                if (data) {
-                    // Filter out questions with no correct answers for users
-                    const filteredQuestions = data.questions.filter(q =>
-                        q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
-                    );
-                    setQuiz({ ...data, questions: filteredQuestions });
-                    
-                    // Increment views
-                    incrementQuizViews(id);
-
-                    // Check if access is automatically granted
-                    const isOwner = user && data.userId === user.uid;
-                    const isCollab = user && data.collaborators?.includes(user.email || "");
-                    if (data.visibility !== 'private' || isOwner || isCollab) {
-                        setIsAccessGranted(true);
+            try {
+                if (id) {
+                    const data = await getQuizById(id);
+                    if (data) {
+                        // Filter out questions with no correct answers for users
+                        const filteredQuestions = data.questions.filter(q =>
+                            q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
+                        );
+                        setQuiz({ ...data, questions: filteredQuestions });
+                        
+                        // Check if access is automatically granted
+                        const isOwner = user && data.userId === user.uid;
+                        const isCollab = user && data.collaborators?.includes(user.email || "");
+                        if (isOwner || isCollab || data.visibility === 'public') {
+                            setIsAccessGranted(true);
+                        }
                     }
+                    setLoading(false);
                 }
+            } catch (err) {
+                console.error(err);
                 setLoading(false);
             }
         }
         fetch();
     }, [id, user]);
+
+    // Record view only once when quiz is loaded AND user is logged in
+    useEffect(() => {
+        if (quiz?.id && user) {
+            recordQuizView(quiz.id, user.uid, user.displayName || "Student", user.email || undefined);
+        }
+    }, [quiz?.id, user]);
 
     // Auto-fill code from URL
     useEffect(() => {
@@ -508,6 +534,40 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         }
     };
 
+    const handleReportSubmit = async (reason: string) => {
+        if (!quiz || reportingIndex === null) return;
+        const q = quiz.questions[reportingIndex];
+
+        try {
+            await reportQuestionIssue({
+                quizId: id as string,
+                quizTitle: quiz.title,
+                questionText: q.text,
+                questionIndex: reportingIndex,
+                questionId: q.id,
+                reason,
+                userId: user?.uid || "guest",
+                userName: user?.displayName || guestName || "Guest",
+                authorEmail: quiz.authorEmail
+            });
+
+            // Notify owner
+            if (quiz.userId) {
+                await createNotification({
+                    userId: quiz.userId,
+                    type: 'report',
+                    title: language === 'vi' ? 'Báo cáo / Góp ý mới' : 'New Report / Feedback',
+                    message: `${user?.displayName || guestName || "Guest"} ${language === 'vi' ? 'vừa gửi nhận xét cho bài' : 'just sent feedback for'} "${quiz.title}"`,
+                    link: `/my-courses?quizId=${id}&tab=reports`
+                });
+            }
+
+            toast.success(language === 'vi' ? "Cảm ơn bạn đã báo cáo! Chúng tôi sẽ xem xét sớm nhất." : "Thank you for your report! We will review it soon.");
+        } catch (error) {
+            toast.error(language === 'vi' ? "Không thể gửi báo cáo. Vui lòng thử lại sau." : "Failed to send report. Please try again later.");
+        }
+    };
+
     const triggerConfetti = () => {
         const duration = 3 * 1000;
         const animationEnd = Date.now() + duration;
@@ -530,6 +590,34 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
     if (loading) return <div className="min-h-screen bg-[rgb(var(--background))] flex items-center justify-center">Loading...</div>;
     if (!quiz) return <div className="min-h-screen bg-[rgb(var(--background))] flex items-center justify-center">Quiz not found</div>;
+
+    // Require login
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+                <Navbar />
+                <main className="flex-1 flex items-center justify-center p-6">
+                    <Card className="w-full max-w-md p-10 text-center space-y-8 shadow-2xl rounded-[3rem] border-none bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl animate-scale-in">
+                        <div className="mx-auto w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-[2rem] flex items-center justify-center mb-2 shadow-inner transform -rotate-6">
+                            <LogIn className="h-12 w-12" />
+                        </div>
+                        <div className="space-y-3">
+                            <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50">Đăng nhập để tiếp tục</h2>
+                            <p className="text-zinc-500 font-medium">Bạn cần đăng nhập để xem nội dung bài tập và lưu lại kết quả của mình.</p>
+                        </div>
+                        <Button 
+                            onClick={() => login()} 
+                            size="lg"
+                            className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-lg font-bold shadow-xl shadow-indigo-500/20 gap-3"
+                        >
+                            <LogIn className="h-5 w-5" /> Đăng nhập ngay
+                        </Button>
+                        <p className="text-xs text-zinc-400">Bằng cách tiếp tục, bạn đồng ý với các điều khoản của Lustio Quiz.</p>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
 
     if (!isAccessGranted) {
         return (
@@ -704,6 +792,10 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     isRevealed={revealed[i]}
                                     isCorrect={isCorrect}
                                     onCheck={() => handleCheckIndividual(i)}
+                                    onReport={() => {
+                                        setReportingIndex(i);
+                                        setReportOpen(true);
+                                    }}
                                     language={language}
                                 />
                             );
@@ -733,6 +825,17 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             onConfirm={handleSubmit}
                             onCancel={() => setConfirmOpen(false)}
                         />
+                        
+                        {quiz && reportingIndex !== null && (
+                            <ReportDialog
+                                isOpen={reportOpen}
+                                questionText={quiz.questions[reportingIndex]?.text || ""}
+                                onConfirm={handleReportSubmit}
+                                onCancel={() => setReportOpen(false)}
+                                language={language}
+                                title={language === 'vi' ? "Báo cáo lỗi" : "Report Error"}
+                            />
+                        )}
                     </div>
                 )}
             </main>

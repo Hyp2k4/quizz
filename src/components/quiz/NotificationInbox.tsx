@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { getNotifications, markNotificationAsRead, Notification } from "@/services/quizService";
 import { useAuth } from "@/contexts/AuthContext";
-import { Bell, CheckCircle2, MessageSquare, AlertTriangle, ExternalLink, Inbox, X, Clock } from "lucide-react";
+import { Bell, CheckCircle2, MessageSquare, AlertTriangle, ExternalLink, Inbox, X, Clock, Flag } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -49,6 +49,7 @@ export function NotificationInbox() {
             case 'quiz_complete': return <CheckCircle2 className="h-4 w-4 text-green-500" />;
             case 'comment': return <MessageSquare className="h-4 w-4 text-blue-500" />;
             case 'missing_answer': return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+            case 'report': return <Flag className="h-4 w-4 text-red-500" />;
             default: return <Bell className="h-4 w-4 text-indigo-500" />;
         }
     };
@@ -135,7 +136,7 @@ export function NotificationInbox() {
                                                             </span>
                                                             <Link href={notif.link} onClick={() => setIsOpen(false)}>
                                                                 <Button variant="ghost" size="sm" className="h-7 text-[10px] gap-1 px-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    Xem chi tiết <ExternalLink className="h-3 w-3" />
+                                                                    {notif.type === 'report' ? (user?.uid ? 'Xem báo cáo' : 'View Report') : 'Xem chi tiết'} <ExternalLink className="h-3 w-3" />
                                                                 </Button>
                                                             </Link>
                                                         </div>

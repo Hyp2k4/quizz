@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Edit, Trash2, BookOpen, Plus, UserPlus, Link as LinkIcon, ExternalLink } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 import { CourseDetailsModal } from "@/components/quiz/CourseDetailsModal";
@@ -23,9 +23,11 @@ export default function MyCoursesPage() {
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [selectedQuiz, setSelectedQuiz] = useState<QuizData | null>(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [initialTab, setInitialTab] = useState<any>(undefined);
     const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
     const [joinLink, setJoinLink] = useState("");
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -47,6 +49,27 @@ export default function MyCoursesPage() {
 
         if (user) fetch();
     }, [user, authLoading, router]);
+
+    // Handle direct link to specific quiz and tab
+    useEffect(() => {
+        if (quizzes.length > 0) {
+            const quizId = searchParams.get("quizId");
+            const tab = searchParams.get("tab");
+            
+            if (quizId) {
+                const targetQuiz = quizzes.find(q => q.id === quizId);
+                if (targetQuiz) {
+                    setSelectedQuiz(targetQuiz);
+                    if (tab) setInitialTab(tab);
+                    setIsDetailsOpen(true);
+                    
+                    // Clear the params from URL without refreshing
+                    const newUrl = window.location.pathname;
+                    window.history.replaceState({}, '', newUrl);
+                }
+            }
+        }
+    }, [quizzes, searchParams]);
 
     const handleDeleteClick = (id: string) => {
         setDeleteId(id);
@@ -205,8 +228,10 @@ export default function MyCoursesPage() {
                     onClose={() => {
                         setIsDetailsOpen(false);
                         setSelectedQuiz(null);
+                        setInitialTab(undefined);
                     }}
                     quiz={selectedQuiz}
+                    initialTab={initialTab}
                 />
             </main>
             {/* Join Collaboration Modal */}

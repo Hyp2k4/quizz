@@ -13,7 +13,8 @@ import {
     orderBy,
     limit,
     onSnapshot,
-    setDoc
+    setDoc,
+    increment
 } from "firebase/firestore";
 import { Question } from "@/components/quiz/QuestionCard";
 
@@ -74,12 +75,39 @@ export interface UserPresence {
 export interface Notification {
   id?: string;
   userId: string; // The person receiving the notification (course owner)
-  type: 'quiz_complete' | 'comment' | 'missing_answer' | 'invitation';
+  type: 'quiz_complete' | 'comment' | 'missing_answer' | 'invitation' | 'report';
   title: string;
   message: string;
   link: string;
   read: boolean;
   createdAt: any;
+}
+
+export interface QuestionReport {
+  id?: string;
+  quizId: string;
+  quizTitle: string;
+  questionText: string;
+  questionIndex: number;
+  questionId: string;
+  reason: string;
+  userId: string;
+  userName: string;
+  authorEmail?: string;
+  createdAt: any;
+  status: 'pending' | 'resolved';
+  resolvedBy?: string;
+  resolvedByName?: string;
+  resolvedAt?: any;
+}
+
+export interface QuizView {
+  id?: string;
+  quizId: string;
+  userId: string;
+  userName: string;
+  userEmail?: string;
+  viewedAt: any;
 }
 
 export interface QuizInvitation {
@@ -182,6 +210,31 @@ export const getUserQuizzes = async (userId: string, userEmail?: string | null):
     return allQuizzes;
 };
 
+export const recordQuizView = async (quizId: string, userId: string, userName: string, userEmail?: string) => {
+    const quizRef = doc(db, "quizzes", quizId);
+    await updateDoc(quizRef, { views: increment(1) });
+
+    const viewRef = collection(db, "quiz_views");
+    await addDoc(viewRef, {
+        quizId,
+        userId,
+        userName,
+        userEmail: userEmail || null,
+        viewedAt: serverTimestamp()
+    });
+};
+
+export const getQuizViewers = async (quizId: string) => {
+    const q = query(
+        collection(db, "quiz_views"),
+        where("quizId", "==", quizId),
+        orderBy("viewedAt", "desc"),
+        limit(50)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as QuizView[];
+};
+
 export const addCollaborator = async (quizId: string, email: string) => {
     const quizRef = doc(db, "quizzes", quizId);
     const quizSnap = await getDoc(quizRef);
@@ -235,18 +288,6 @@ export const updateQuiz = async (id: string, quiz: Partial<QuizData>) => {
         ...data,
         updatedAt: serverTimestamp()
     });
-};
-
-export const incrementQuizViews = async (quizId: string) => {
-    try {
-        const quizRef = doc(db, "quizzes", quizId);
-        const { increment } = await import("firebase/firestore");
-        await updateDoc(quizRef, {
-            views: increment(1)
-        });
-    } catch (error) {
-        console.error("Error incrementing views:", error);
-    }
 };
 
 export const saveQuizToFirestore = async (quiz: QuizData) => {
@@ -424,4 +465,67 @@ export const subscribeToQuizPresence = (quizId: string, callback: (presences: Us
 export const removeQuizPresence = async (quizId: string, userId: string) => {
     const presenceRef = doc(db, "quiz_presence", `${quizId}_${userId}`);
     await deleteDoc(presenceRef);
+};
+
+export const reportQuestionIssue = async (report: Omit<QuestionReport, "id" | "createdAt" | "status">) => {
+    try {
+        const docRef = await addDoc(collection(db, "question_reports"), {
+            ...report,
+            status: 'pending',
+            createdAt: serverTimestamp()
+        });
+        return docRef.id;
+    } catch (error) {
+        console.error("Error reporting question:", error);
+        throw error;
+    }
+};
+
+export const getQuizReports = async (quizId: string): Promise<QuestionReport[]> => {
+    try {
+        const q = query(
+            collection(db, "question_reports"),
+            where("quizId", "==", quizId),
+            orderBy("createdAt", "desc")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as QuestionReport));
+    } catch (error) {
+        console.error("Error fetching reports:", error);
+        return [];
+    }
+};
+
+export const updateReportStatus = async (reportId: string, status: 'pending' | 'resolved', resolver?: { uid: string, name: string }) => {
+    const reportRef = doc(db, "question_reports", reportId);
+    const updates: any = { status };
+    if (resolver && status === 'resolved') {
+        updates.resolvedBy = resolver.uid;
+        updates.resolvedByName = resolver.name;
+        updates.resolvedAt = serverTimestamp();
+    }
+    await updateDoc(reportRef, updates);
+};
+
+export const resolveReportWithAnswer = async (report: QuestionReport, newAnswer: string[], resolver: { uid: string, name: string }) => {
+    // 1. Update the report
+    await updateReportStatus(report.id!, 'resolved', resolver);
+
+    // 2. Update the quiz question
+    const quizRef = doc(db, "quizzes", report.quizId);
+    const quizSnap = await getDoc(quizRef);
+    if (quizSnap.exists()) {
+        const quizData = quizSnap.data() as QuizData;
+        const updatedQuestions = quizData.questions.map((q, idx) => {
+            // Match by ID if available, otherwise by index
+            const isMatch = (report.questionId && q.id === report.questionId) || 
+                            (!report.questionId && idx === report.questionIndex);
+            
+            if (isMatch) {
+                return { ...q, correctAnswer: newAnswer };
+            }
+            return q;
+        });
+        await updateDoc(quizRef, { questions: updatedQuestions });
+    }
 };

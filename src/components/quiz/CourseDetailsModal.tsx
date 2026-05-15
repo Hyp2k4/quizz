@@ -13,12 +13,18 @@ import {
     removeCollaborator,
     getQuizById,
     createQuizInvitation,
-    updateQuizVisibility
+    updateQuizVisibility,
+    getQuizReports,
+    updateReportStatus,
+    resolveReportWithAnswer,
+    getQuizViewers,
+    QuestionReport,
+    QuizView
 } from "@/services/quizService";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Send, MessageCircle, User, CornerDownRight, Clock, AlertCircle, Users, UserPlus, UserMinus, Copy, Check, Lock, Globe, Key, Share2, Mail, BarChart3, Trophy, Users2, Target, Eye } from "lucide-react";
+import { X, Send, MessageCircle, User, CornerDownRight, Clock, AlertCircle, Users, UserPlus, UserMinus, Copy, Check, Lock, Globe, Key, Share2, Mail, BarChart3, Trophy, Users2, Target, Eye, Flag, Edit, CheckCircle, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -27,9 +33,10 @@ interface CourseDetailsModalProps {
     isOpen: boolean;
     onClose: () => void;
     quiz: QuizData | null;
+    initialTab?: 'comments' | 'collaboration' | 'visibility' | 'analytics' | 'reports';
 }
 
-export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModalProps) {
+export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: CourseDetailsModalProps) {
     const { user, login } = useAuth();
     const { t, language } = useLanguage();
     const [comments, setComments] = useState<Comment[]>([]);
@@ -38,7 +45,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
     const [replyText, setReplyText] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
-    const [activeTab, setActiveTab] = useState<'comments' | 'collaboration' | 'visibility' | 'analytics'>('comments');
+    const [activeTab, setActiveTab] = useState<'comments' | 'collaboration' | 'visibility' | 'analytics' | 'reports'>('comments');
     const [collabEmail, setCollabEmail] = useState("");
     const [currentQuiz, setCurrentQuiz] = useState<QuizData | null>(quiz);
     const [isCollabLoading, setIsCollabLoading] = useState(false);
@@ -47,6 +54,13 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
     const [isVisibilityLoading, setIsVisibilityLoading] = useState(false);
     const [results, setResults] = useState<any[]>([]);
     const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
+    const [reports, setReports] = useState<QuestionReport[]>([]);
+    const [isReportsLoading, setIsReportsLoading] = useState(false);
+    const [editingReportId, setEditingReportId] = useState<string | null>(null);
+    const [resolvingAnswer, setResolvingAnswer] = useState<string[]>([]);
+    const [viewers, setViewers] = useState<QuizView[]>([]);
+    const [isViewersLoading, setIsViewersLoading] = useState(false);
+    const [showViewersList, setShowViewersList] = useState(false);
 
     const isOwner = user && currentQuiz?.userId === user.uid;
 
@@ -54,8 +68,10 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
         setMounted(true);
         if (isOpen && quiz?.id) {
             setCurrentQuiz(quiz);
+            if (initialTab) setActiveTab(initialTab);
             if (activeTab === 'comments') loadComments();
             if (activeTab === 'analytics') loadAnalytics();
+            if (activeTab === 'reports') loadReports();
             document.body.style.overflow = "hidden";
         } else {
             document.body.style.overflow = "unset";
@@ -92,6 +108,58 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
             console.error("Error loading analytics:", error);
         } finally {
             setIsAnalyticsLoading(false);
+        }
+    };
+    
+    const loadReports = async () => {
+        if (!quiz?.id) return;
+        setIsReportsLoading(true);
+        try {
+            const data = await getQuizReports(quiz.id);
+            setReports(data);
+        } catch (error) {
+            console.error("Error loading reports:", error);
+        } finally {
+            setIsReportsLoading(false);
+        }
+    };
+
+    const loadViewers = async () => {
+        if (!quiz?.id) return;
+        setIsViewersLoading(true);
+        try {
+            const data = await getQuizViewers(quiz.id);
+            setViewers(data);
+        } catch (error) {
+            console.error("Error loading viewers:", error);
+        } finally {
+            setIsViewersLoading(false);
+        }
+    };
+
+    const handleResolveReport = async (reportId: string) => {
+        try {
+            await updateReportStatus(reportId, 'resolved', user ? { uid: user.uid, name: user.displayName || "Owner" } : undefined);
+            toast.success(language === 'vi' ? "Đã đánh dấu là đã xử lý" : "Marked as resolved");
+            loadReports();
+        } catch (error) {
+            toast.error(t.common.error);
+        }
+    };
+
+    const handleQuickResolve = async (report: QuestionReport) => {
+        if (!user) return;
+        setIsReportsLoading(true);
+        try {
+            await resolveReportWithAnswer(report, resolvingAnswer, { uid: user.uid, name: user.displayName || "Owner" });
+            toast.success(language === 'vi' ? "Đã cập nhật đáp án và xử lý báo cáo" : "Answer updated and report resolved");
+            setEditingReportId(null);
+            loadReports();
+            refreshQuiz();
+        } catch (error) {
+            toast.error(t.common.error);
+        } finally {
+            setIsReportsLoading(false);
         }
     };
 
@@ -361,6 +429,18 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                         >
                             <span className="flex items-center gap-2">
                                 <BarChart3 className="h-4 w-4" /> {t.analytics.title}
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('reports')}
+                            className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'reports'
+                                ? 'border-red-500 text-red-500'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-700'
+                                }`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <Flag className="h-4 w-4" /> {language === 'vi' ? 'Báo cáo lỗi' : 'Reports'}
+                                {reports.length > 0 && <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
                             </span>
                         </button>
                     </div>
@@ -719,7 +799,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                     </motion.div>
                                 )}
                             </motion.div>
-                        ) : (
+                        ) : activeTab === 'analytics' ? (
                             <motion.div
                                 key="analytics"
                                 initial={{ opacity: 0, x: 10 }}
@@ -745,10 +825,19 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                                 </div>
                                                 <div className="text-2xl font-black">{results.length}</div>
                                             </div>
-                                            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
-                                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
-                                                    <Eye className="h-4 w-4" />
-                                                    <span className="text-xs font-bold uppercase">{language === 'vi' ? 'Người xem' : 'Views'}</span>
+                                            <div 
+                                                className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-2xl border border-blue-100 dark:border-blue-900/30 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group"
+                                                onClick={() => {
+                                                    setShowViewersList(!showViewersList);
+                                                    if (!showViewersList) loadViewers();
+                                                }}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                                                        <Eye className="h-4 w-4" />
+                                                        <span className="text-xs font-bold uppercase">{language === 'vi' ? 'Người xem' : 'Views'}</span>
+                                                    </div>
+                                                    <ExternalLink className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 </div>
                                                 <div className="text-2xl font-black">{currentQuiz?.views || 0}</div>
                                             </div>
@@ -771,6 +860,62 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {showViewersList && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="space-y-4"
+                                            >
+                                                <div className="flex items-center justify-between px-2">
+                                                    <h3 className="text-sm font-bold text-blue-500 uppercase tracking-wider">
+                                                        {language === 'vi' ? 'Danh sách người xem' : 'Viewer List'}
+                                                    </h3>
+                                                    <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowViewersList(false)}>
+                                                        {language === 'vi' ? 'Đóng' : 'Close'}
+                                                    </Button>
+                                                </div>
+                                                <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30 overflow-hidden">
+                                                    {isViewersLoading ? (
+                                                        <div className="p-10 text-center text-zinc-400 text-xs italic">Đang tải...</div>
+                                                    ) : viewers.length === 0 ? (
+                                                        <div className="p-10 text-center text-zinc-400 text-xs italic">Chưa có ai xem bài này</div>
+                                                    ) : (
+                                                        <table className="w-full text-sm text-left">
+                                                            <thead className="bg-blue-100/50 dark:bg-blue-900/30 text-blue-600 font-bold">
+                                                                <tr>
+                                                                    <th className="px-4 py-3">#</th>
+                                                                    <th className="px-4 py-3">{t.analytics.user}</th>
+                                                                    <th className="px-4 py-3 text-right">{language === 'vi' ? 'Thời gian' : 'Time'}</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-blue-100 dark:divide-blue-900/30">
+                                                                {viewers.map((v, i) => (
+                                                                    <tr key={v.id} className="hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors">
+                                                                        <td className="px-4 py-3 text-zinc-400 font-mono text-xs">{i + 1}</td>
+                                                                        <td className="px-4 py-3">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[10px] font-bold text-blue-600">
+                                                                                    {v.userName.charAt(0)}
+                                                                                </div>
+                                                                                <div>
+                                                                                    <div className="font-bold text-xs">{v.userName}</div>
+                                                                                    <div className="text-[10px] text-zinc-400">{v.userEmail}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="px-4 py-3 text-right text-zinc-400 text-[10px]">
+                                                                            {formatDate(v.viewedAt)}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        )}
 
                                         {/* Ranking Table */}
                                         <div className="space-y-4">
@@ -815,6 +960,186 @@ export function CourseDetailsModal({ isOpen, onClose, quiz }: CourseDetailsModal
                                             </div>
                                         </div>
                                     </>
+                                )}
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="reports"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-6"
+                            >
+                                <h3 className="text-lg font-bold flex items-center gap-2">
+                                    <Flag className="h-5 w-5 text-red-500" />
+                                    {language === 'vi' ? 'Báo cáo lỗi từ người dùng' : 'User Reports'} ({reports.length})
+                                </h3>
+
+                                {isReportsLoading ? (
+                                    <div className="text-center py-20 text-zinc-400">{t.common.loading}</div>
+                                ) : reports.length === 0 ? (
+                                    <div className="text-center py-20 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-3xl text-zinc-400">
+                                        <Check className="h-12 w-12 mx-auto mb-4 opacity-20 text-green-500" />
+                                        <p>{language === 'vi' ? 'Tuyệt vời! Không có báo cáo lỗi nào.' : 'Great! No reports found.'}</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {reports.map((report) => (
+                                            <div key={report.id} className="p-5 bg-red-50/50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/30">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${report.status === 'resolved' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                                                            {report.status === 'resolved' ? <Check className="h-4 w-4 text-green-600" /> : <User className="h-4 w-4 text-red-600" />}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-bold">{report.userName}</div>
+                                                            <div className="text-[10px] text-zinc-400 flex items-center gap-1">
+                                                                <Clock className="h-3 w-3" />
+                                                                {formatDate(report.createdAt)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-7 text-[10px] font-bold rounded-lg text-indigo-600 hover:bg-indigo-50 gap-1"
+                                                            onClick={() => {
+                                                                const q = currentQuiz?.questions.find(q => q.id === report.questionId) || currentQuiz?.questions[report.questionIndex];
+                                                                if (q) {
+                                                                    setEditingReportId(report.id || null);
+                                                                    setResolvingAnswer(q.correctAnswer || []);
+                                                                } else {
+                                                                    toast.error(language === 'vi' ? "Không tìm thấy câu hỏi này trong bài tập" : "Could not find this question in the quiz");
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Check className="h-3 w-3" /> {language === 'vi' ? 'Sửa đáp án nhanh' : 'Quick fix answer'}
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-7 text-[10px] font-bold rounded-lg text-zinc-600 hover:bg-zinc-100 gap-1"
+                                                            onClick={() => {
+                                                                if (report.quizId) {
+                                                                    const qId = report.questionId || currentQuiz?.questions[report.questionIndex]?.id;
+                                                                    router.push(`/questionbuilder?edit=${report.quizId}${qId ? `&questionId=${qId}` : ''}`);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Edit className="h-3 w-3" /> {language === 'vi' ? 'Sửa toàn bộ' : 'Full Edit'}
+                                                        </Button>
+                                                        {report.status === 'pending' && (
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline" 
+                                                                className="h-7 text-[10px] font-bold rounded-lg border-green-200 text-green-600 hover:bg-green-50"
+                                                                onClick={() => report.id && handleResolveReport(report.id)}
+                                                            >
+                                                                {language === 'vi' ? 'Đã xử lý' : 'Resolve'}
+                                                            </Button>
+                                                        )}
+                                                        <div className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wider ${report.status === 'resolved' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                            {report.status}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="space-y-3">
+                                                    <div className="p-3 bg-white dark:bg-zinc-800 rounded-xl border border-red-50 dark:border-zinc-700">
+                                                        <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">{language === 'vi' ? 'Câu hỏi' : 'Question'} #{report.questionIndex + 1}</p>
+                                                        <p className="text-sm italic text-zinc-600 dark:text-zinc-400">"{report.questionText}"</p>
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-red-400 uppercase mb-1">{language === 'vi' ? 'Nội dung báo cáo' : 'Report content'}</p>
+                                                        <p className="text-sm font-medium">{report.reason}</p>
+                                                    </div>
+
+                                                    {editingReportId === report.id && (
+                                                        <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800 animate-in fade-in slide-in-from-top-2">
+                                                            <div className="flex justify-between items-center mb-3">
+                                                                <p className="text-[10px] font-bold text-indigo-600 uppercase">{language === 'vi' ? 'Sửa đáp án nhanh' : 'Quick fix answer'}</p>
+                                                                <div className="text-[10px] bg-white dark:bg-zinc-800 px-2 py-0.5 rounded border border-indigo-100 dark:border-zinc-700">
+                                                                    <span className="text-zinc-400">{language === 'vi' ? 'Hiện tại' : 'Current'}: </span>
+                                                                    <span className="font-bold text-indigo-500">
+                                                                        {(currentQuiz?.questions.find(q => q.id === report.questionId) || currentQuiz?.questions[report.questionIndex])?.correctAnswer?.join(", ") || (language === 'vi' ? 'Chưa có' : 'None')}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div className="space-y-2 mb-4 max-h-[200px] overflow-y-auto pr-2">
+                                                                {(() => {
+                                                                    const q = currentQuiz?.questions.find(q => q.id === report.questionId) || currentQuiz?.questions[report.questionIndex];
+                                                                    if (!q) return null;
+                                                                    
+                                                                    const isMultiple = q.type === 'multiple';
+                                                                    const isOpen = q.type === 'open';
+                                                                    
+                                                                    if (isOpen) {
+                                                                        return (
+                                                                            <Textarea 
+                                                                                placeholder={language === 'vi' ? "Nhập đáp án đúng mới..." : "Enter new correct answer..."}
+                                                                                value={resolvingAnswer[0] || ""}
+                                                                                onChange={(e) => setResolvingAnswer([e.target.value])}
+                                                                                className="bg-white dark:bg-zinc-800 border-indigo-100"
+                                                                            />
+                                                                        );
+                                                                    }
+
+                                                                    return q.options.map((opt, i) => {
+                                                                        const isSelected = resolvingAnswer.includes(opt);
+                                                                        return (
+                                                                            <label key={i} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all border ${isSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 hover:border-indigo-300'}`}>
+                                                                                <input 
+                                                                                    type={isMultiple ? "checkbox" : "radio"}
+                                                                                    name={`resolving-${report.id}`}
+                                                                                    checked={isSelected}
+                                                                                    onChange={(e) => {
+                                                                                        if (isMultiple) {
+                                                                                            if (e.target.checked) setResolvingAnswer([...resolvingAnswer, opt]);
+                                                                                            else setResolvingAnswer(resolvingAnswer.filter(a => a !== opt));
+                                                                                        } else {
+                                                                                            setResolvingAnswer([opt]);
+                                                                                        }
+                                                                                    }}
+                                                                                    className="h-4 w-4 text-white focus:ring-0"
+                                                                                />
+                                                                                <span className="text-sm font-medium">{opt}</span>
+                                                                            </label>
+                                                                        );
+                                                                    });
+                                                                })()}
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    className="h-9 rounded-xl px-4 bg-indigo-600 hover:bg-indigo-700 text-[11px] font-black shadow-lg shadow-indigo-500/20" 
+                                                                    onClick={() => handleQuickResolve(report)}
+                                                                    disabled={isReportsLoading}
+                                                                >
+                                                                    {isReportsLoading ? t.common.loading : (language === 'vi' ? 'Cập nhật & Xử lý' : 'Update & Resolve')}
+                                                                </Button>
+                                                                <Button size="sm" variant="ghost" className="h-9 rounded-xl text-[11px] font-bold" onClick={() => setEditingReportId(null)}>
+                                                                    {t.common.cancel}
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {report.status === 'resolved' && report.resolvedByName && (
+                                                        <div className="mt-2 flex items-center gap-2 text-[10px] text-green-600 font-bold">
+                                                            <CheckCircle className="h-3 w-3" />
+                                                            {language === 'vi' ? 'Đã sửa bởi' : 'Resolved by'}: {report.resolvedByName}
+                                                            {report.resolvedAt && (
+                                                                <span className="text-zinc-400 font-medium"> • {formatDate(report.resolvedAt)}</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
                             </motion.div>
                         )}
