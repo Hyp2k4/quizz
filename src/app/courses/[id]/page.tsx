@@ -32,13 +32,23 @@ const arraysEqual = (a: any[], b: any[]) => {
     return sortedA.every((val, index) => val === sortedB[index]);
 };
 
-const shuffleArray = <T>(array: T[]): T[] => {
+const shuffleArray = <T,>(array: T[]): T[] => {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
+};
+
+const shuffleQuestionsAndOptions = (questions: any[]) => {
+    const shuffled = shuffleArray(questions);
+    return shuffled.map(q => {
+        if (q.options && q.options.length > 0) {
+            return { ...q, options: shuffleArray(q.options) };
+        }
+        return q;
+    });
 };
 
 function Leaderboard({ quizId, language = 'vi' }: { quizId: string, language?: string }) {
@@ -352,7 +362,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             }
                         }
 
-                        setQuiz({ ...data, questions: shuffleArray(finalQuestions) });
+                        setQuiz({ ...data, questions: shuffleQuestionsAndOptions(finalQuestions) });
                         
                         // Check if access is automatically granted
                         const isOwner = user && data.userId === user.uid;
@@ -558,7 +568,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         
         const wrongQuestions = quiz.questions.filter((_, i) => wrongQuestionIndices.includes(i));
         
-        setQuiz(prev => prev ? { ...prev, questions: shuffleArray(wrongQuestions) } : null);
+        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(wrongQuestions) } : null);
         setAnswers({});
         setIsSubmitted(false);
         setScore(0);
@@ -574,7 +584,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
     const handleRestartFull = () => {
         if (!quiz) return;
-        setQuiz(prev => prev ? { ...prev, questions: shuffleArray(originalQuestions) } : null);
+        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(originalQuestions) } : null);
         setAnswers({});
         setIsSubmitted(false);
         setScore(0);
