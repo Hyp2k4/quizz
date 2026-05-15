@@ -532,7 +532,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             quizTitle: quiz.title
         });
 
-        // Create notification and send email for course owner
+        // Create notification for course owner
         if (quiz.userId) {
             await createNotification({
                 userId: quiz.userId,
@@ -541,28 +541,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 message: `${user?.displayName || guestName || (language === 'vi' ? "Khách" : "Guest")} ${language === 'vi' ? 'vừa hoàn thành' : 'just completed'} "${quiz.title}" ${language === 'vi' ? 'với số điểm' : 'with score'} ${calculatedScore}/${quiz.questions.length}`,
                 link: `/courses/${id}`
             });
-
-            // Send email to author if email exists
-            if (quiz.authorEmail) {
-                const completionTime = (infoTime / 1000 / 60).toFixed(1) + " " + (language === 'vi' ? 'phút' : 'mins');
-                fetch('/api/send-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'completion',
-                        to: quiz.authorEmail,
-                        language: language,
-                        data: {
-                            userName: user?.displayName || guestName || (language === 'vi' ? "Khách" : "Guest"),
-                            quizTitle: quiz.title,
-                            score: calculatedScore,
-                            total: quiz.questions.length,
-                            time: completionTime,
-                            link: `${window.location.origin}/courses/${id}`
-                        }
-                    })
-                }).catch(err => console.error("Error sending completion email notification:", err));
-            }
         }
     };
 
