@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Save, Upload, FileUp, ArrowLeft, ClipboardList, Sparkles, Trash2, Eraser, Zap, X, Search } from "lucide-react";
+import { Plus, Save, Upload, FileUp, ArrowLeft, ClipboardList, Sparkles, Trash2, Eraser, Zap, X, Search, BookOpen } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Question, QuestionCard } from "@/components/quiz/QuestionCard";
@@ -47,6 +47,7 @@ export default function QuizBuilder() {
 
     const [title, setTitle] = useState(t.builder.untitled);
     const [description, setDescription] = useState("");
+    const [subject, setSubject] = useState("");
     const [isImporting, setIsImporting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(!!editId);
@@ -69,6 +70,7 @@ export default function QuizBuilder() {
                     setOriginalQuiz(data);
                     setTitle(data.title);
                     setDescription(data.description);
+                    setSubject(data.subject || "");
                     setQuestions(data.questions);
                     
                     // Scroll to specific question if requested
@@ -460,6 +462,7 @@ export default function QuizBuilder() {
             const quizData: Partial<QuizData> = {
                 title,
                 description,
+                subject,
                 questions,
             };
 
@@ -617,14 +620,26 @@ export default function QuizBuilder() {
                     className="w-full text-center text-2xl md:text-5xl font-black bg-transparent border-none focus:outline-none placeholder-zinc-300 dark:placeholder-zinc-700 text-zinc-900 dark:text-white transition-all tracking-tight"
                     placeholder={t.builder.untitled}
                 />
-                <Textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    onFocus={() => handleFocusQuestion(null)}
-                    className="w-full max-w-2xl mx-auto text-center border-none resize-none shadow-none text-zinc-400 font-medium bg-transparent focus:ring-0 text-sm md:text-base"
-                    placeholder={t.builder.descPlaceholder}
-                    rows={1}
-                />
+                <div className="flex flex-col md:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
+                    <div className="relative w-full md:w-1/3">
+                        <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-400" />
+                        <Input
+                            value={subject}
+                            onChange={(e) => setSubject(e.target.value)}
+                            onFocus={() => handleFocusQuestion(null)}
+                            className="pl-10 h-10 rounded-2xl bg-white dark:bg-zinc-800/50 border-indigo-100 dark:border-indigo-900/30 focus:ring-indigo-500 text-sm font-bold"
+                            placeholder={language === 'vi' ? "Tên môn học/Nhóm..." : "Subject/Group name..."}
+                        />
+                    </div>
+                    <Textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        onFocus={() => handleFocusQuestion(null)}
+                        className="flex-1 text-center md:text-left border-none resize-none shadow-none text-zinc-400 font-medium bg-transparent focus:ring-0 text-sm md:text-base min-h-[40px] py-2"
+                        placeholder={t.builder.descPlaceholder}
+                        rows={1}
+                    />
+                </div>
             </div>
 
             {/* Toolbar - Optimized for Responsive */}

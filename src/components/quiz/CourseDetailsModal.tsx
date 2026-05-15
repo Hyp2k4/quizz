@@ -370,6 +370,9 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                         <p className="text-zinc-500 dark:text-zinc-400 mt-1">{currentQuiz.description}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-3 text-sm font-medium">
                             <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full">
+                                {currentQuiz.subject || (language === 'vi' ? "Chưa phân loại" : "Uncategorized")}
+                            </span>
+                            <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full">
                                 {currentQuiz.questions.length} {language === 'vi' ? 'câu hỏi' : 'questions'}
                             </span>
                             {currentQuiz.questions.filter(q => q.type !== 'open' && q.correctAnswer.length === 0).length > 0 && (

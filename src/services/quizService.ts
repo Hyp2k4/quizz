@@ -42,6 +42,7 @@ export interface QuizData {
   visibility?: 'public' | 'private';
   accessCode?: string; // Optional code for private access
   views?: number;
+  subject?: string; // Group quizzes by subject
 }
 
 
@@ -306,13 +307,26 @@ export const saveQuizToFirestore = async (quiz: QuizData) => {
 };
 
 export const getQuizzes = async (): Promise<QuizData[]> => {
-    // Only return public quizzes (where visibility is not 'private')
     const q = query(collection(db, "quizzes"), where("visibility", "!=", "private"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
     } as QuizData));
+};
+
+export const getQuizzesBySubject = async (subject: string, excludeId?: string): Promise<QuizData[]> => {
+    if (!subject) return [];
+    const q = query(
+        collection(db, "quizzes"), 
+        where("subject", "==", subject),
+        where("visibility", "==", "public"),
+        limit(5)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as QuizData))
+        .filter(q => q.id !== excludeId);
 };
 
 export const getQuizById = async (id: string): Promise<QuizData | null> => {

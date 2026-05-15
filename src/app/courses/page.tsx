@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getQuizzes, QuizData } from "@/services/quizService";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Info, Search, Key, Sparkles, Filter } from "lucide-react";
+import { ArrowRight, BookOpen, Info, Search, Key, Sparkles, Filter, ChevronDown, ChevronUp, Share2, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CourseDetailsModal } from "@/components/quiz/CourseDetailsModal";
 import { getQuizByAccessCode } from "@/services/quizService";
@@ -23,7 +23,36 @@ export default function CoursesPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [joinCode, setJoinCode] = useState("");
     const [isJoining, setIsJoining] = useState(false);
+    const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+    const [expandedSubjects, setExpandedSubjects] = useState<Record<string, boolean>>({});
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const subjectParam = searchParams.get("subject");
+        if (subjectParam) {
+            setSelectedSubject(subjectParam);
+        }
+    }, [searchParams]);
+
+    const handleShareSubject = (subject: string) => {
+        const url = `${window.location.origin}/courses?subject=${encodeURIComponent(subject)}`;
+        navigator.clipboard.writeText(url);
+        toast.success(language === 'vi' ? `Đã sao chép liên kết môn ${subject}!` : `${subject} subject link copied!`);
+    };
+
+    const toggleSubject = (subject: string) => {
+        setExpandedSubjects(prev => ({
+            ...prev,
+            [subject]: prev[subject] === false ? true : false
+        }));
+    };
+
+    const handleShare = (quizId: string) => {
+        const url = `${window.location.origin}/courses/${quizId}`;
+        navigator.clipboard.writeText(url);
+        toast.success(language === 'vi' ? "Đã sao chép liên kết khóa học!" : "Course link copied!");
+    };
 
     useEffect(() => {
         async function fetch() {
@@ -39,10 +68,12 @@ export default function CoursesPage() {
         fetch();
     }, []);
 
-    const filteredQuizzes = quizzes.filter(q => 
-        q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        q.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredQuizzes = quizzes.filter(q => {
+        const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            q.description?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSubject = !selectedSubject || q.subject === selectedSubject;
+        return matchesSearch && matchesSubject;
+    });
 
     const handleJoinWithCode = async () => {
         if (!joinCode.trim()) return;
@@ -76,7 +107,15 @@ export default function CoursesPage() {
                         </h1>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
+                        {selectedSubject && (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl border border-indigo-100 dark:border-indigo-800 text-sm font-bold">
+                                <span>{language === 'vi' ? 'Môn học' : 'Subject'}: {selectedSubject}</span>
+                                <button onClick={() => setSelectedSubject(null)} className="hover:text-indigo-800 dark:hover:text-indigo-200">
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                        )}
                         <div className="relative group flex-1 sm:w-80">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" />
                             <input
@@ -140,62 +179,135 @@ export default function CoursesPage() {
                                 </Button>
                             </motion.div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                                <AnimatePresence mode="popLayout">
-                                    {filteredQuizzes.map(quiz => (
-                                        <motion.div
-                                            key={quiz.id}
-                                            layout
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                        >
-                                            <Card className="h-full border-none shadow-xl shadow-zinc-200/50 dark:shadow-none bg-white dark:bg-zinc-900 rounded-[2.5rem] overflow-hidden group hover:ring-2 ring-indigo-500 transition-all duration-300">
-                                                <CardHeader className="p-8 pb-4">
-                                                    <div className="flex justify-between items-start mb-6">
-                                                        <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
-                                                            <BookOpen className="h-7 w-7" />
-                                                        </div>
-                                                        <div className="px-3 py-1 bg-zinc-50 dark:bg-zinc-800 text-zinc-500 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                                            {quiz.questions?.length || 0} {language === 'vi' ? 'CÂU HỎI' : 'QUESTIONS'}
-                                                        </div>
-                                                    </div>
-                                                    <CardTitle className="text-xl font-bold line-clamp-2 leading-tight min-h-[56px] group-hover:text-indigo-600 transition-colors">
-                                                        {quiz.title}
-                                                    </CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="px-8 pt-0 flex-1">
-                                                    <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-3 leading-relaxed mb-6">
-                                                        {quiz.description || (language === 'vi' ? "Khóa học này chưa có mô tả chi tiết từ tác giả." : "This course doesn't have a detailed description yet.")}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 mb-4">
-                                                        <div className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold">
-                                                            {quiz.authorName?.[0] || 'A'}
-                                                        </div>
-                                                        <span className="text-xs text-zinc-400 font-medium">{language === 'vi' ? 'Tác giả' : 'Author'}: {quiz.authorName || (language === 'vi' ? "Ẩn danh" : "Anonymous")}</span>
-                                                    </div>
-                                                </CardContent>
-                                                <CardFooter className="p-8 pt-0 flex gap-3">
+                            <div className="space-y-20">
+                                {Object.entries(
+                                    filteredQuizzes.reduce((acc, quiz) => {
+                                        const subject = quiz.subject?.trim() || (language === 'vi' ? "Khác" : "Others");
+                                        if (!acc[subject]) acc[subject] = [];
+                                        acc[subject].push(quiz);
+                                        return acc;
+                                    }, {} as Record<string, QuizData[]>)
+                                ).map(([subject, subjectQuizzes]) => {
+                                    const isExpanded = expandedSubjects[subject] !== false;
+                                    return (
+                                        <div key={subject} className="space-y-10">
+                                            <div 
+                                                className="flex items-center justify-between group/header cursor-pointer"
+                                                onClick={() => toggleSubject(subject)}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="h-12 w-1.5 bg-indigo-600 rounded-full" />
+                                                    <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
+                                                        <BookOpen className="h-6 w-6 text-indigo-500" />
+                                                        {subject}
+                                                        <span className="text-sm font-bold px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl ml-2">
+                                                            {subjectQuizzes.length}
+                                                        </span>
+                                                    </h2>
+                                                </div>
+                                                <div className="flex items-center gap-2">
                                                     <Button
-                                                        variant="secondary"
-                                                        className="flex-1 h-12 rounded-2xl font-bold"
-                                                        onClick={() => {
-                                                            setSelectedQuiz(quiz);
-                                                            setIsDetailsOpen(true);
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-10 w-10 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleShareSubject(subject);
                                                         }}
                                                     >
-                                                        {t.common.details}
+                                                        <Share2 className="h-5 w-5" />
                                                     </Button>
-                                                    <Link href={`/courses/${quiz.id}`} className="flex-[1.5]">
-                                                        <Button className="w-full h-12 gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-500/20">
-                                                            {language === 'vi' ? 'Làm bài' : 'Start'} <ArrowRight className="h-4 w-4" />
-                                                        </Button>
-                                                    </Link>
-                                                </CardFooter>
-                                            </Card>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
+                                                    <Button variant="ghost" size="sm" className="rounded-full h-12 w-12 p-0 text-zinc-400 group-hover/header:bg-indigo-50 group-hover/header:text-indigo-600 transition-colors">
+                                                        {isExpanded ? <ChevronUp className="h-6 w-6" /> : <ChevronDown className="h-6 w-6" />}
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            <AnimatePresence initial={false}>
+                                                {isExpanded && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: "auto", opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 py-2">
+                                                            <AnimatePresence mode="popLayout">
+                                                                {subjectQuizzes.map(quiz => (
+                                                                    <motion.div
+                                                                        key={quiz.id}
+                                                                        layout
+                                                                        initial={{ opacity: 0, scale: 0.9 }}
+                                                                        animate={{ opacity: 1, scale: 1 }}
+                                                                        exit={{ opacity: 0, scale: 0.9 }}
+                                                                    >
+                                                                        <Card className="h-full border-none shadow-xl shadow-zinc-200/50 dark:shadow-none bg-white dark:bg-zinc-900 rounded-[2.5rem] overflow-hidden group hover:ring-2 ring-indigo-500 transition-all duration-300">
+                                                                            <CardHeader className="p-8 pb-4">
+                                                                                <div className="flex justify-between items-start mb-6">
+                                                                                    <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                                                                                        <BookOpen className="h-7 w-7" />
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-9 w-9 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                quiz.id && handleShare(quiz.id);
+                                                                                            }}
+                                                                                        >
+                                                                                            <Share2 className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                        <div className="px-3 py-1 bg-zinc-50 dark:bg-zinc-800 text-zinc-500 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                                                                            {quiz.questions?.length || 0} {language === 'vi' ? 'CÂU HỎI' : 'QUESTIONS'}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <CardTitle className="text-xl font-bold line-clamp-2 leading-tight min-h-[56px] group-hover:text-indigo-600 transition-colors">
+                                                                                    {quiz.title}
+                                                                                </CardTitle>
+                                                                            </CardHeader>
+                                                                            <CardContent className="px-8 pt-0 flex-1">
+                                                                                <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-3 leading-relaxed mb-6">
+                                                                                    {quiz.description || (language === 'vi' ? "Khóa học này chưa có mô tả chi tiết từ tác giả." : "This course doesn't have a detailed description yet.")}
+                                                                                </p>
+                                                                                <div className="flex items-center gap-2 mb-4">
+                                                                                    <div className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold">
+                                                                                        {quiz.authorName?.[0] || 'A'}
+                                                                                    </div>
+                                                                                    <span className="text-xs text-zinc-400 font-medium">{language === 'vi' ? 'Tác giả' : 'Author'}: {quiz.authorName || (language === 'vi' ? "Ẩn danh" : "Anonymous")}</span>
+                                                                                </div>
+                                                                            </CardContent>
+                                                                            <CardFooter className="p-8 pt-0 flex gap-3">
+                                                                                <Button
+                                                                                    variant="secondary"
+                                                                                    className="flex-1 h-12 rounded-2xl font-bold"
+                                                                                    onClick={() => {
+                                                                                        setSelectedQuiz(quiz);
+                                                                                        setIsDetailsOpen(true);
+                                                                                    }}
+                                                                                >
+                                                                                    {t.common.details}
+                                                                                </Button>
+                                                                                <Link href={`/courses/${quiz.id}`} className="flex-[1.5]">
+                                                                                    <Button className="w-full h-12 gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-500/20">
+                                                                                        {language === 'vi' ? 'Làm bài' : 'Start'} <ArrowRight className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                </Link>
+                                                                            </CardFooter>
+                                                                        </Card>
+                                                                    </motion.div>
+                                                                ))}
+                                                            </AnimatePresence>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </>

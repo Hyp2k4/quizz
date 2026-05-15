@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
-import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, reportQuestionIssue, recordQuizView } from "@/services/quizService";
+import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, reportQuestionIssue, recordQuizView, getQuizzesBySubject } from "@/services/quizService";
 import { ReportDialog } from "@/components/quiz/ReportDialog";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
-import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers, Flag, LogIn } from "lucide-react";
+import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers, Flag, LogIn, ArrowLeft, BookOpen } from "lucide-react";
 import confetti from "canvas-confetti";
 
 // Helper to format time
@@ -308,6 +308,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const [startTime, setStartTime] = useState<number | null>(null);
     const [elapsedTime, setElapsedTime] = useState(0); // for display only
     const [finalTimeMs, setFinalTimeMs] = useState(0);
+    const [relatedQuizzes, setRelatedQuizzes] = useState<QuizData[]>([]);
 
     // Access Check
     const hasAccess = !!user || !!guestName;
@@ -328,11 +329,16 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                         // Check if access is automatically granted
                         const isOwner = user && data.userId === user.uid;
                         const isCollab = user && data.collaborators?.includes(user.email || "");
-                        if (isOwner || isCollab || data.visibility === 'public') {
-                            setIsAccessGranted(true);
+                            if (isOwner || isCollab || data.visibility === 'public') {
+                                setIsAccessGranted(true);
+                            }
+
+                            // Fetch related quizzes if subject exists
+                            if (data.subject) {
+                                getQuizzesBySubject(data.subject, data.id).then(setRelatedQuizzes);
+                            }
                         }
-                    }
-                    setLoading(false);
+                        setLoading(false);
                 }
             } catch (err) {
                 console.error(err);
@@ -763,6 +769,35 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">
                                         {language === 'vi' ? 'Làm lại' : 'Retake Quiz'}
                                     </Button>
+
+                                    {relatedQuizzes.length > 0 && (
+                                        <div className="w-full mt-12 space-y-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-6 w-1 bg-indigo-500 rounded-full" />
+                                                <h3 className="text-lg font-black">{language === 'vi' ? 'Bài tập liên quan' : 'Related Quizzes'}</h3>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {relatedQuizzes.map(rq => (
+                                                    <Card 
+                                                        key={rq.id} 
+                                                        className="group cursor-pointer hover:border-indigo-500 transition-all border-none bg-white dark:bg-white/5 shadow-sm rounded-3xl overflow-hidden"
+                                                        onClick={() => router.push(`/courses/${rq.id}`)}
+                                                    >
+                                                        <CardContent className="p-4 flex gap-4 items-center">
+                                                            <div className="h-12 w-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                                                <BookOpen className="h-6 w-6" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="font-bold text-sm truncate">{rq.title}</h4>
+                                                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{rq.questions?.length || 0} {language === 'vi' ? 'Câu hỏi' : 'Questions'}</p>
+                                                            </div>
+                                                            <ArrowLeft className="h-4 w-4 text-zinc-300 group-hover:text-indigo-500 rotate-180 transition-colors" />
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
