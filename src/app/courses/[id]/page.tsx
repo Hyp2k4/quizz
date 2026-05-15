@@ -32,6 +32,15 @@ const arraysEqual = (a: any[], b: any[]) => {
     return sortedA.every((val, index) => val === sortedB[index]);
 };
 
+const shuffleArray = <T>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+};
+
 function Leaderboard({ quizId, language = 'vi' }: { quizId: string, language?: string }) {
     const [results, setResults] = useState<QuizResult[]>([]);
 
@@ -343,7 +352,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             }
                         }
 
-                        setQuiz({ ...data, questions: finalQuestions });
+                        setQuiz({ ...data, questions: shuffleArray(finalQuestions) });
                         
                         // Check if access is automatically granted
                         const isOwner = user && data.userId === user.uid;
@@ -549,7 +558,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         
         const wrongQuestions = quiz.questions.filter((_, i) => wrongQuestionIndices.includes(i));
         
-        setQuiz(prev => prev ? { ...prev, questions: wrongQuestions } : null);
+        setQuiz(prev => prev ? { ...prev, questions: shuffleArray(wrongQuestions) } : null);
         setAnswers({});
         setIsSubmitted(false);
         setScore(0);
@@ -565,7 +574,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
     const handleRestartFull = () => {
         if (!quiz) return;
-        setQuiz(prev => prev ? { ...prev, questions: originalQuestions } : null);
+        setQuiz(prev => prev ? { ...prev, questions: shuffleArray(originalQuestions) } : null);
         setAnswers({});
         setIsSubmitted(false);
         setScore(0);
