@@ -474,6 +474,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         const infoTime = startTime ? Date.now() - startTime : 0;
         setFinalTimeMs(infoTime);
 
+        let calculatedScore = 0;
         const wrongIndices: number[] = [];
         quiz.questions.forEach((q, index) => {
             const userAns = answers[index];
