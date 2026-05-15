@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
-import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, reportQuestionIssue, recordQuizView, getQuizzesBySubject } from "@/services/quizService";
+import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, reportQuestionIssue, recordQuizView, getQuizzesBySubject, getQuizResultById } from "@/services/quizService";
 import { ReportDialog } from "@/components/quiz/ReportDialog";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -324,11 +324,26 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     const data = await getQuizById(id);
                     if (data) {
                         // Filter out questions with no correct answers for users
-                        const filteredQuestions = data.questions.filter(q =>
+                        let finalQuestions = data.questions.filter(q =>
                             q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
                         );
-                        setOriginalQuestions(filteredQuestions);
-                        setQuiz({ ...data, questions: filteredQuestions });
+                        setOriginalQuestions(finalQuestions);
+
+                        // Check for review mode
+                        const queryParams = new URLSearchParams(window.location.search);
+                        const mode = queryParams.get('mode');
+                        const resultId = queryParams.get('resultId');
+
+                        if (mode === 'review' && resultId) {
+                            const result = await getQuizResultById(resultId);
+                            if (result && result.wrongQuestions && result.wrongQuestions.length > 0) {
+                                finalQuestions = result.wrongQuestions;
+                                setIsRetakeMode(true);
+                                setIsReadyToStart(true);
+                            }
+                        }
+
+                        setQuiz({ ...data, questions: finalQuestions });
                         
                         // Check if access is automatically granted
                         const isOwner = user && data.userId === user.uid;

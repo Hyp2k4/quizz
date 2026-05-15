@@ -176,7 +176,7 @@ function ReviewContent() {
                                                     </div>
                                                 </CardContent>
                                                 <CardFooter className="p-8 pt-0">
-                                                    <Link href={`/courses/${result.quizId}`} className="w-full">
+                                                    <Link href={`/courses/${result.quizId}?mode=review&resultId=${result.id}`} className="w-full">
                                                         <Button className="w-full h-12 gap-2 rounded-2xl bg-red-600 hover:bg-red-700 font-bold shadow-lg shadow-red-500/20">
                                                             <RotateCcw className="h-4 w-4" />
                                                             {language === 'vi' ? 'Làm lại ngay' : 'Retake Now'}

@@ -183,6 +183,20 @@ export const getUserQuizResults = async (userId: string): Promise<QuizResult[]> 
     }
 };
 
+export const getQuizResultById = async (resultId: string): Promise<QuizResult | null> => {
+    try {
+        const docRef = doc(db, "quiz_results", resultId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+            return { id: snap.id, ...snap.data() } as QuizResult;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching result:", error);
+        return null;
+    }
+};
+
 export const getUserQuizzes = async (userId: string, userEmail?: string | null): Promise<QuizData[]> => {
     // Quizzes owned by user
     const qOwner = query(collection(db, "quizzes"), where("userId", "==", userId));
