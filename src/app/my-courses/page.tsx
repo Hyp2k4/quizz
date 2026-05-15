@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { getUserQuizzes, deleteQuiz, QuizData } from "@/services/quizService";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { CourseDetailsModal } from "@/components/quiz/CourseDetailsModal";
 import { Info } from "lucide-react";
 
-export default function MyCoursesPage() {
+function MyCoursesContent() {
     const { t, language } = useLanguage();
     const { user, loading: authLoading } = useAuth();
     const [quizzes, setQuizzes] = useState<QuizData[]>([]);
@@ -270,5 +270,13 @@ export default function MyCoursesPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function MyCoursesPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen pt-32 text-center text-zinc-400 italic">Đang tải trang quản lý...</div>}>
+            <MyCoursesContent />
+        </Suspense>
     );
 }
