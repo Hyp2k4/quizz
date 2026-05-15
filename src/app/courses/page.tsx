@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getQuizzes, QuizData } from "@/services/quizService";
 import { Navbar } from "@/components/layout/Navbar";
@@ -15,6 +15,18 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function CoursesPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[rgb(var(--background))] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+            </div>
+        }>
+            <CoursesContent />
+        </Suspense>
+    );
+}
+
+function CoursesContent() {
     const { t, language } = useLanguage();
     const [quizzes, setQuizzes] = useState<QuizData[]>([]);
     const [loading, setLoading] = useState(true);
