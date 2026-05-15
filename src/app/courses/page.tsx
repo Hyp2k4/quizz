@@ -7,7 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Info, Search, Key, Sparkles, Filter, ChevronDown, ChevronUp, Share2, X } from "lucide-react";
+import { ArrowRight, BookOpen, Info, Search, Key, Sparkles, Filter, ChevronDown, ChevronUp, Share2, X, Trophy } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CourseDetailsModal } from "@/components/quiz/CourseDetailsModal";
 import { getQuizByAccessCode } from "@/services/quizService";
@@ -218,6 +218,18 @@ function CoursesContent() {
                                                     </h2>
                                                 </div>
                                                 <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="rounded-full px-4 border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold hidden sm:flex gap-2"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.push(`/mock-exam/${encodeURIComponent(subject)}`);
+                                                        }}
+                                                    >
+                                                        <Trophy className="h-4 w-4" />
+                                                        {language === 'vi' ? 'Thi thử (60p)' : 'Mock Exam (60m)'}
+                                                    </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"

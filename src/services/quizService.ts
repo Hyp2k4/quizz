@@ -198,6 +198,35 @@ export const getUserQuizResults = async (userId: string): Promise<QuizResult[]> 
     }
 };
 
+export const saveMockExamResult = async (result: any) => {
+    try {
+        await addDoc(collection(db, "mock_exam_results"), {
+            ...result,
+            createdAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error saving mock result:", error);
+        throw error;
+    }
+};
+
+export const getMockExamLeaderboard = async (subject: string): Promise<any[]> => {
+    try {
+        const q = query(
+            collection(db, "mock_exam_results"),
+            where("subject", "==", subject),
+            orderBy("score", "desc"),
+            orderBy("timeTakenMs", "asc"),
+            limit(10)
+        );
+        const snap = await getDocs(q);
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (e) {
+        console.error("Error fetching mock leaderboard:", e);
+        return [];
+    }
+};
+
 export const getQuizResultById = async (resultId: string): Promise<QuizResult | null> => {
     try {
         const docRef = doc(db, "quiz_results", resultId);
@@ -347,18 +376,40 @@ export const getQuizzes = async (): Promise<QuizData[]> => {
     } as QuizData));
 };
 
-export const getQuizzesBySubject = async (subject: string, excludeId?: string): Promise<QuizData[]> => {
+export const getQuizzesBySubject = async (subject: string, excludeId?: string, limitCount?: number): Promise<QuizData[]> => {
     if (!subject) return [];
     const q = query(
         collection(db, "quizzes"), 
         where("subject", "==", subject),
         where("visibility", "==", "public"),
-        limit(5)
+        limit(limitCount || 5)
     );
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as QuizData))
         .filter(q => q.id !== excludeId);
+};
+
+export const getMockExamQuestions = async (subject: string): Promise<Question[]> => {
+    try {
+        // Fetch more quizzes to get a diverse pool of questions
+        const quizzes = await getQuizzesBySubject(subject, undefined, 50);
+        
+        let allQuestions: Question[] = [];
+        quizzes.forEach(quiz => {
+            const filtered = quiz.questions.filter(q => 
+                q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
+            );
+            allQuestions = [...allQuestions, ...filtered];
+        });
+        
+        // Shuffle and pick 40
+        const shuffled = allQuestions.sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, 40);
+    } catch (error) {
+        console.error("Error fetching mock questions:", error);
+        return [];
+    }
 };
 
 export const getQuizById = async (id: string): Promise<QuizData | null> => {
