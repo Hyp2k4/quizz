@@ -801,7 +801,7 @@ export default function QuizBuilder() {
                     <div className="text-center py-20 bg-zinc-50 dark:bg-zinc-900/30 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-white/5">
                         <Search className="h-10 w-10 mx-auto mb-4 text-zinc-300" />
                         <p className="text-zinc-500 font-bold">{language === 'vi' ? 'Không tìm thấy câu hỏi nào khớp với từ khóa' : 'No questions match your search'}</p>
-                        <Button variant="link" onClick={() => setSearchQuery("")} className="text-indigo-500 mt-2">
+                        <Button variant="ghost" onClick={() => setSearchQuery("")} className="text-indigo-500 mt-2 hover:bg-indigo-50">
                             {language === 'vi' ? 'Xóa tìm kiếm' : 'Clear search'}
                         </Button>
                     </div>

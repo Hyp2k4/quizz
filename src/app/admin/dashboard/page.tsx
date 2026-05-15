@@ -5,26 +5,26 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
-import { 
-    getAllUsers, 
-    getAllQuizzesAdmin, 
-    getSystemStats, 
-    updateUserRole, 
-    deleteUserAdmin, 
-    UserProfile 
+import {
+    getAllUsers,
+    getAllQuizzesAdmin,
+    getSystemStats,
+    updateUserRole,
+    deleteUserAdmin,
+    UserProfile
 } from "@/services/adminService";
 import { deleteQuiz, QuizData } from "@/services/quizService";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { 
-    Users, 
-    BookOpen, 
-    BarChart3, 
-    Shield, 
-    ShieldAlert, 
-    Trash2, 
-    ExternalLink, 
-    Search, 
+import {
+    Users,
+    BookOpen,
+    BarChart3,
+    Shield,
+    ShieldAlert,
+    Trash2,
+    ExternalLink,
+    Search,
     Filter,
     MoreVertical,
     CheckCircle2,
@@ -106,13 +106,13 @@ export default function AdminDashboardPage() {
         }
     };
 
-    const filteredUsers = users.filter(u => 
-        u.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const filteredUsers = users.filter(u =>
+        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.displayName.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const filteredQuizzes = quizzes.filter(q => 
-        q.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const filteredQuizzes = quizzes.filter(q =>
+        q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         q.authorName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -121,7 +121,7 @@ export default function AdminDashboardPage() {
     return (
         <div className="min-h-screen bg-[rgb(var(--background))] pb-20">
             <Navbar />
-            
+
             <main className="pt-32 px-6 max-w-7xl mx-auto animate-blur-reveal">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
@@ -138,19 +138,19 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <div className="flex bg-[rgb(var(--card))] p-1 rounded-2xl border border-[rgb(var(--border))] shadow-sm">
-                        <button 
+                        <button
                             onClick={() => setActiveTab('stats')}
                             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'stats' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                         >
                             {t.admin.stats}
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab('users')}
                             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'users' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                         >
                             {t.admin.users}
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab('quizzes')}
                             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'quizzes' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                         >
@@ -211,8 +211,8 @@ export default function AdminDashboardPage() {
                         <div className="p-6 border-b border-[rgb(var(--border))] bg-zinc-50/50 dark:bg-zinc-800/50 flex flex-col md:flex-row justify-between items-center gap-4">
                             <div className="relative w-full md:w-96">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     placeholder={language === 'vi' ? 'Tìm kiếm nhanh...' : 'Search everything...'}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -272,17 +272,17 @@ export default function AdminDashboardPage() {
                                                         {u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : 'N/A'}
                                                     </td>
                                                     <td className="px-8 py-5 text-right space-x-2">
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="ghost" 
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
                                                             onClick={() => handleRoleUpdate(u.uid, u.role)}
                                                             className={`rounded-xl px-4 ${u.role === 'admin' ? 'text-amber-600 hover:bg-amber-50' : 'text-indigo-600 hover:bg-indigo-50'}`}
                                                         >
                                                             {u.role === 'admin' ? t.admin.removeAdmin : t.admin.makeAdmin}
                                                         </Button>
-                                                        <Button 
-                                                            size="icon" 
-                                                            variant="ghost" 
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
                                                             onClick={() => handleDeleteUser(u.uid)}
                                                             className="rounded-xl text-red-500 hover:bg-red-50"
                                                         >
@@ -312,17 +312,17 @@ export default function AdminDashboardPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-5 text-right space-x-2">
-                                                        <Button 
-                                                            size="icon" 
-                                                            variant="ghost" 
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
                                                             onClick={() => router.push(`/courses/${q.id}`)}
                                                             className="rounded-xl text-zinc-500 hover:bg-zinc-100"
                                                         >
                                                             <ExternalLink className="h-4 w-4" />
                                                         </Button>
-                                                        <Button 
-                                                            size="icon" 
-                                                            variant="ghost" 
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
                                                             onClick={() => handleDeleteQuiz(q.id!)}
                                                             className="rounded-xl text-red-500 hover:bg-red-50"
                                                         >
