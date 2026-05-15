@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NotificationInbox } from "@/components/quiz/NotificationInbox";
+import { ChevronDown, History } from "lucide-react";
 
 export function Navbar() {
     const { t, language, setLanguage } = useLanguage();
@@ -17,6 +18,7 @@ export function Navbar() {
     const router = useRouter();
     const pathname = usePathname();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     // Close menu when route changes
     useEffect(() => {
@@ -107,17 +109,61 @@ export function Navbar() {
                         {/* User Auth Desktop & Mobile Trigger */}
                         <div className="flex items-center gap-2">
                             {user ? (
-                                <div className="hidden md:flex items-center gap-2 pl-2 border-l border-[rgb(var(--border))]">
-                                    {user.photoURL ? (
-                                        <img src={user.photoURL} alt="User" className="h-8 w-8 rounded-full border border-[rgb(var(--border))]" />
-                                    ) : (
-                                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                                            <UserIcon className="h-4 w-4 text-indigo-600" />
-                                        </div>
-                                    )}
-                                    <Button variant="ghost" size="icon" onClick={logout} title={t.navbar.logout}>
-                                        <LogOut className="h-4 w-4" />
-                                    </Button>
+                                <div className="hidden md:flex items-center gap-2 pl-2 border-l border-[rgb(var(--border))] relative">
+                                    <button 
+                                        onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                        className="flex items-center gap-2 p-1 pr-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                    >
+                                        {user.photoURL ? (
+                                            <img src={user.photoURL} alt="User" className="h-8 w-8 rounded-full border border-[rgb(var(--border))]" />
+                                        ) : (
+                                            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                <UserIcon className="h-4 w-4 text-indigo-600" />
+                                            </div>
+                                        )}
+                                        <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {isProfileOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-10" onClick={() => setIsProfileOpen(false)} />
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border dark:border-zinc-800 p-2 z-20"
+                                                >
+                                                    <div className="p-3 border-b dark:border-zinc-800 mb-2">
+                                                        <p className="font-bold text-sm truncate">{user.displayName || "User"}</p>
+                                                        <p className="text-[10px] text-zinc-500 truncate">{user.email}</p>
+                                                    </div>
+                                                    
+                                                    <Link href="/review" onClick={() => setIsProfileOpen(false)}>
+                                                        <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 transition-colors text-sm font-bold">
+                                                            <History className="h-4 w-4" />
+                                                            {language === 'vi' ? 'Câu hỏi đã sai' : 'Wrong Questions'}
+                                                        </button>
+                                                    </Link>
+
+                                                    <Link href="/my-courses" onClick={() => setIsProfileOpen(false)}>
+                                                        <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium">
+                                                            <BookOpen className="h-4 w-4" />
+                                                            {t.navbar.myCourses}
+                                                        </button>
+                                                    </Link>
+
+                                                    <button 
+                                                        onClick={() => { logout(); setIsProfileOpen(false); }}
+                                                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium text-zinc-500"
+                                                    >
+                                                        <LogOut className="h-4 w-4" />
+                                                        {t.navbar.logout}
+                                                    </button>
+                                                </motion.div>
+                                            </>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                             ) : (
                                 <Button variant="ghost" size="sm" onClick={() => login()} className="hidden md:flex gap-2">
@@ -180,10 +226,16 @@ export function Navbar() {
                                         </Link>
                                     ))}
                                     {user && (
-                                        <Link href="/my-courses" className="flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-medium text-indigo-600">
-                                            <BookOpen className="h-5 w-5" />
-                                            {t.navbar.myCourses}
-                                        </Link>
+                                        <>
+                                            <Link href="/review" className="flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 transition-colors font-bold">
+                                                <History className="h-5 w-5" />
+                                                {language === 'vi' ? 'Câu hỏi đã sai' : 'Wrong Questions'}
+                                            </Link>
+                                            <Link href="/my-courses" className="flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-medium">
+                                                <BookOpen className="h-5 w-5" />
+                                                {t.navbar.myCourses}
+                                            </Link>
+                                        </>
                                     )}
                                 </div>
 

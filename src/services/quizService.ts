@@ -27,6 +27,9 @@ export interface QuizResult {
   totalQuestions: number;
   timeTakenMs: number;
   createdAt: any;
+  wrongQuestions?: Question[];
+  subject?: string;
+  quizTitle?: string;
 }
 
 export interface QuizData {

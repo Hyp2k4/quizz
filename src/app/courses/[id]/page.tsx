@@ -504,13 +504,17 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         // Save Result
+        const wrongQuestions = quiz.questions.filter((_, i) => wrongIndices.includes(i));
         await saveQuizResult({
             quizId: id as string,
             userId: user?.uid || "guest",
             userName: user?.displayName || guestName || "Guest",
             score: calculatedScore,
             totalQuestions: quiz.questions.length,
-            timeTakenMs: infoTime
+            timeTakenMs: infoTime,
+            wrongQuestions: wrongQuestions,
+            subject: quiz.subject,
+            quizTitle: quiz.title
         });
 
         // Create notification and send email for course owner
