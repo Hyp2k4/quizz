@@ -28,6 +28,7 @@ import { X, Send, MessageCircle, User, CornerDownRight, Clock, AlertCircle, User
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useRouter } from "next/navigation";
 
 interface CourseDetailsModalProps {
     isOpen: boolean;
@@ -39,6 +40,7 @@ interface CourseDetailsModalProps {
 export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: CourseDetailsModalProps) {
     const { user, login } = useAuth();
     const { t, language } = useLanguage();
+    const router = useRouter();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
