@@ -647,3 +647,44 @@ export const resolveReportWithAnswer = async (report: QuestionReport, newAnswer:
         await updateDoc(quizRef, { questions: updatedQuestions });
     }
 };
+
+export const syncSubjectWrongQuestions = async (userId: string, subject: string, results: { question: Question, isCorrect: boolean }[]) => {
+    if (!userId || userId === "guest" || !subject) return;
+
+    for (const res of results) {
+        const docId = `${userId}_${subject}_${res.question.id}`;
+        const docRef = doc(db, "subject_wrong_questions", docId);
+
+        if (res.isCorrect) {
+            // If correct, remove from wrong questions pool
+            await deleteDoc(docRef);
+        } else {
+            // If wrong, add or update in pool
+            await setDoc(docRef, {
+                userId,
+                subject,
+                question: res.question,
+                questionId: res.question.id,
+                updatedAt: serverTimestamp()
+            });
+        }
+    }
+};
+
+export const getSubjectWrongQuestions = async (userId: string, subject: string): Promise<Question[]> => {
+    if (!userId || userId === "guest" || !subject) return [];
+
+    try {
+        const q = query(
+            collection(db, "subject_wrong_questions"),
+            where("userId", "==", userId),
+            where("subject", "==", subject),
+            orderBy("updatedAt", "desc")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => d.data().question as Question);
+    } catch (error) {
+        console.error("Error fetching subject wrong questions:", error);
+        return [];
+    }
+};

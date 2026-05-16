@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
-import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, reportQuestionIssue, recordQuizView, getQuizzesBySubject, getQuizResultById } from "@/services/quizService";
+import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, reportQuestionIssue, recordQuizView, getQuizzesBySubject, getQuizResultById, syncSubjectWrongQuestions, getSubjectWrongQuestions } from "@/services/quizService";
 import { ReportDialog } from "@/components/quiz/ReportDialog";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,6 +50,19 @@ const shuffleQuestionsAndOptions = (questions: any[]) => {
         return q;
     });
 };
+
+const MOTIVATIONAL_QUOTES = [
+    { text: "Thất bại là mẹ thành công.", author: "Tục ngữ Việt Nam" },
+    { text: "Học, học nữa, học mãi.", author: "V.I. Lê-nin" },
+    { text: "Thiên tài chỉ có 1% là cảm hứng và 99% là mồ hôi.", author: "Thomas Edison" },
+    { text: "Đừng lo lắng về việc thất bại, hãy lo lắng về việc bạn không thử.", author: "Jack Canfield" },
+    { text: "Hành trình ngàn dặm bắt đầu từ một bước chân.", author: "Lão Tử" },
+    { text: "Cố gắng là tất cả những gì chúng ta có thể làm.", author: "Socrates" },
+    { text: "Kiến thức là sức mạnh.", author: "Francis Bacon" },
+    { text: "Thành công không phải là cuối cùng, thất bại không phải là chết người.", author: "Winston Churchill" },
+    { text: "Người duy nhất không bao giờ mắc sai lầm là người không làm gì cả.", author: "Theodore Roosevelt" }
+];
+
 
 function Leaderboard({ quizId, language = 'vi' }: { quizId: string, language?: string }) {
     const [results, setResults] = useState<QuizResult[]>([]);
@@ -153,7 +166,7 @@ function QuestionTaker({
                                         onChange={(e) => !showResult && onChange(e.target.value)}
                                         disabled={showResult}
                                     />
-                                    {!showResult && (selected as string)?.length > 0 && (
+                                    {onCheck && !showResult && (selected as string)?.length > 0 && (
                                         <div className="flex justify-end">
                                             <Button size="sm" onClick={onCheck} className="rounded-full">
                                                 {language === 'vi' ? 'Kiểm tra' : 'Check'}
@@ -227,7 +240,7 @@ function QuestionTaker({
                                 })
                             )}
                         </div>
-                        {isMultiple && !showResult && (selected as string[])?.length > 0 && (
+                        {onCheck && isMultiple && !showResult && (selected as string[])?.length > 0 && (
                             <div className="mt-4 flex justify-end">
                                 <Button size="sm" variant="secondary" onClick={onCheck} className="rounded-full">
                                     {language === 'vi' ? 'Xác nhận đáp án' : 'Confirm Answer'}
@@ -318,6 +331,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const [isReadyToStart, setIsReadyToStart] = useState(false);
     const streakRef = useRef(0);
 
+    // Inactivity State
+    const lastInteractionRef = useRef(Date.now());
+    const [showQuote, setShowQuote] = useState(false);
+    const [currentQuote, setCurrentQuote] = useState(MOTIVATIONAL_QUOTES[0]);
+    const [subjectWrongQuestions, setSubjectWrongQuestions] = useState<any[]>([]);
+
+
     // Private Access State
     const [isAccessGranted, setIsAccessGranted] = useState(false);
     const [inputCode, setInputCode] = useState("");
@@ -374,6 +394,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             // Fetch related quizzes if subject exists
                             if (data.subject) {
                                 getQuizzesBySubject(data.subject, data.id).then(setRelatedQuizzes);
+                                if (user) {
+                                    getSubjectWrongQuestions(user.uid, data.subject).then(setSubjectWrongQuestions);
+                                }
                             }
                         }
                         setLoading(false);
@@ -385,6 +408,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         }
         fetch();
     }, [id, user]);
+
 
     // Record view only once when quiz is loaded AND user is logged in
     useEffect(() => {
@@ -426,6 +450,28 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         return () => clearInterval(interval);
     }, [quiz, hasAccess, startTime, isSubmitted, isReadyToStart]);
 
+    // Inactivity Detection Effect
+    useEffect(() => {
+        if (!isReadyToStart || isSubmitted || !hasAccess) return;
+
+        const interval = setInterval(() => {
+            const timeSinceInteraction = Date.now() - lastInteractionRef.current;
+            if (timeSinceInteraction > 5000 && !showQuote) {
+                const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+                setCurrentQuote(randomQuote);
+                setShowQuote(true);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [isReadyToStart, isSubmitted, showQuote, hasAccess]);
+
+    const resetInactivity = () => {
+        lastInteractionRef.current = Date.now();
+        if (showQuote) setShowQuote(false);
+    };
+
+
 
     const handleJoinAsGuest = () => {
         if (tempName.trim()) setGuestName(tempName);
@@ -450,14 +496,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     };
 
     const handleAnswer = (qIndex: number, val: string | string[]) => {
-        if (isSubmitted || revealed[qIndex]) return;
+        if (isSubmitted) return;
         setAnswers(prev => ({ ...prev, [qIndex]: val }));
-
-        // Auto-reveal for single choice
-        if (quiz && quiz.questions[qIndex].type === 'single') {
-            setRevealed(prev => ({ ...prev, [qIndex]: true }));
-            checkStreakAfterAnswer(qIndex, val);
-        }
     };
 
     const handleCheckIndividual = (qIndex: number) => {
@@ -494,8 +534,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const onPreSubmit = () => {
         if (!quiz) return;
         const total = quiz.questions.length;
-        // Answered is questions that are revealed
-        const answeredCount = Object.keys(revealed).length;
+        // Answered is questions that have an entry in answers
+        const answeredCount = Object.keys(answers).length;
         const missing = total - answeredCount;
 
         setUnansweredCount(missing);
@@ -532,6 +572,14 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
         setScore(calculatedScore);
         setWrongQuestionIndices(wrongIndices);
+        
+        // Reveal ALL answers for final result
+        const allRevealed: Record<number, boolean> = {};
+        quiz.questions.forEach((_, i) => {
+            allRevealed[i] = true;
+        });
+        setRevealed(allRevealed);
+        
         setIsSubmitted(true);
 
         toast.success(`Quiz submitted! Score: ${calculatedScore}/${quiz.questions.length}`);
@@ -550,6 +598,17 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             subject: quiz.subject,
             quizTitle: quiz.title
         });
+
+        // Sync Subject Wrong Questions (Global Pool)
+        if (user && quiz.subject) {
+            const results = quiz.questions.map((q, i) => ({
+                question: q,
+                isCorrect: !wrongIndices.includes(i)
+            }));
+            await syncSubjectWrongQuestions(user.uid, quiz.subject, results);
+            // Refresh wrong questions list
+            getSubjectWrongQuestions(user.uid, quiz.subject).then(setSubjectWrongQuestions);
+        }
 
         // Create notification for course owner
         if (quiz.userId) {
@@ -794,7 +853,14 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 ) : !isReadyToStart ? (
                     renderStartGate()
                 ) : (
-                    <div className="space-y-6 animation-fade-in">
+                    <div 
+                        className="space-y-6 animation-fade-in"
+                        onMouseMove={resetInactivity}
+                        onKeyDown={resetInactivity}
+                        onScroll={resetInactivity}
+                        onClick={resetInactivity}
+                    >
+
                         {/* Header Info */}
                         <div className="flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg sticky top-20 z-10 backdrop-blur-md shadow-sm">
                             <span className="font-medium">{language === 'vi' ? 'Người chơi' : 'Player'}: <span className="font-bold text-indigo-600 dark:text-indigo-400">{user ? user.displayName : guestName}</span></span>
@@ -805,11 +871,30 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 </span>
                                 {!isSubmitted && (
                                     <span className="text-sm text-[rgb(var(--muted-foreground))]">
-                                        {Object.keys(revealed).length} / {quiz.questions.length}
+                                        {Object.keys(answers).length} / {quiz.questions.length}
                                     </span>
                                 )}
                             </div>
                         </div>
+
+                        {/* Motivational Quote Overlay */}
+                        {showQuote && !isSubmitted && (
+                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animation-fade-in pointer-events-none">
+                                <Card className="max-w-md w-full p-8 text-center space-y-4 border-none shadow-2xl bg-white dark:bg-zinc-900 rounded-[2rem] transform translate-y-[-20%] animate-bounce-slow">
+                                    <div className="mx-auto w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-2">
+                                        <Flame className="h-6 w-6" />
+                                    </div>
+                                    <p className="text-lg font-bold italic leading-relaxed text-zinc-800 dark:text-zinc-100">
+                                        "{currentQuote.text}"
+                                    </p>
+                                    <p className="text-sm font-black uppercase tracking-widest text-indigo-500">
+                                        — {currentQuote.author}
+                                    </p>
+                                    <p className="text-[10px] text-zinc-400 font-bold uppercase mt-4">Tiếp tục nào, bạn làm được mà! ✨</p>
+                                </Card>
+                            </div>
+                        )}
+
 
                         {isSubmitted && (
                             <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-2xl p-8 mb-8 animation-scale-in">
@@ -884,23 +969,28 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             }
 
                             return (
-                                <QuestionTaker
-                                    key={i}
-                                    index={i}
-                                    question={q}
-                                    selected={answers[i]}
-                                    onChange={(val) => handleAnswer(i, val)}
-                                    readOnly={isSubmitted}
-                                    isRevealed={revealed[i]}
-                                    isCorrect={isCorrect}
-                                    onCheck={() => handleCheckIndividual(i)}
-                                    onReport={() => {
-                                        setReportingIndex(i);
-                                        setReportOpen(true);
-                                    }}
-                                    language={language}
-                                />
+                                <div key={i} id={`question-${i}`}>
+                                    <QuestionTaker
+                                        index={i}
+                                        question={q}
+                                        selected={answers[i]}
+                                        onChange={(val) => {
+                                            handleAnswer(i, val);
+                                            resetInactivity();
+                                        }}
+                                        readOnly={isSubmitted}
+                                        isRevealed={revealed[i]}
+                                        isCorrect={isCorrect}
+                                        onCheck={undefined}
+                                        onReport={() => {
+                                            setReportingIndex(i);
+                                            setReportOpen(true);
+                                        }}
+                                        language={language}
+                                    />
+                                </div>
                             );
+
                         })}
 
                         {!isSubmitted && (
@@ -914,6 +1004,45 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 </Button>
                             </div>
                         )}
+
+                        {/* Subject Wrong Questions Pool */}
+                        {!isSubmitted && subjectWrongQuestions.length > 0 && (
+                            <div className="mt-12 space-y-6 pt-12 border-t border-zinc-100 dark:border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
+                                        <AlertCircle className="h-5 w-5" />
+                                    </div>
+                                    <h2 className="text-xl font-black">{language === 'vi' ? `Câu hỏi cần ôn tập cho môn ${quiz.subject}` : `Review questions for ${quiz.subject}`}</h2>
+                                </div>
+                                <p className="text-sm text-zinc-500">{language === 'vi' ? 'Đây là những câu bạn từng trả lời sai trong môn học này. Hãy xem lại để khắc sâu kiến thức nhé!' : 'These are questions you answered incorrectly in this subject. Review them to solidify your knowledge!'}</p>
+                                
+                                <div className="space-y-4">
+                                    {subjectWrongQuestions.map((sq, si) => (
+                                        <Card key={`wrong-${si}`} className="border-l-4 border-l-red-500 bg-red-50/5 hover:bg-red-50/10 transition-colors">
+                                            <CardContent className="p-4 flex gap-4">
+                                                <div className="h-6 w-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0 text-xs font-bold">{si + 1}</div>
+                                                <div className="space-y-2">
+                                                    <p className="font-bold text-sm">{sq.text}</p>
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold uppercase">{language === 'vi' ? 'Còn sai' : 'Still wrong'}</span>
+                                                        <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2" onClick={() => {
+                                                            // Small hack to scroll to a similar question if it exists in current quiz
+                                                            const idx = quiz.questions.findIndex(q => q.text === sq.text);
+                                                            if (idx !== -1) {
+                                                                document.getElementById(`question-${idx}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                            }
+                                                        }}>
+                                                            <ArrowLeft className="h-3 w-3 rotate-180" /> {language === 'vi' ? 'Tìm trong bài này' : 'Find in this quiz'}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
 
                         <ConfirmDialog
                             isOpen={confirmOpen}
