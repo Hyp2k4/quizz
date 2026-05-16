@@ -1,0 +1,344 @@
+"use client";
+
+import { useEffect, useState, use, useRef } from "react";
+import { 
+    getAllSubjectQuestions,
+    createNotification
+} from "@/services/quizService";
+import { Navbar } from "@/components/layout/Navbar";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent } from "@/components/ui/Card";
+import { useRouter } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { toast } from "sonner";
+import { 
+    Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, 
+    BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap
+} from "lucide-react";
+import confetti from "canvas-confetti";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Helper to compare arrays
+const arraysEqual = (a: any[], b: any[]) => {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((val, index) => val === sortedB[index]);
+};
+
+function PracticeQuestion({
+    question,
+    index,
+    selected,
+    onChange,
+    isRevealed = false,
+    onReveal,
+    language = 'vi'
+}: any) {
+    const isMultiple = question.type === 'multiple';
+    const isOpen = question.type === 'open';
+
+    const handleMultiChange = (opt: string, checked: boolean) => {
+        if (isRevealed) return;
+        const current = Array.isArray(selected) ? selected : [];
+        if (checked) {
+            onChange([...current, opt]);
+        } else {
+            onChange(current.filter(i => i !== opt));
+        }
+    };
+
+    const isCorrect = isRevealed ? (
+        isMultiple 
+        ? arraysEqual(selected, question.correctAnswer)
+        : isOpen
+        ? (selected || "").trim().toLowerCase() === (question.correctAnswer?.[0] || "").trim().toLowerCase()
+        : (question.correctAnswer || []).includes(selected)
+    ) : undefined;
+
+    return (
+        <Card className={`mb-6 border-l-4 transition-all duration-300 ${isRevealed ? (isCorrect ? 'border-l-green-500 bg-green-50/5' : 'border-l-red-500 bg-red-50/5') : 'border-l-indigo-500'}`}>
+            <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm ${isRevealed ? (isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-indigo-100 text-indigo-700'}`}>
+                        {isRevealed ? (isCorrect ? <CheckCircle className="h-6 w-6" /> : <XCircle className="h-6 w-6" />) : index + 1}
+                    </div>
+                    <div className="w-full">
+                        <h3 className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100">{question.text}</h3>
+                        
+                        {question.imageUrl && (
+                            <div className="mb-6 rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
+                                <img src={question.imageUrl} alt="Question" className="max-h-[400px] w-auto mx-auto object-contain" />
+                            </div>
+                        )}
+
+                        <div className="space-y-3">
+                            {isOpen ? (
+                                <div className="space-y-3">
+                                    <textarea
+                                        className="w-full p-4 rounded-xl border bg-white dark:bg-black/20 min-h-[120px] outline-none focus:ring-2 ring-indigo-500/20 transition-all"
+                                        placeholder={language === 'vi' ? "Nhập câu trả lời của bạn..." : "Type your answer..."}
+                                        value={selected as string || ''}
+                                        onChange={(e) => !isRevealed && onChange(e.target.value)}
+                                        disabled={isRevealed}
+                                    />
+                                    {!isRevealed && (selected as string)?.length > 0 && (
+                                        <div className="flex justify-end">
+                                            <Button onClick={onReveal} className="rounded-full px-6">
+                                                {language === 'vi' ? 'Kiểm tra' : 'Check'}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-3">
+                                    {question.options?.map((opt: string, i: number) => {
+                                        const isSelected = isMultiple ? (selected as string[])?.includes(opt) : selected === opt;
+                                        const isActuallyCorrect = isRevealed && (isMultiple ? question.correctAnswer?.includes(opt) : question.correctAnswer?.[0] === opt);
+                                        
+                                        let optionClass = `flex items-start gap-3 p-4 rounded-2xl border-2 transition-all ${isRevealed ? 'cursor-default' : 'cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-zinc-800/50'}`;
+                                        
+                                        if (isRevealed) {
+                                            if (isActuallyCorrect) optionClass += " border-green-500 bg-green-50 dark:bg-green-900/20";
+                                            else if (isSelected) optionClass += " border-red-500 bg-red-50 dark:bg-red-900/20";
+                                            else optionClass += " border-transparent opacity-60";
+                                        } else if (isSelected) {
+                                            optionClass += " border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20";
+                                        } else {
+                                            optionClass += " border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900";
+                                        }
+
+                                        return (
+                                            <label key={i} className={optionClass}>
+                                                <input
+                                                    type={isMultiple ? "checkbox" : "radio"}
+                                                    checked={!!isSelected}
+                                                    onChange={() => !isRevealed && (isMultiple ? handleMultiChange(opt, !isSelected) : (onChange(opt), onReveal()))}
+                                                    disabled={isRevealed}
+                                                    className="mt-1 w-4 h-4 text-indigo-600"
+                                                />
+                                                <span className="text-sm font-medium">{opt}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {isMultiple && !isRevealed && (selected as string[])?.length > 0 && (
+                            <div className="mt-4 flex justify-end">
+                                <Button onClick={onReveal} variant="secondary" className="rounded-full px-6">
+                                    {language === 'vi' ? 'Xác nhận' : 'Confirm'}
+                                </Button>
+                            </div>
+                        )}
+
+                        {isRevealed && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-6 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
+                            >
+                                <div className="flex items-center gap-2 mb-2 text-indigo-600 dark:text-indigo-400 font-bold text-sm">
+                                    <AlertCircle className="h-4 w-4" />
+                                    {language === 'vi' ? 'Giải thích & Đáp án' : 'Explanation & Answer'}
+                                </div>
+                                <div className="text-sm space-y-2">
+                                    <p><span className="font-bold">{language === 'vi' ? 'Đáp án đúng' : 'Correct Answer'}:</span> {Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : question.correctAnswer}</p>
+                                    {question.explanation && <p className="text-zinc-600 dark:text-zinc-400 italic">"{question.explanation}"</p>}
+                                </div>
+                            </motion.div>
+                        )}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function SubjectPracticePage({ params }: { params: Promise<{ subject: string }> }) {
+    const { subject: rawSubject } = use(params);
+    const subject = decodeURIComponent(rawSubject);
+    const router = useRouter();
+    const { user, login } = useAuth();
+    const { language } = useLanguage();
+
+    const [questions, setQuestions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isStarted, setIsStarted] = useState(false);
+    const [answers, setAnswers] = useState<Record<number, any>>({});
+    const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+    const [score, setScore] = useState(0);
+    const streakRef = useRef(0);
+
+    useEffect(() => {
+        async function fetch() {
+            setLoading(true);
+            const qs = await getAllSubjectQuestions(subject);
+            setQuestions(qs);
+            setLoading(false);
+        }
+        fetch();
+    }, [subject]);
+
+    const handleReveal = (idx: number) => {
+        if (revealed[idx]) return;
+        
+        setRevealed(prev => ({ ...prev, [idx]: true }));
+        
+        const q = questions[idx];
+        const userAns = answers[idx];
+        const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
+        let isCorrect = false;
+
+        if (q.type === 'multiple') isCorrect = arraysEqual(userAns as string[], correctArr);
+        else if (q.type === 'single') isCorrect = correctArr.includes(userAns as string);
+        else isCorrect = (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+
+        if (isCorrect) {
+            setScore(prev => prev + 1);
+            streakRef.current += 1;
+            if (streakRef.current >= 5) {
+                confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+                toast.success(`Chuỗi ${streakRef.current} câu đúng! 🔥`);
+            }
+        } else {
+            streakRef.current = 0;
+        }
+    };
+
+    if (loading) return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+            <p className="text-zinc-500 font-medium animate-pulse">Đang chuẩn bị bộ câu hỏi môn {subject}...</p>
+        </div>
+    );
+
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+                <Navbar />
+                <main className="flex-1 flex items-center justify-center p-6">
+                    <Card className="max-w-md w-full p-10 text-center space-y-8 rounded-[3rem] shadow-2xl border-none">
+                        <div className="mx-auto w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-[2rem] flex items-center justify-center mb-2 shadow-inner transform -rotate-6">
+                            <LogIn className="h-12 w-12" />
+                        </div>
+                        <h2 className="text-3xl font-black">Đăng nhập để luyện tập</h2>
+                        <p className="text-zinc-500">Hãy đăng nhập để theo dõi tiến độ luyện tập của bạn.</p>
+                        <Button onClick={() => login()} className="w-full h-14 rounded-2xl bg-indigo-600 text-lg font-bold">Đăng nhập ngay</Button>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
+
+    if (!isStarted) {
+        return (
+            <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+                <Navbar />
+                <main className="pt-32 px-6 max-w-2xl mx-auto pb-20">
+                    <Card className="p-10 text-center space-y-8 rounded-[3rem] shadow-2xl border-none">
+                        <div className="mx-auto w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-[2rem] flex items-center justify-center mb-2 shadow-inner">
+                            <LayoutGrid className="h-12 w-12" />
+                        </div>
+                        <div className="space-y-4">
+                            <h1 className="text-4xl font-black text-zinc-900 dark:text-zinc-50">Luyện tập {subject}</h1>
+                            <p className="text-zinc-500 leading-relaxed">
+                                Bạn sẽ làm toàn bộ các câu hỏi có trong môn học này mà không giới hạn thời gian. 
+                                Đáp án sẽ được hiển thị ngay sau khi bạn trả lời.
+                            </p>
+                            <div className="flex justify-center gap-6 py-4">
+                                <div className="flex items-center gap-2 text-zinc-600 font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-2xl">
+                                    <BookOpen className="h-5 w-5 text-indigo-500" /> {questions.length} Câu hỏi
+                                </div>
+                                <div className="flex items-center gap-2 text-zinc-600 font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-2xl">
+                                    <Zap className="h-5 w-5 text-yellow-500" /> Không giới hạn
+                                </div>
+                            </div>
+                        </div>
+                        <Button onClick={() => setIsStarted(true)} className="w-full h-16 rounded-3xl bg-indigo-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-indigo-500/20">
+                            Bắt đầu luyện tập
+                        </Button>
+                        <Button variant="ghost" onClick={() => router.back()} className="text-zinc-400">Quay lại</Button>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
+
+    const answeredCount = Object.keys(revealed).length;
+    const progress = (answeredCount / questions.length) * 100;
+
+    return (
+        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+            <Navbar />
+            <main className="pt-32 px-6 max-w-4xl mx-auto pb-32">
+                {/* Fixed Progress Bar */}
+                <div className="fixed top-24 left-0 right-0 z-40 px-4 sm:px-6 pointer-events-none">
+                    <div className="max-w-4xl mx-auto bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md p-4 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xl pointer-events-auto">
+                        <div className="flex justify-between items-center mb-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-2xl flex items-center justify-center">
+                                    <LayoutGrid className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Đang luyện tập môn</p>
+                                    <p className="text-sm font-black truncate max-w-[150px] sm:max-w-none">{subject}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Tiến độ</p>
+                                <p className="text-lg font-black text-indigo-600">{answeredCount} <span className="text-zinc-400 text-sm">/ {questions.length}</span></p>
+                            </div>
+                        </div>
+                        <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progress}%` }}
+                                className="h-full bg-indigo-500"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-6 pt-24">
+                    {questions.map((q, i) => (
+                        <PracticeQuestion
+                            key={i}
+                            index={i}
+                            question={q}
+                            selected={answers[i]}
+                            onChange={(val: any) => setAnswers(prev => ({ ...prev, [i]: val }))}
+                            isRevealed={revealed[i]}
+                            onReveal={() => handleReveal(i)}
+                            language={language}
+                        />
+                    ))}
+                </div>
+
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6">
+                    <Card className="p-4 bg-indigo-600 text-white rounded-[2rem] shadow-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-4 px-4">
+                            <div className="bg-white/20 p-2 rounded-xl">
+                                <Trophy className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold opacity-80 uppercase">Đúng</p>
+                                <p className="text-xl font-black">{score}</p>
+                            </div>
+                        </div>
+                        <Button 
+                            onClick={() => router.push('/courses')}
+                            className="bg-white text-indigo-600 hover:bg-zinc-100 h-12 px-8 rounded-2xl font-bold"
+                        >
+                            Kết thúc luyện tập
+                        </Button>
+                    </Card>
+                </div>
+            </main>
+        </div>
+    );
+}

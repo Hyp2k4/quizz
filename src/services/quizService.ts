@@ -412,6 +412,27 @@ export const getMockExamQuestions = async (subject: string): Promise<Question[]>
     }
 };
 
+export const getAllSubjectQuestions = async (subject: string): Promise<Question[]> => {
+    try {
+        // Fetch all quizzes for this subject (up to 100 for now)
+        const quizzes = await getQuizzesBySubject(subject, undefined, 100);
+        
+        let allQuestions: Question[] = [];
+        quizzes.forEach(quiz => {
+            const filtered = quiz.questions.filter(q => 
+                q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
+            );
+            allQuestions = [...allQuestions, ...filtered];
+        });
+        
+        // Return shuffled questions
+        return allQuestions.sort(() => Math.random() - 0.5);
+    } catch (error) {
+        console.error("Error fetching all subject questions:", error);
+        return [];
+    }
+};
+
 export const getQuizById = async (id: string): Promise<QuizData | null> => {
     const docRef = doc(db, "quizzes", id);
     const docSnap = await getDoc(docRef);

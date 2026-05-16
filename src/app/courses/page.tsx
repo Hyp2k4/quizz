@@ -7,7 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Info, Search, Key, Sparkles, Filter, ChevronDown, ChevronUp, Share2, X, Trophy } from "lucide-react";
+import { ArrowRight, BookOpen, Info, Search, Key, Sparkles, Filter, ChevronDown, ChevronUp, Share2, X, Trophy, Zap } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CourseDetailsModal } from "@/components/quiz/CourseDetailsModal";
 import { getQuizByAccessCode } from "@/services/quizService";
@@ -217,32 +217,46 @@ function CoursesContent() {
                                                         </span>
                                                     </h2>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1 sm:gap-2">
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="rounded-full px-4 border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold hidden sm:flex gap-2"
+                                                        className="rounded-full px-2 sm:px-4 border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold flex gap-1 sm:gap-2"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.push(`/practice/${encodeURIComponent(subject)}`);
+                                                        }}
+                                                    >
+                                                        <Zap className="h-4 w-4 text-yellow-500" />
+                                                        <span className="hidden xs:inline">{language === 'vi' ? 'Luyện tập' : 'Practice'}</span>
+                                                        <span className="xs:hidden">{language === 'vi' ? 'Luyện' : 'Prac'}</span>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="rounded-full px-2 sm:px-4 border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold flex gap-1 sm:gap-2"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             router.push(`/mock-exam/${encodeURIComponent(subject)}`);
                                                         }}
                                                     >
                                                         <Trophy className="h-4 w-4" />
-                                                        {language === 'vi' ? 'Thi thử (60p)' : 'Mock Exam (60m)'}
+                                                        <span className="hidden xs:inline">{language === 'vi' ? 'Thi thử' : 'Mock'}</span>
+                                                        <span className="xs:hidden">{language === 'vi' ? 'Thi' : 'Exam'}</span>
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-10 w-10 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
+                                                        className="h-8 w-8 sm:h-10 sm:w-10 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleShareSubject(subject);
                                                         }}
                                                     >
-                                                        <Share2 className="h-5 w-5" />
+                                                        <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
                                                     </Button>
-                                                    <Button variant="ghost" size="sm" className="rounded-full h-12 w-12 p-0 text-zinc-400 group-hover/header:bg-indigo-50 group-hover/header:text-indigo-600 transition-colors">
-                                                        {isExpanded ? <ChevronUp className="h-6 w-6" /> : <ChevronDown className="h-6 w-6" />}
+                                                    <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 sm:h-12 sm:w-12 p-0 text-zinc-400 group-hover/header:bg-indigo-50 group-hover/header:text-indigo-600 transition-colors">
+                                                        {isExpanded ? <ChevronUp className="h-5 w-5 sm:h-6 sm:w-6" /> : <ChevronDown className="h-5 w-5 sm:h-6 sm:w-6" />}
                                                     </Button>
                                                 </div>
                                             </div>
