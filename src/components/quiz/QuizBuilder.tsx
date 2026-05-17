@@ -80,9 +80,9 @@ export default function QuizBuilder() {
                             const el = document.getElementById(`question-${targetQId}`);
                             el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             // Highlight the question briefly
-                            el?.classList.add('ring-2', 'ring-indigo-500', 'ring-offset-8', 'rounded-3xl');
+                            el?.classList.add('ring-2', 'ring-sky-500', 'ring-offset-8', 'rounded-3xl');
                             setTimeout(() => {
-                                el?.classList.remove('ring-2', 'ring-indigo-500', 'ring-offset-8');
+                                el?.classList.remove('ring-2', 'ring-sky-500', 'ring-offset-8');
                             }, 3000);
                         }, 500);
                     }
@@ -596,7 +596,7 @@ export default function QuizBuilder() {
                             disabled={isSaving}
                         >
                             {isSaving ? (
-                                <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin sm:mr-2" />
+                                <div className="h-4 w-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin sm:mr-2" />
                             ) : (
                                 <Save className="sm:mr-2 h-4 w-4" />
                             )}
@@ -622,12 +622,12 @@ export default function QuizBuilder() {
                 />
                 <div className="flex flex-col md:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
                     <div className="relative w-full md:w-1/3">
-                        <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-400" />
+                        <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-400" />
                         <Input
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
                             onFocus={() => handleFocusQuestion(null)}
-                            className="pl-10 h-10 rounded-2xl bg-white dark:bg-zinc-800/50 border-indigo-100 dark:border-indigo-900/30 focus:ring-indigo-500 text-sm font-bold"
+                            className="pl-10 h-10 rounded-2xl bg-white dark:bg-zinc-800/50 border-sky-100 dark:border-sky-900/30 focus:ring-sky-500 text-sm font-bold"
                             placeholder={language === 'vi' ? "Tên môn học/Nhóm..." : "Subject/Group name..."}
                         />
                     </div>
@@ -668,10 +668,10 @@ export default function QuizBuilder() {
                 <div className="flex flex-wrap gap-2 justify-center md:justify-end">
                     <Button
                         variant="outline"
-                        className="gap-2 border-indigo-500/20 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-full h-10 px-4 text-xs font-bold"
+                        className="gap-2 border-sky-500/20 hover:bg-sky-50 dark:hover:bg-sky-950/30 rounded-full h-10 px-4 text-xs font-bold"
                         onClick={() => setShowQuickPaste(!showQuickPaste)}
                     >
-                        <ClipboardList className="h-4 w-4 text-indigo-500" />
+                        <ClipboardList className="h-4 w-4 text-sky-500" />
                         {showQuickPaste ? t.builder.tools.quickPasteHide : t.builder.tools.quickPaste}
                     </Button>
                     <Button
@@ -702,7 +702,7 @@ export default function QuizBuilder() {
                         placeholder={language === 'vi' ? "Tìm kiếm câu hỏi..." : "Search questions..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 h-10 rounded-full bg-white dark:bg-zinc-800 border-zinc-200/50 dark:border-white/5 focus:ring-indigo-500/20 transition-all text-xs font-medium"
+                        className="pl-9 h-10 rounded-full bg-white dark:bg-zinc-800 border-zinc-200/50 dark:border-white/5 focus:ring-sky-500/20 transition-all text-xs font-medium"
                     />
                     {searchQuery && (
                         <button 
@@ -764,11 +764,11 @@ export default function QuizBuilder() {
 
             {/* Quick Paste Area */}
             {showQuickPaste && (
-                <Card className="bg-indigo-50/30 dark:bg-indigo-950/10 border-indigo-500/20 animation-scale-in">
+                <Card className="bg-sky-50/30 dark:bg-sky-950/10 border-sky-500/20 animation-scale-in">
                     <CardContent className="pt-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-bold flex items-center gap-2">
-                                <Sparkles className="h-4 w-4 text-indigo-500" /> {t.builder.tools.quickPaste}
+                                <Sparkles className="h-4 w-4 text-sky-500" /> {t.builder.tools.quickPaste}
                             </h3>
                             <span className="text-xs text-[rgb(var(--muted-foreground))]">
                                 {t.builder.tools.quickPasteHelp}
@@ -816,7 +816,7 @@ export default function QuizBuilder() {
                     <div className="text-center py-20 bg-zinc-50 dark:bg-zinc-900/30 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-white/5">
                         <Search className="h-10 w-10 mx-auto mb-4 text-zinc-300" />
                         <p className="text-zinc-500 font-bold">{language === 'vi' ? 'Không tìm thấy câu hỏi nào khớp với từ khóa' : 'No questions match your search'}</p>
-                        <Button variant="ghost" onClick={() => setSearchQuery("")} className="text-indigo-500 mt-2 hover:bg-indigo-50">
+                        <Button variant="ghost" onClick={() => setSearchQuery("")} className="text-sky-500 mt-2 hover:bg-sky-50">
                             {language === 'vi' ? 'Xóa tìm kiếm' : 'Clear search'}
                         </Button>
                     </div>

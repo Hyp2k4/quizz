@@ -51,7 +51,7 @@ export function ConfirmDialog({
             {/* Modal */}
             <div className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 p-6 shadow-2xl ring-1 ring-zinc-900/5 transition-all transform scale-100 opacity-100 animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex flex-col items-center text-center gap-4">
-                    <div className={`h-12 w-12 rounded-full flex items-center justify-center ${variant === 'danger' ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center ${variant === 'danger' ? 'bg-red-100 text-red-600' : 'bg-sky-100 text-sky-600'}`}>
                         <AlertTriangle className="h-6 w-6" />
                     </div>
 
@@ -74,7 +74,7 @@ export function ConfirmDialog({
                         </Button>
                         <Button
                             onClick={() => { onConfirm(); onCancel(); }}
-                            className={`flex-1 rounded-xl shadow-lg border-0 ${variant === 'danger' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                            className={`flex-1 rounded-xl shadow-lg border-0 ${variant === 'danger' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-sky-600 hover:bg-sky-700 text-white'}`}
                         >
                             {confirmText}
                         </Button>

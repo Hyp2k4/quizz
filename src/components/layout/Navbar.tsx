@@ -59,7 +59,7 @@ export function Navbar() {
                             alt="Lustio Quiz Logo"
                             className="h-8 w-8 md:h-10 md:w-10 object-contain hover:scale-110 transition-transform duration-300"
                         />
-                        <span className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 animate-gradient-x hidden sm:block">
+                        <span className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-sky-600 via-purple-600 to-sky-600 animate-gradient-x hidden sm:block">
                             Lustio Quiz
                         </span>
                     </Link>
@@ -117,8 +117,8 @@ export function Navbar() {
                                         {user.photoURL ? (
                                             <img src={user.photoURL} alt="User" className="h-8 w-8 rounded-full border border-[rgb(var(--border))]" />
                                         ) : (
-                                            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                                                <UserIcon className="h-4 w-4 text-indigo-600" />
+                                            <div className="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center">
+                                                <UserIcon className="h-4 w-4 text-sky-600" />
                                             </div>
                                         )}
                                         <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
@@ -175,7 +175,7 @@ export function Navbar() {
                             {/* Mobile Toggle */}
                             <button
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                                className="flex md:hidden h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg active:scale-95 transition-transform"
+                                className="flex md:hidden h-10 w-10 items-center justify-center rounded-xl bg-sky-600 text-white shadow-lg active:scale-95 transition-transform"
                             >
                                 {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                             </button>
@@ -221,7 +221,7 @@ export function Navbar() {
                                 <div className="space-y-1">
                                     {navLinks.map((link) => (
                                         <Link key={link.name} href={link.href} className="flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-medium">
-                                            <link.icon className="h-5 w-5 text-indigo-500" />
+                                            <link.icon className="h-5 w-5 text-sky-500" />
                                             {link.name}
                                         </Link>
                                     ))}
@@ -249,8 +249,8 @@ export function Navbar() {
                                                 {user.photoURL ? (
                                                     <img src={user.photoURL} alt="User" className="h-10 w-10 rounded-full" />
                                                 ) : (
-                                                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                                                        <UserIcon className="h-5 w-5 text-indigo-600" />
+                                                    <div className="h-10 w-10 rounded-full bg-sky-100 flex items-center justify-center">
+                                                        <UserIcon className="h-5 w-5 text-sky-600" />
                                                     </div>
                                                 )}
                                                 <div className="flex-1 overflow-hidden">
@@ -268,7 +268,7 @@ export function Navbar() {
                                         </Button>
                                     )}
 
-                                    <Button className="w-full gap-2 rounded-xl h-12 bg-indigo-600" onClick={handleCreateClick}>
+                                    <Button className="w-full gap-2 rounded-xl h-12 bg-sky-600" onClick={handleCreateClick}>
                                         <PlusCircle className="h-5 w-5" /> {t.navbar.createQuiz}
                                     </Button>
 

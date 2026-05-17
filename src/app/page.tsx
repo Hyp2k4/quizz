@@ -17,7 +17,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 px-6">
         {/* Background Elements */}
-        <div className="absolute top-20 left-1/2 -ml-[40rem] -z-10 w-[80rem] h-[40rem] bg-gradient-to-tr from-indigo-500/20 via-purple-500/10 to-transparent blur-3xl opacity-50 rounded-[100%]" />
+        <div className="absolute top-20 left-1/2 -ml-[40rem] -z-10 w-[80rem] h-[40rem] bg-gradient-to-tr from-sky-500/20 via-purple-500/10 to-transparent blur-3xl opacity-50 rounded-[100%]" />
 
         <div className="mx-auto max-w-5xl text-center space-y-8">
           <motion.div
@@ -37,7 +37,7 @@ export default function LandingPage() {
             className="text-5xl md:text-7xl font-extrabold tracking-tight text-[rgb(var(--foreground))]"
           >
             {t.hero.title} <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-purple-500">
               {t.hero.subtitle}
             </span>
           </motion.h1>
@@ -58,7 +58,7 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Link href="/questionbuilder">
-              <Button size="lg" className="rounded-full h-14 px-8 text-lg shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all hover:-translate-y-1">
+              <Button size="lg" className="rounded-full h-14 px-8 text-lg shadow-xl shadow-sky-500/20 hover:shadow-sky-500/30 transition-all hover:-translate-y-1">
                 {t.navbar.cta} <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>

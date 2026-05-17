@@ -140,19 +140,19 @@ export default function AdminDashboardPage() {
                     <div className="flex bg-[rgb(var(--card))] p-1 rounded-2xl border border-[rgb(var(--border))] shadow-sm">
                         <button
                             onClick={() => setActiveTab('stats')}
-                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'stats' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'stats' ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                         >
                             {t.admin.stats}
                         </button>
                         <button
                             onClick={() => setActiveTab('users')}
-                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'users' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'users' ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                         >
                             {t.admin.users}
                         </button>
                         <button
                             onClick={() => setActiveTab('quizzes')}
-                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'quizzes' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'quizzes' ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                         >
                             {t.admin.quizzes}
                         </button>
@@ -162,12 +162,12 @@ export default function AdminDashboardPage() {
                 {/* Content */}
                 {activeTab === 'stats' && stats && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                        <Card className="border-none bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-[32px] overflow-hidden relative group">
+                        <Card className="border-none bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-[32px] overflow-hidden relative group">
                             <Users className="absolute right-[-20px] top-[-20px] h-40 w-40 opacity-10 group-hover:rotate-12 transition-transform duration-500" />
                             <CardContent className="p-8">
-                                <p className="text-indigo-100 font-bold uppercase tracking-wider text-xs mb-2">{t.admin.totalUsers}</p>
+                                <p className="text-sky-100 font-bold uppercase tracking-wider text-xs mb-2">{t.admin.totalUsers}</p>
                                 <h3 className="text-5xl font-black">{stats.totalUsers}</h3>
-                                <div className="mt-4 flex items-center gap-2 text-sm text-indigo-100/80">
+                                <div className="mt-4 flex items-center gap-2 text-sm text-sky-100/80">
                                     <div className="h-1 w-20 bg-white/20 rounded-full overflow-hidden">
                                         <div className="h-full bg-white w-[60%]" />
                                     </div>
@@ -216,7 +216,7 @@ export default function AdminDashboardPage() {
                                     placeholder={language === 'vi' ? 'Tìm kiếm nhanh...' : 'Search everything...'}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-zinc-900 border border-[rgb(var(--border))] rounded-2xl outline-none focus:ring-2 ring-indigo-500/20 transition-all font-medium"
+                                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-zinc-900 border border-[rgb(var(--border))] rounded-2xl outline-none focus:ring-2 ring-sky-500/20 transition-all font-medium"
                                 />
                             </div>
                             <Button variant="outline" className="rounded-xl gap-2 h-12 px-6">
@@ -276,7 +276,7 @@ export default function AdminDashboardPage() {
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() => handleRoleUpdate(u.uid, u.role)}
-                                                            className={`rounded-xl px-4 ${u.role === 'admin' ? 'text-amber-600 hover:bg-amber-50' : 'text-indigo-600 hover:bg-indigo-50'}`}
+                                                            className={`rounded-xl px-4 ${u.role === 'admin' ? 'text-amber-600 hover:bg-amber-50' : 'text-sky-600 hover:bg-sky-50'}`}
                                                         >
                                                             {u.role === 'admin' ? t.admin.removeAdmin : t.admin.makeAdmin}
                                                         </Button>

@@ -93,7 +93,7 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
 
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-zinc-100 dark:border-white/5">
                 <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-black text-xl shadow-lg shadow-indigo-500/20">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-violet-600 text-white font-black text-xl shadow-lg shadow-sky-500/20">
                         {index + 1}
                     </div>
                     <div className="space-y-1 overflow-hidden">
@@ -123,7 +123,7 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                         <option value="mixed">{t.builder.types.mixed}</option>
                     </Select>
                     <div className="flex items-center gap-1 sm:gap-2 border-l border-zinc-200 dark:border-white/5 ml-1 pl-1">
-                        <Button variant="ghost" size="icon" onClick={() => onDuplicate(question.id)} className="h-9 w-9 sm:h-8 sm:w-8 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title={language === 'vi' ? 'Nhân bản' : 'Duplicate'}>
+                        <Button variant="ghost" size="icon" onClick={() => onDuplicate(question.id)} className="h-9 w-9 sm:h-8 sm:w-8 text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-colors" title={language === 'vi' ? 'Nhân bản' : 'Duplicate'}>
                             <Plus className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => onDelete(question.id)} className="h-9 w-9 sm:h-8 sm:w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
@@ -155,13 +155,13 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                     <div className="flex items-center justify-between">
                         <label className="text-xs font-medium text-[rgb(var(--muted-foreground))] uppercase tracking-wider">{t.builder.statement}</label>
                         <div className="flex items-center gap-2">
-                            <Image className="h-3 w-3 text-indigo-500" />
+                            <Image className="h-3 w-3 text-sky-500" />
                             <input 
                                 type="text" 
                                 placeholder="Image URL (optional)" 
                                 value={question.imageUrl || ""} 
                                 onChange={(e) => onUpdate(question.id, { imageUrl: e.target.value })}
-                                className="text-[10px] bg-transparent border-b border-zinc-200 focus:border-indigo-500 outline-none w-32 md:w-48"
+                                className="text-[10px] bg-transparent border-b border-zinc-200 focus:border-sky-500 outline-none w-32 md:w-48"
                             />
                         </div>
                     </div>
@@ -213,7 +213,7 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                                             value={opt}
                                             onChange={(e) => handleOptionChange(i, e.target.value)}
                                             placeholder={`${t.builder.optionPlaceholder} ${i + 1}`}
-                                            className="flex-1 bg-zinc-50 dark:bg-zinc-900/50 border-zinc-100 dark:border-white/5 hover:border-indigo-500/50 focus:border-indigo-500 focus:bg-white dark:focus:bg-zinc-900 transition-all h-11 sm:h-10 text-sm font-medium rounded-xl"
+                                            className="flex-1 bg-zinc-50 dark:bg-zinc-900/50 border-zinc-100 dark:border-white/5 hover:border-sky-500/50 focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 transition-all h-11 sm:h-10 text-sm font-medium rounded-xl"
                                         />
                                         <Button variant="ghost" size="icon" onClick={() => removeOption(i)} className="h-8 w-8 opacity-0 group-hover/opt:opacity-100 transition-opacity">
                                             <Trash2 className="h-4 w-4 text-[rgb(var(--muted-foreground))]" />
@@ -232,7 +232,7 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                     <div className="space-y-2 pt-4 border-t border-dashed border-[rgb(var(--border))]">
                         <label className="text-xs font-medium text-[rgb(var(--muted-foreground))] uppercase tracking-wider flex justify-between">
                             <span>{t.builder.detailedAnswer}</span>
-                            <span className="text-indigo-500 text-[10px] bg-indigo-500/10 px-2 py-0.5 rounded-full">{t.builder.part2}</span>
+                            <span className="text-sky-500 text-[10px] bg-sky-500/10 px-2 py-0.5 rounded-full">{t.builder.part2}</span>
                         </label>
                         <Textarea
                             placeholder={t.builder.userAnswerPlaceholder}
@@ -255,7 +255,7 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                                     placeholder="Answer Image URL (optional)" 
                                     value={question.answerImageUrl || ""} 
                                     onChange={(e) => onUpdate(question.id, { answerImageUrl: e.target.value })}
-                                    className="text-[10px] bg-transparent border-b border-zinc-200 focus:border-indigo-500 outline-none w-32 md:w-48"
+                                    className="text-[10px] bg-transparent border-b border-zinc-200 focus:border-sky-500 outline-none w-32 md:w-48"
                                 />
                             </div>
                         </div>

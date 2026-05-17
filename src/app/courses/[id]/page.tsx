@@ -51,18 +51,6 @@ const shuffleQuestionsAndOptions = (questions: any[]) => {
     });
 };
 
-const MOTIVATIONAL_QUOTES = [
-    { text: "Thất bại là mẹ thành công.", author: "Tục ngữ Việt Nam" },
-    { text: "Học, học nữa, học mãi.", author: "V.I. Lê-nin" },
-    { text: "Thiên tài chỉ có 1% là cảm hứng và 99% là mồ hôi.", author: "Thomas Edison" },
-    { text: "Đừng lo lắng về việc thất bại, hãy lo lắng về việc bạn không thử.", author: "Jack Canfield" },
-    { text: "Hành trình ngàn dặm bắt đầu từ một bước chân.", author: "Lão Tử" },
-    { text: "Cố gắng là tất cả những gì chúng ta có thể làm.", author: "Socrates" },
-    { text: "Kiến thức là sức mạnh.", author: "Francis Bacon" },
-    { text: "Thành công không phải là cuối cùng, thất bại không phải là chết người.", author: "Winston Churchill" },
-    { text: "Người duy nhất không bao giờ mắc sai lầm là người không làm gì cả.", author: "Theodore Roosevelt" }
-];
-
 
 function Leaderboard({ quizId, language = 'vi' }: { quizId: string, language?: string }) {
     const [results, setResults] = useState<QuizResult[]>([]);
@@ -331,10 +319,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const [isReadyToStart, setIsReadyToStart] = useState(false);
     const streakRef = useRef(0);
 
-    // Inactivity State
-    const lastInteractionRef = useRef(Date.now());
-    const [showQuote, setShowQuote] = useState(false);
-    const [currentQuote, setCurrentQuote] = useState(MOTIVATIONAL_QUOTES[0]);
+
     const [subjectWrongQuestions, setSubjectWrongQuestions] = useState<any[]>([]);
 
 
@@ -449,27 +434,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         }
         return () => clearInterval(interval);
     }, [quiz, hasAccess, startTime, isSubmitted, isReadyToStart]);
-
-    // Inactivity Detection Effect
-    useEffect(() => {
-        if (!isReadyToStart || isSubmitted || !hasAccess) return;
-
-        const interval = setInterval(() => {
-            const timeSinceInteraction = Date.now() - lastInteractionRef.current;
-            if (timeSinceInteraction > 5000 && !showQuote) {
-                const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
-                setCurrentQuote(randomQuote);
-                setShowQuote(true);
-            }
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [isReadyToStart, isSubmitted, showQuote, hasAccess]);
-
-    const resetInactivity = () => {
-        lastInteractionRef.current = Date.now();
-        if (showQuote) setShowQuote(false);
-    };
 
 
 
@@ -855,10 +819,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 ) : (
                     <div 
                         className="space-y-6 animation-fade-in"
-                        onMouseMove={resetInactivity}
-                        onKeyDown={resetInactivity}
-                        onScroll={resetInactivity}
-                        onClick={resetInactivity}
                     >
 
                         {/* Header Info */}
@@ -876,24 +836,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 )}
                             </div>
                         </div>
-
-                        {/* Motivational Quote Overlay */}
-                        {showQuote && !isSubmitted && (
-                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animation-fade-in pointer-events-none">
-                                <Card className="max-w-md w-full p-8 text-center space-y-4 border-none shadow-2xl bg-white dark:bg-zinc-900 rounded-[2rem] transform translate-y-[-20%] animate-bounce-slow">
-                                    <div className="mx-auto w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-2">
-                                        <Flame className="h-6 w-6" />
-                                    </div>
-                                    <p className="text-lg font-bold italic leading-relaxed text-zinc-800 dark:text-zinc-100">
-                                        "{currentQuote.text}"
-                                    </p>
-                                    <p className="text-sm font-black uppercase tracking-widest text-indigo-500">
-                                        — {currentQuote.author}
-                                    </p>
-                                    <p className="text-[10px] text-zinc-400 font-bold uppercase mt-4">Tiếp tục nào, bạn làm được mà! ✨</p>
-                                </Card>
-                            </div>
-                        )}
 
 
                         {isSubmitted && (
@@ -976,7 +918,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                         selected={answers[i]}
                                         onChange={(val) => {
                                             handleAnswer(i, val);
-                                            resetInactivity();
                                         }}
                                         readOnly={isSubmitted}
                                         isRevealed={revealed[i]}

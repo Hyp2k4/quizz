@@ -73,12 +73,12 @@ export default function DashboardPage() {
                             {language === 'vi' ? 'Xem lại kết quả và tiến độ học tập của bạn' : 'Review your quiz results and learning progress'}
                         </p>
                     </div>
-                    <div className="bg-indigo-50 dark:bg-indigo-950/30 px-6 py-4 rounded-3xl border border-indigo-100 dark:border-indigo-900/30 flex items-center gap-4">
-                        <div className="h-12 w-12 bg-indigo-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                    <div className="bg-sky-50 dark:bg-sky-950/30 px-6 py-4 rounded-3xl border border-sky-100 dark:border-sky-900/30 flex items-center gap-4">
+                        <div className="h-12 w-12 bg-sky-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
                             <Trophy className="h-6 w-6" />
                         </div>
                         <div>
-                            <div className="text-xs font-bold uppercase text-indigo-600 dark:text-indigo-400">{language === 'vi' ? 'Tổng bài đã làm' : 'Total Quizzes'}</div>
+                            <div className="text-xs font-bold uppercase text-sky-600 dark:text-sky-400">{language === 'vi' ? 'Tổng bài đã làm' : 'Total Quizzes'}</div>
                             <div className="text-2xl font-black">{results.length}</div>
                         </div>
                     </div>
@@ -119,7 +119,7 @@ export default function DashboardPage() {
                                         
                                         <div className="flex-1 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
                                             <div className="space-y-1">
-                                                <h3 className="text-xl font-bold group-hover:text-indigo-600 transition-colors">
+                                                <h3 className="text-xl font-bold group-hover:text-sky-600 transition-colors">
                                                     {result.quiz?.title || (language === 'vi' ? 'Bài tập đã xóa' : 'Deleted Quiz')}
                                                 </h3>
                                                 <div className="flex flex-wrap items-center gap-4 text-sm text-[rgb(var(--muted-foreground))]">
@@ -147,7 +147,7 @@ export default function DashboardPage() {
                                                 </div>
                                                 
                                                 <Link href={`/courses/${result.quizId}`}>
-                                                    <Button variant="outline" size="icon" className="h-12 w-12 rounded-2xl hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all">
+                                                    <Button variant="outline" size="icon" className="h-12 w-12 rounded-2xl hover:bg-sky-600 hover:text-white hover:border-sky-600 transition-all">
                                                         <ChevronRight className="h-6 w-6" />
                                                     </Button>
                                                 </Link>

@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
             {/* Background Decorations */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-500/10 blur-[120px] rounded-full animate-pulse" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-sky-500/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
             </div>
 
             <Navbar />
@@ -36,7 +36,7 @@ export default function AdminLoginPage() {
             <main className="pt-40 px-6 flex items-center justify-center">
                 <div className="w-full max-w-md animate-blur-reveal">
                     <Card className="border-none shadow-2xl bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl rounded-[40px] overflow-hidden">
-                        <div className="h-2 bg-gradient-to-r from-red-500 via-indigo-500 to-red-500 bg-[length:200%_auto] animate-gradient" />
+                        <div className="h-2 bg-gradient-to-r from-red-500 via-sky-500 to-red-500 bg-[length:200%_auto] animate-gradient" />
                         <CardContent className="p-10 text-center">
                             <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner group">
                                 <Shield className="h-10 w-10 text-zinc-900 dark:text-white group-hover:scale-110 transition-transform" />
@@ -80,9 +80,9 @@ export default function AdminLoginPage() {
                             ) : (
                                 <div className="flex flex-col items-center gap-4">
                                     <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-indigo-500 w-full animate-progress" />
+                                        <div className="h-full bg-sky-500 w-full animate-progress" />
                                     </div>
-                                    <p className="text-sm font-medium text-indigo-500 animate-pulse">
+                                    <p className="text-sm font-medium text-sky-500 animate-pulse">
                                         {language === 'vi' ? 'Đang chuyển hướng...' : 'Redirecting...'}
                                     </p>
                                 </div>

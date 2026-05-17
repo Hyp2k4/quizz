@@ -138,7 +138,7 @@ function MyCoursesContent() {
                     <div className="flex gap-3">
                         <Button
                             variant="outline"
-                            className="gap-2 rounded-full border-indigo-500/30 text-indigo-600 hover:bg-indigo-50"
+                            className="gap-2 rounded-full border-sky-500/30 text-sky-600 hover:bg-sky-50"
                             onClick={() => setIsJoinModalOpen(true)}
                         >
                             <UserPlus className="h-4 w-4" /> {t.collaboration.join}
@@ -186,11 +186,11 @@ function MyCoursesContent() {
                                         onClick={() => toggleSubject(subject)}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className="h-10 w-1 bg-indigo-600 rounded-full" />
+                                            <div className="h-10 w-1 bg-sky-600 rounded-full" />
                                             <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                                                <BookOpen className="h-5 w-5 text-indigo-500" />
+                                                <BookOpen className="h-5 w-5 text-sky-500" />
                                                 {subject}
-                                                <span className="text-xs font-bold px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg ml-2">
+                                                <span className="text-xs font-bold px-2 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 rounded-lg ml-2">
                                                     {subjectQuizzes.length}
                                                 </span>
                                             </h2>
@@ -199,7 +199,7 @@ function MyCoursesContent() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-10 w-10 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
+                                                className="h-10 w-10 text-sky-500 hover:text-sky-600 hover:bg-sky-50 rounded-full"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleShareSubject(subject);
@@ -207,7 +207,7 @@ function MyCoursesContent() {
                                             >
                                                 <Share2 className="h-5 w-5" />
                                             </Button>
-                                            <Button variant="ghost" size="sm" className="rounded-full h-10 w-10 p-0 text-zinc-400 group-hover/header:bg-indigo-50 group-hover/header:text-indigo-600 transition-colors">
+                                            <Button variant="ghost" size="sm" className="rounded-full h-10 w-10 p-0 text-zinc-400 group-hover/header:bg-sky-50 group-hover/header:text-sky-600 transition-colors">
                                                 {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                                             </Button>
                                         </div>
@@ -227,7 +227,7 @@ function MyCoursesContent() {
                                                         <Card key={quiz.id} className="hover:shadow-lg transition-all group border-none shadow-sm bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-[2rem] overflow-hidden">
                                                             <CardHeader className="pb-2">
                                                                 <div className="flex justify-between items-start">
-                                                                    <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl text-indigo-600 dark:text-indigo-400 mb-4 transform -rotate-3 transition-transform group-hover:rotate-0">
+                                                                    <div className="p-3 bg-sky-100 dark:bg-sky-900/30 rounded-2xl text-sky-600 dark:text-sky-400 mb-4 transform -rotate-3 transition-transform group-hover:rotate-0">
                                                                         <BookOpen className="h-5 w-5" />
                                                                     </div>
                                                                     {quiz.userId === user?.uid && (
@@ -235,7 +235,7 @@ function MyCoursesContent() {
                                                                             <Button
                                                                                 variant="ghost"
                                                                                 size="icon"
-                                                                                className="h-8 w-8 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
+                                                                                className="h-8 w-8 text-sky-500 hover:text-sky-600 hover:bg-sky-50 rounded-full"
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
                                                                                     quiz.id && handleShare(quiz.id);
@@ -279,7 +279,7 @@ function MyCoursesContent() {
                                                             <CardFooter className="flex gap-2 pt-0 pb-6 px-6">
                                                                 <Button
                                                                     variant="outline"
-                                                                    className="flex-1 gap-2 rounded-2xl border-indigo-100 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-600 font-bold text-xs"
+                                                                    className="flex-1 gap-2 rounded-2xl border-sky-100 hover:border-sky-500 hover:bg-sky-50 text-sky-600 font-bold text-xs"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setSelectedQuiz(quiz);
@@ -333,7 +333,7 @@ function MyCoursesContent() {
                 <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                     <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl p-8 shadow-2xl space-y-6">
                         <div className="text-center space-y-2">
-                            <div className="mx-auto w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 transform -rotate-3">
+                            <div className="mx-auto w-16 h-16 bg-sky-100 dark:bg-sky-900/30 text-sky-600 rounded-2xl flex items-center justify-center mb-4 transform -rotate-3">
                                 <LinkIcon className="h-8 w-8" />
                             </div>
                             <h2 className="text-2xl font-black">{t.collaboration.join}</h2>
@@ -348,7 +348,7 @@ function MyCoursesContent() {
                                     placeholder="https://example.com/accept-invite/..."
                                     value={joinLink}
                                     onChange={(e) => setJoinLink(e.target.value)}
-                                    className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-100 dark:border-zinc-800 focus:border-indigo-500 rounded-2xl px-5 py-4 text-sm outline-none transition-all"
+                                    className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-100 dark:border-zinc-800 focus:border-sky-500 rounded-2xl px-5 py-4 text-sm outline-none transition-all"
                                 />
                             </div>
                             <div className="flex flex-col gap-2">

@@ -364,12 +364,12 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                 className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl bg-white dark:bg-zinc-900 shadow-2xl flex flex-col"
             >
                 {/* Header */}
-                <div className="p-6 border-b dark:border-zinc-800 flex justify-between items-start bg-indigo-50/50 dark:bg-indigo-950/10">
+                <div className="p-6 border-b dark:border-zinc-800 flex justify-between items-start bg-sky-50/50 dark:bg-sky-950/10">
                     <div>
                         <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{currentQuiz.title}</h2>
                         <p className="text-zinc-500 dark:text-zinc-400 mt-1">{currentQuiz.description}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-3 text-sm font-medium">
-                            <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full">
+                            <span className="px-3 py-1 bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 rounded-full">
                                 {currentQuiz.subject || (language === 'vi' ? "Chưa phân loại" : "Uncategorized")}
                             </span>
                             <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full">
@@ -395,7 +395,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                         <button
                             onClick={() => setActiveTab('comments')}
                             className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'comments'
-                                ? 'border-indigo-500 text-indigo-500'
+                                ? 'border-sky-500 text-sky-500'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
@@ -406,7 +406,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                         <button
                             onClick={() => setActiveTab('collaboration')}
                             className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'collaboration'
-                                ? 'border-indigo-500 text-indigo-500'
+                                ? 'border-sky-500 text-sky-500'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
@@ -417,7 +417,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                         <button
                             onClick={() => setActiveTab('visibility')}
                             className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'visibility'
-                                ? 'border-indigo-500 text-indigo-500'
+                                ? 'border-sky-500 text-sky-500'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
@@ -428,7 +428,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                         <button
                             onClick={() => setActiveTab('analytics')}
                             className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'analytics'
-                                ? 'border-indigo-500 text-indigo-500'
+                                ? 'border-sky-500 text-sky-500'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
@@ -462,7 +462,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                 className="space-y-4"
                             >
                                 <h3 className="text-lg font-bold flex items-center gap-2">
-                                    <MessageCircle className="h-5 w-5 text-indigo-500" />
+                                    <MessageCircle className="h-5 w-5 text-sky-500" />
                                     {language === 'vi' ? 'Nhận xét từ cộng đồng' : 'Community Comments'} ({comments.length})
                                 </h3>
 
@@ -498,8 +498,8 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                         comments.map(comment => (
                                             <div key={comment.id} className="group">
                                                 <div className="flex gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800">
-                                                        <User className="h-5 w-5 text-indigo-600" />
+                                                    <div className="h-10 w-10 rounded-full bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center shrink-0 border border-sky-200 dark:border-sky-800">
+                                                        <User className="h-5 w-5 text-sky-600" />
                                                     </div>
                                                     <div className="flex-1">
                                                         <div className="bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-2xl rounded-tl-none border border-zinc-100 dark:border-zinc-800">
@@ -516,7 +516,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                                         <div className="flex items-center gap-4 mt-2 ml-2">
                                                             <button
                                                                 onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id!)}
-                                                                className="text-xs font-bold text-indigo-500 hover:text-indigo-600 transition-colors"
+                                                                className="text-xs font-bold text-sky-500 hover:text-sky-600 transition-colors"
                                                             >
                                                                 {t.comments.reply}
                                                             </button>
@@ -583,12 +583,12 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                 exit={{ opacity: 0, x: -10 }}
                                 className="space-y-6"
                             >
-                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-3xl border border-indigo-100 dark:border-indigo-800">
-                                    <h3 className="text-lg font-bold flex items-center gap-2 text-indigo-700 dark:text-indigo-400 mb-2">
+                                <div className="bg-sky-50 dark:bg-sky-900/20 p-6 rounded-3xl border border-sky-100 dark:border-sky-800">
+                                    <h3 className="text-lg font-bold flex items-center gap-2 text-sky-700 dark:text-sky-400 mb-2">
                                         <UserPlus className="h-5 w-5" />
                                         {t.collaboration.invite}
                                     </h3>
-                                    <p className="text-sm text-indigo-600/70 dark:text-indigo-400/70 mb-4">
+                                    <p className="text-sm text-sky-600/70 dark:text-sky-400/70 mb-4">
                                         {t.collaboration.inviteDesc}
                                     </p>
                                     <div className="flex gap-2">
@@ -597,7 +597,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                             placeholder={t.collaboration.placeholder}
                                             value={collabEmail}
                                             onChange={(e) => setCollabEmail(e.target.value)}
-                                            className="flex-1 bg-white dark:bg-zinc-800 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 ring-indigo-500/20"
+                                            className="flex-1 bg-white dark:bg-zinc-800 border border-sky-200 dark:border-sky-800 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 ring-sky-500/20"
                                         />
                                         <Button
                                             onClick={handleInviteCollab}
@@ -614,9 +614,9 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                                 initial={{ opacity: 0, height: 0, marginTop: 0 }}
                                                 animate={{ opacity: 1, height: "auto", marginTop: 16 }}
                                                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                                                className="p-4 bg-white dark:bg-zinc-800 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-indigo-800/50 overflow-hidden"
+                                                className="p-4 bg-white dark:bg-zinc-800 rounded-2xl border-2 border-dashed border-sky-200 dark:border-sky-800/50 overflow-hidden"
                                             >
-                                                <p className="text-xs font-bold text-indigo-500 mb-2 uppercase tracking-wide">{t.collaboration.inviteLink}</p>
+                                                <p className="text-xs font-bold text-sky-500 mb-2 uppercase tracking-wide">{t.collaboration.inviteLink}</p>
                                                 <div className="flex gap-2">
                                                     <input
                                                         readOnly
@@ -636,7 +636,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="flex-1 gap-2 rounded-xl text-xs h-9 border-indigo-200"
+                                                        className="flex-1 gap-2 rounded-xl text-xs h-9 border-sky-200"
                                                         onClick={() => {
                                                             const subject = encodeURIComponent(language === 'vi' ? `[Lustio] Mời cộng tác khóa học: ${currentQuiz.title}` : `[Lustio] Course Collaboration Invite: ${currentQuiz.title}`);
                                                             const body = encodeURIComponent(language === 'vi'
@@ -652,7 +652,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            className="flex-1 gap-2 rounded-xl text-xs h-9 border-indigo-200"
+                                                            className="flex-1 gap-2 rounded-xl text-xs h-9 border-sky-200"
                                                             onClick={() => {
                                                                 navigator.share({
                                                                     title: currentQuiz.title,
@@ -682,7 +682,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                             </div>
                                         ) : (
                                             currentQuiz.collaborators.map(email => (
-                                                <div key={email} className="flex items-center justify-between p-4 bg-white dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 group hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors">
+                                                <div key={email} className="flex items-center justify-between p-4 bg-white dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 group hover:border-sky-200 dark:hover:border-sky-800 transition-colors">
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-10 w-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                                                             <User className="h-5 w-5 text-zinc-400" />
@@ -718,11 +718,11 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                             disabled={isVisibilityLoading}
                                             onClick={() => handleToggleVisibility('public')}
                                             className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${currentQuiz.visibility !== 'private'
-                                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400'
+                                                ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400'
                                                 : 'border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700'
                                                 }`}
                                         >
-                                            <div className={`p-3 rounded-2xl ${currentQuiz.visibility !== 'private' ? 'bg-indigo-500 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>
+                                            <div className={`p-3 rounded-2xl ${currentQuiz.visibility !== 'private' ? 'bg-sky-500 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>
                                                 <Globe className="h-6 w-6" />
                                             </div>
                                             <div className="text-center">
@@ -823,8 +823,8 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                     <>
                                         {/* Stats Cards */}
                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                            <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
-                                                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
+                                            <div className="p-4 bg-sky-50 dark:bg-sky-950/20 rounded-2xl border border-sky-100 dark:border-sky-900/30">
+                                                <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 mb-2">
                                                     <Users2 className="h-4 w-4" />
                                                     <span className="text-xs font-bold uppercase">{t.analytics.visitors}</span>
                                                 </div>
@@ -1008,7 +1008,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
-                                                            className="h-7 text-[10px] font-bold rounded-lg text-indigo-600 hover:bg-indigo-50 gap-1"
+                                                            className="h-7 text-[10px] font-bold rounded-lg text-sky-600 hover:bg-sky-50 gap-1"
                                                             onClick={() => {
                                                                 const q = currentQuiz?.questions.find(q => q.id === report.questionId) || currentQuiz?.questions[report.questionIndex];
                                                                 if (q) {
@@ -1062,12 +1062,12 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                                     </div>
 
                                                     {editingReportId === report.id && (
-                                                        <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800 animate-in fade-in slide-in-from-top-2">
+                                                        <div className="mt-4 p-4 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-100 dark:border-sky-800 animate-in fade-in slide-in-from-top-2">
                                                             <div className="flex justify-between items-center mb-3">
-                                                                <p className="text-[10px] font-bold text-indigo-600 uppercase">{language === 'vi' ? 'Sửa đáp án nhanh' : 'Quick fix answer'}</p>
-                                                                <div className="text-[10px] bg-white dark:bg-zinc-800 px-2 py-0.5 rounded border border-indigo-100 dark:border-zinc-700">
+                                                                <p className="text-[10px] font-bold text-sky-600 uppercase">{language === 'vi' ? 'Sửa đáp án nhanh' : 'Quick fix answer'}</p>
+                                                                <div className="text-[10px] bg-white dark:bg-zinc-800 px-2 py-0.5 rounded border border-sky-100 dark:border-zinc-700">
                                                                     <span className="text-zinc-400">{language === 'vi' ? 'Hiện tại' : 'Current'}: </span>
-                                                                    <span className="font-bold text-indigo-500">
+                                                                    <span className="font-bold text-sky-500">
                                                                         {(currentQuiz?.questions.find(q => q.id === report.questionId) || currentQuiz?.questions[report.questionIndex])?.correctAnswer?.join(", ") || (language === 'vi' ? 'Chưa có' : 'None')}
                                                                     </span>
                                                                 </div>
@@ -1087,7 +1087,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                                                                 placeholder={language === 'vi' ? "Nhập đáp án đúng mới..." : "Enter new correct answer..."}
                                                                                 value={resolvingAnswer[0] || ""}
                                                                                 onChange={(e) => setResolvingAnswer([e.target.value])}
-                                                                                className="bg-white dark:bg-zinc-800 border-indigo-100"
+                                                                                className="bg-white dark:bg-zinc-800 border-sky-100"
                                                                             />
                                                                         );
                                                                     }
@@ -1095,7 +1095,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                                                     return q.options.map((opt, i) => {
                                                                         const isSelected = resolvingAnswer.includes(opt);
                                                                         return (
-                                                                            <label key={i} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all border ${isSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 hover:border-indigo-300'}`}>
+                                                                            <label key={i} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all border ${isSelected ? 'bg-sky-600 text-white border-sky-600' : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 hover:border-sky-300'}`}>
                                                                                 <input 
                                                                                     type={isMultiple ? "checkbox" : "radio"}
                                                                                     name={`resolving-${report.id}`}
@@ -1119,7 +1119,7 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                                                             <div className="flex gap-2">
                                                                 <Button 
                                                                     size="sm" 
-                                                                    className="h-9 rounded-xl px-4 bg-indigo-600 hover:bg-indigo-700 text-[11px] font-black shadow-lg shadow-indigo-500/20" 
+                                                                    className="h-9 rounded-xl px-4 bg-sky-600 hover:bg-sky-700 text-[11px] font-black shadow-lg shadow-sky-500/20" 
                                                                     onClick={() => handleQuickResolve(report)}
                                                                     disabled={isReportsLoading}
                                                                 >

@@ -16,7 +16,7 @@ export default function ReviewPage() {
     return (
         <Suspense fallback={
             <div className="min-h-screen bg-[rgb(var(--background))] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-600"></div>
             </div>
         }>
             <ReviewContent />
@@ -90,12 +90,12 @@ function ReviewContent() {
                     </div>
 
                     <div className="relative group w-full md:w-80">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-sky-500 transition-colors" />
                         <input
                             placeholder={language === 'vi' ? "Tìm bài tập..." : "Search quizzes..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-12 pl-12 pr-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 focus:border-indigo-500 rounded-2xl text-sm outline-none transition-all shadow-sm"
+                            className="w-full h-12 pl-12 pr-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 focus:border-sky-500 rounded-2xl text-sm outline-none transition-all shadow-sm"
                         />
                     </div>
                 </div>
@@ -122,7 +122,7 @@ function ReviewContent() {
                             {language === 'vi' ? 'Bạn đã hoàn thành rất tốt các bài tập. Hãy tiếp tục duy trì phong độ này nhé!' : 'You have done a great job on your quizzes. Keep up the good work!'}
                         </p>
                         <Link href="/courses">
-                            <Button className="mt-8 rounded-2xl bg-indigo-600 px-8">
+                            <Button className="mt-8 rounded-2xl bg-sky-600 px-8">
                                 {language === 'vi' ? 'Khám phá thêm' : 'Explore More'}
                             </Button>
                         </Link>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Snowflakes } from "@/components/ui/Snowflakes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#38bdf8",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -43,8 +44,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased relative`}
       >
+        <Snowflakes />
         <Providers>{children}</Providers>
       </body>
     </html>
