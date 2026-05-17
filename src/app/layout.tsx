@@ -16,6 +16,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Lustio Quiz - Master Your Knowledge",
   description: "Create and share professional quizzes with AI-assisted tools. Integration of faith and knowledge.",
+  manifest: "/manifest.json",
+};
+
+export const viewport = {
+  themeColor: "#4f46e5",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

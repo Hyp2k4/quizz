@@ -147,8 +147,8 @@ function QuestionTaker({
                     <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold shrink-0 ${showResult ? (isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-indigo-100 text-indigo-700'}`}>
                         {showResult ? (isCorrect ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />) : index + 1}
                     </div>
-                    <div className="w-full">
-                        <h3 className="font-semibold text-lg mb-4">{question.text}</h3>
+                    <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg mb-4 break-words">{question.text}</h3>
                         
                         {question.imageUrl && (
                             <div className="mb-6 rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
@@ -718,8 +718,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         return (
             <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
                 <Navbar />
-                <main className="flex-1 flex items-center justify-center p-6">
-                    <Card className="w-full max-w-md p-10 text-center space-y-8 shadow-2xl rounded-[3rem] border-none bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl animate-scale-in">
+                <main className="flex-1 flex items-center justify-center p-4 md:p-6 pt-24 md:pt-32">
+                    <Card className="w-full max-w-md p-6 md:p-10 text-center space-y-8 shadow-2xl rounded-[2rem] md:rounded-[3rem] border-none bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl animate-scale-in">
                         <div className="mx-auto w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-[2rem] flex items-center justify-center mb-2 shadow-inner transform -rotate-6">
                             <LogIn className="h-12 w-12" />
                         </div>
@@ -745,8 +745,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         return (
             <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
                 <Navbar />
-                <main className="pt-40 px-6 flex items-center justify-center">
-                    <Card className="w-full max-w-md p-8 text-center space-y-6 shadow-2xl rounded-[2.5rem] border-none bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl">
+                <main className="pt-28 md:pt-40 px-4 md:px-6 flex items-center justify-center">
+                    <Card className="w-full max-w-md p-6 md:p-8 text-center space-y-6 shadow-2xl rounded-[2rem] md:rounded-[2.5rem] border-none bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl">
                         <div className="mx-auto w-20 h-20 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-3xl flex items-center justify-center mb-2 shadow-inner">
                             <Lock className="h-10 w-10" />
                         </div>
@@ -780,8 +780,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     }
 
     const renderStartGate = () => (
-        <Card className="max-w-md mx-auto p-8 text-center space-y-6 shadow-2xl border-indigo-500/20 animate-scale-in">
-            <div className="h-20 w-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Card className="max-w-md mx-auto p-6 md:p-8 text-center space-y-6 shadow-2xl border-indigo-500/20 animate-scale-in">
+            <div className="h-16 w-16 md:h-20 md:w-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <PlayCircle className="h-10 w-10 text-indigo-600" />
             </div>
             <div>
@@ -817,7 +817,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     return (
         <div className="min-h-screen bg-[rgb(var(--background))]">
             <Navbar />
-            <main className="pt-32 px-6 max-w-4xl mx-auto pb-20">
+            <main className="pt-24 md:pt-32 px-4 md:px-6 max-w-4xl mx-auto pb-20">
                 <div className="mb-8 text-center">
                     <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
                     <p className="text-[rgb(var(--muted-foreground))]">{quiz.description}</p>
@@ -862,8 +862,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     >
 
                         {/* Header Info */}
-                        <div className="flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg sticky top-20 z-10 backdrop-blur-md shadow-sm">
-                            <span className="font-medium">{language === 'vi' ? 'Người chơi' : 'Player'}: <span className="font-bold text-indigo-600 dark:text-indigo-400">{user ? user.displayName : guestName}</span></span>
+                        <div className="flex flex-col sm:flex-row justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 p-3 md:p-4 rounded-xl sticky top-20 z-10 backdrop-blur-md shadow-sm gap-2 sm:gap-0">
+                            <span className="font-medium text-sm md:text-base text-center sm:text-left truncate max-w-[200px] sm:max-w-none">{language === 'vi' ? 'Người chơi' : 'Player'}: <span className="font-bold text-indigo-600 dark:text-indigo-400">{user ? user.displayName : guestName}</span></span>
 
                             <div className="flex items-center gap-4">
                                 <span className={`font-mono text-xl font-bold ${isSubmitted ? 'text-green-600' : 'text-indigo-600'}`}>
@@ -897,7 +897,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
 
                         {isSubmitted && (
-                            <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-2xl p-8 mb-8 animation-scale-in">
+                            <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-2xl p-6 md:p-8 mb-8 animation-scale-in">
                                 <div className="flex flex-col items-center gap-4">
                                     <div className="h-16 w-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center animate-bounce">
                                         <Trophy className="h-8 w-8" />
@@ -926,7 +926,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                         <div className="w-full mt-12 space-y-6">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-6 w-1 bg-indigo-500 rounded-full" />
-                                                <h3 className="text-lg font-black">{language === 'vi' ? 'Bài tập liên quan' : 'Related Quizzes'}</h3>
+                                                <h3 className="text-lg md:text-xl font-black">{language === 'vi' ? 'Bài tập liên quan' : 'Related Quizzes'}</h3>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 {relatedQuizzes.map(rq => (
@@ -1023,9 +1023,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                                 <div className="h-6 w-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0 text-xs font-bold">{si + 1}</div>
                                                 <div className="space-y-2">
                                                     <p className="font-bold text-sm">{sq.text}</p>
-                                                    <div className="flex items-center gap-4">
-                                                        <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold uppercase">{language === 'vi' ? 'Còn sai' : 'Still wrong'}</span>
-                                                        <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2" onClick={() => {
+                                                    <div className="flex flex-wrap items-center gap-2 md:gap-4">
+                                                        <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold uppercase shrink-0">{language === 'vi' ? 'Còn sai' : 'Still wrong'}</span>
+                                                        <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={() => {
                                                             // Small hack to scroll to a similar question if it exists in current quiz
                                                             const idx = quiz.questions.findIndex(q => q.text === sq.text);
                                                             if (idx !== -1) {
