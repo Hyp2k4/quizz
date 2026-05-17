@@ -17,6 +17,15 @@ export const metadata: Metadata = {
   title: "Lustio Quiz - Master Your Knowledge",
   description: "Create and share professional quizzes with AI-assisted tools. Integration of faith and knowledge.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Lustio Quiz",
+  },
 };
 
 export const viewport = {
