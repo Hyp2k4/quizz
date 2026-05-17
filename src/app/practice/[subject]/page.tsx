@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
-import { 
+import {
     getAllSubjectQuestions,
     createNotification
 } from "@/services/quizService";
@@ -14,8 +14,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 
-import { 
-    Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, 
+import {
+    Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle,
     BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap
 } from "lucide-react";
 import confetti from "canvas-confetti";
@@ -54,11 +54,11 @@ function PracticeQuestion({
     };
 
     const isCorrect = isRevealed ? (
-        isMultiple 
-        ? arraysEqual(selected, question.correctAnswer)
-        : isOpen
-        ? (selected || "").trim().toLowerCase() === (question.correctAnswer?.[0] || "").trim().toLowerCase()
-        : (question.correctAnswer || []).includes(selected)
+        isMultiple
+            ? arraysEqual(selected, question.correctAnswer)
+            : isOpen
+                ? (selected || "").trim().toLowerCase() === (question.correctAnswer?.[0] || "").trim().toLowerCase()
+                : (question.correctAnswer || []).includes(selected)
     ) : undefined;
 
     return (
@@ -70,7 +70,7 @@ function PracticeQuestion({
                     </div>
                     <div className="w-full">
                         <h3 className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100">{question.text}</h3>
-                        
+
                         {question.imageUrl && (
                             <div className="mb-6 rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
                                 <img src={question.imageUrl} alt="Question" className="max-h-[400px] w-auto mx-auto object-contain" />
@@ -100,9 +100,9 @@ function PracticeQuestion({
                                     {question.options?.map((opt: string, i: number) => {
                                         const isSelected = isMultiple ? (selected as string[])?.includes(opt) : selected === opt;
                                         const isActuallyCorrect = isRevealed && (isMultiple ? question.correctAnswer?.includes(opt) : question.correctAnswer?.[0] === opt);
-                                        
+
                                         let optionClass = `flex items-start gap-3 p-4 rounded-2xl border-2 transition-all ${isRevealed ? 'cursor-default' : 'cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-zinc-800/50'}`;
-                                        
+
                                         if (isRevealed) {
                                             if (isActuallyCorrect) optionClass += " border-green-500 bg-green-50 dark:bg-green-900/20";
                                             else if (isSelected) optionClass += " border-red-500 bg-red-50 dark:bg-red-900/20";
@@ -139,7 +139,7 @@ function PracticeQuestion({
                         )}
 
                         {isRevealed && (
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="mt-6 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
@@ -187,9 +187,9 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
 
     const handleReveal = (idx: number, currentAnswer?: any) => {
         if (revealed[idx]) return;
-        
+
         setRevealed(prev => ({ ...prev, [idx]: true }));
-        
+
         const q = questions[idx];
         const userAns = currentAnswer !== undefined ? currentAnswer : answers[idx];
         const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
@@ -268,7 +268,7 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
                         <div className="space-y-4">
                             <h1 className="text-4xl font-black text-zinc-900 dark:text-zinc-50">Luyện tập {subject}</h1>
                             <p className="text-zinc-500 leading-relaxed">
-                                Bạn sẽ làm toàn bộ các câu hỏi có trong môn học này mà không giới hạn thời gian. 
+                                Bạn sẽ làm toàn bộ các câu hỏi có trong môn học này mà không giới hạn thời gian.
                                 Đáp án sẽ được hiển thị ngay sau khi bạn trả lời.
                             </p>
                             <div className="flex justify-center gap-6 py-4">
@@ -297,7 +297,7 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
             <Navbar />
-            
+
 
 
             <main className="pt-32 px-6 max-w-4xl mx-auto pb-32">
@@ -320,7 +320,7 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
                             </div>
                         </div>
                         <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                            <motion.div 
+                            <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${progress}%` }}
                                 className="h-full bg-indigo-500"
@@ -331,7 +331,7 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
 
 
 
-                <div className={`space-y-6 pt-6 transition-all ${isFrozen ? 'pointer-events-none opacity-50' : ''} ${hideOptions ? 'blur-md pointer-events-none' : ''}`}>
+                <div className={`space-y-6 pt-6 transition-all ${'pointer-events-none opacity-50'} ${'blur-md pointer-events-none'}`}>
                     {questions.map((q, i) => (
                         <PracticeQuestion
                             key={i}
