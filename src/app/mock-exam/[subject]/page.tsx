@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
+import { Character, Expression } from "@/components/character/Character";
 
 // Helper to format time for countdown (MM:SS)
 const formatCountdown = (seconds: number) => {
@@ -128,7 +129,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
     const { subject: rawSubject } = use(params);
     const subject = decodeURIComponent(rawSubject);
     const router = useRouter();
-    const { user, login } = useAuth();
+    const { user, userData, login, refreshUserData } = useAuth();
     const { language } = useLanguage();
 
     const [questions, setQuestions] = useState<any[]>([]);
@@ -202,6 +203,25 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                 message: `${language === 'vi' ? 'Bạn đã hoàn thành thi thử môn' : 'You completed mock exam for'} ${subject}: ${calculatedScore}/${questions.length}`,
                 link: `/mock-exam/${encodeURIComponent(subject)}`
             });
+
+            // Award Snowy Coins
+            if (userData) {
+                const earnedCoins = Math.round((calculatedScore / questions.length) * 1000);
+                if (earnedCoins > 0) {
+                    try {
+                        const { doc, updateDoc, increment } = await import("firebase/firestore");
+                        const { db } = await import("@/lib/firebase");
+                        const userRef = doc(db, "users", user.uid);
+                        await updateDoc(userRef, {
+                            snowyCoins: increment(earnedCoins)
+                        });
+                        if (refreshUserData) await refreshUserData();
+                        toast.success(language === 'vi' ? `Bạn nhận được ${earnedCoins} Snowy Coins! ❄️` : `You earned ${earnedCoins} Snowy Coins! ❄️`);
+                    } catch (err) {
+                        console.error("Error adding coins", err);
+                    }
+                }
+            }
         }
         
         if (calculatedScore / questions.length >= 0.8) {
@@ -284,9 +304,12 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
         );
     }
 
+
+
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
             <Navbar />
+            
             <main className="pt-32 px-6 max-w-4xl mx-auto pb-32">
                 {/* Fixed Header with Timer */}
                 <div className="fixed top-20 sm:top-24 left-0 right-0 z-40 px-4 sm:px-6 pointer-events-none">

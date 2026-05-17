@@ -11,14 +11,16 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
+import { db } from "@/lib/firebase";
+
 import { 
     Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, 
     BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
+import { Character, Expression } from "@/components/character/Character";
 
 // Helper to compare arrays
 const arraysEqual = (a: any[], b: any[]) => {
@@ -163,7 +165,7 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
     const { subject: rawSubject } = use(params);
     const subject = decodeURIComponent(rawSubject);
     const router = useRouter();
-    const { user, login } = useAuth();
+    const { user, userData, login, refreshUserData } = useAuth();
     const { language } = useLanguage();
 
     const [questions, setQuestions] = useState<any[]>([]);
@@ -172,7 +174,6 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
     const [answers, setAnswers] = useState<Record<number, any>>({});
     const [revealed, setRevealed] = useState<Record<number, boolean>>({});
     const [score, setScore] = useState(0);
-    const streakRef = useRef(0);
 
     useEffect(() => {
         async function fetch() {
@@ -184,13 +185,13 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
         fetch();
     }, [subject]);
 
-    const handleReveal = (idx: number) => {
+    const handleReveal = (idx: number, currentAnswer?: any) => {
         if (revealed[idx]) return;
         
         setRevealed(prev => ({ ...prev, [idx]: true }));
         
         const q = questions[idx];
-        const userAns = answers[idx];
+        const userAns = currentAnswer !== undefined ? currentAnswer : answers[idx];
         const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
         let isCorrect = false;
 
@@ -200,13 +201,33 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
 
         if (isCorrect) {
             setScore(prev => prev + 1);
-            streakRef.current += 1;
-            if (streakRef.current >= 5) {
-                confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
-                toast.success(`Chuỗi ${streakRef.current} câu đúng! 🔥`);
+        }
+
+        // Check if finished
+        const newAnsweredCount = Object.keys(revealed).length + 1;
+        if (newAnsweredCount === questions.length) {
+            // Award coins
+            if (userData) {
+                const finalScore = isCorrect ? score + 1 : score;
+                const earnedCoins = Math.round((finalScore / questions.length) * 1000);
+                if (earnedCoins > 0) {
+                    const awardCoins = async () => {
+                        try {
+                            const { doc, updateDoc, increment } = await import("firebase/firestore");
+                            const { db } = await import("@/lib/firebase");
+                            const userRef = doc(db, "users", user!.uid);
+                            await updateDoc(userRef, {
+                                snowyCoins: increment(earnedCoins)
+                            });
+                            if (refreshUserData) await refreshUserData();
+                            toast.success(language === 'vi' ? `Hoàn thành! Bạn nhận được ${earnedCoins} Snowy Coins! ❄️` : `Completed! You earned ${earnedCoins} Snowy Coins! ❄️`);
+                        } catch (err) {
+                            console.error("Error adding coins", err);
+                        }
+                    };
+                    awardCoins();
+                }
             }
-        } else {
-            streakRef.current = 0;
         }
     };
 
@@ -271,10 +292,14 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
 
     const answeredCount = Object.keys(revealed).length;
     const progress = (answeredCount / questions.length) * 100;
+    const isFinished = answeredCount === questions.length && questions.length > 0;
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
             <Navbar />
+            
+
+
             <main className="pt-32 px-6 max-w-4xl mx-auto pb-32">
                 {/* Fixed Progress Bar */}
                 <div className="fixed top-24 left-0 right-0 z-40 px-4 sm:px-6 pointer-events-none">
@@ -304,7 +329,9 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
                     </div>
                 </div>
 
-                <div className="space-y-6 pt-24">
+
+
+                <div className={`space-y-6 pt-6 transition-all ${isFrozen ? 'pointer-events-none opacity-50' : ''} ${hideOptions ? 'blur-md pointer-events-none' : ''}`}>
                     {questions.map((q, i) => (
                         <PracticeQuestion
                             key={i}
@@ -313,31 +340,12 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
                             selected={answers[i]}
                             onChange={(val: any) => setAnswers(prev => ({ ...prev, [i]: val }))}
                             isRevealed={revealed[i]}
-                            onReveal={() => handleReveal(i)}
+                            onReveal={(val?: any) => handleReveal(i, val)}
                             language={language}
                         />
                     ))}
                 </div>
 
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6">
-                    <Card className="p-4 bg-indigo-600 text-white rounded-[2rem] shadow-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-4 px-4">
-                            <div className="bg-white/20 p-2 rounded-xl">
-                                <Trophy className="h-6 w-6" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold opacity-80 uppercase">Đúng</p>
-                                <p className="text-xl font-black">{score}</p>
-                            </div>
-                        </div>
-                        <Button 
-                            onClick={() => router.push('/courses')}
-                            className="bg-white text-indigo-600 hover:bg-zinc-100 h-12 px-8 rounded-2xl font-bold"
-                        >
-                            Kết thúc luyện tập
-                        </Button>
-                    </Card>
-                </div>
             </main>
         </div>
     );

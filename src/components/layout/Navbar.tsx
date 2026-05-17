@@ -10,11 +10,11 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NotificationInbox } from "@/components/quiz/NotificationInbox";
-import { ChevronDown, History } from "lucide-react";
+import { ChevronDown, History, ShoppingBag, Coins } from "lucide-react";
 
 export function Navbar() {
     const { t, language, setLanguage } = useLanguage();
-    const { user, login, logout, isAdmin } = useAuth();
+    const { user, userData, login, logout, isAdmin } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -103,6 +103,7 @@ export function Navbar() {
                                 {t.navbar.createQuiz}
                             </Button>
 
+
                             {user && <NotificationInbox />}
                         </div>
 
@@ -145,6 +146,7 @@ export function Navbar() {
                                                             {language === 'vi' ? 'Câu hỏi đã sai' : 'Wrong Questions'}
                                                         </button>
                                                     </Link>
+
 
                                                     <Link href="/my-courses" onClick={() => setIsProfileOpen(false)}>
                                                         <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium">

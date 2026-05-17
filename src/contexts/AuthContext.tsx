@@ -9,20 +9,40 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 
+export interface UserData {
+    uid: string;
+    email: string;
+    displayName: string;
+    photoURL: string;
+    role: string;
+    gender?: 'male' | 'female';
+    snowyCoins?: number;
+    ownedCostumes?: string[];
+    equippedCostume?: string;
+    equippedCostumeUrl?: string;
+    equippedCostumeItem?: any;
+    inventory?: Record<string, number>; // For power-ups
+    createdAt?: any;
+    lastLogin?: any;
+}
+
 interface AuthContextType {
     user: User | null;
+    userData: UserData | null;
     loading: boolean;
     isAdmin: boolean;
     guestName: string | null;
     setGuestName: (name: string) => void;
     login: () => Promise<void>;
     logout: () => Promise<void>;
+    refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [userData, setUserData] = useState<UserData | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
     const [guestName, setGuestNameState] = useState<string | null>(null);
@@ -44,19 +64,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const userSnap = await getDoc(userRef);
                     
                     if (!userSnap.exists()) {
-                        await setDoc(userRef, {
+                        const newUserData = {
                             uid: currentUser.uid,
-                            email: currentUser.email,
-                            displayName: currentUser.displayName,
-                            photoURL: currentUser.photoURL,
+                            email: currentUser.email || '',
+                            displayName: currentUser.displayName || '',
+                            photoURL: currentUser.photoURL || '',
                             role: 'user', // Default role
+                            snowyCoins: 0,
+                            ownedCostumes: [],
                             createdAt: serverTimestamp(),
                             lastLogin: serverTimestamp()
-                        });
+                        };
+                        await setDoc(userRef, newUserData);
                         setIsAdmin(false);
+                        setUserData({ ...newUserData, createdAt: null, lastLogin: null } as UserData);
                     } else {
-                        const userData = userSnap.data();
-                        setIsAdmin(userData.role === 'admin');
+                        const uData = userSnap.data() as UserData;
+                        setIsAdmin(uData.role === 'admin');
+                        setUserData(uData);
                         await setDoc(userRef, {
                             lastLogin: serverTimestamp(),
                             displayName: currentUser.displayName,
@@ -68,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
             } else {
                 setIsAdmin(false);
+                setUserData(null);
             }
             
             setLoading(false);
@@ -98,8 +124,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const refreshUserData = async () => {
+        if (!user) return;
+        try {
+            const { doc, getDoc } = await import("firebase/firestore");
+            const { db } = await import("@/lib/firebase");
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                setUserData(userSnap.data() as UserData);
+            }
+        } catch (error) {
+            console.error("Error refreshing user data:", error);
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, isAdmin, guestName, setGuestName, login, logout }}>
+        <AuthContext.Provider value={{ user, userData, loading, isAdmin, guestName, setGuestName, login, logout, refreshUserData }}>
             {children}
         </AuthContext.Provider>
     );

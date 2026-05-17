@@ -14,6 +14,12 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers, Flag, LogIn, ArrowLeft, BookOpen, RotateCcw } from "lucide-react";
 import confetti from "canvas-confetti";
+import { Character, Expression } from "@/components/character/Character";
+import { motion, AnimatePresence } from "framer-motion";
+
+
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // Helper to format time
 const formatTime = (ms: number, language: string = 'vi') => {
@@ -52,12 +58,12 @@ const shuffleQuestionsAndOptions = (questions: any[]) => {
 };
 
 
-function Leaderboard({ quizId, language = 'vi' }: { quizId: string, language?: string }) {
+function Leaderboard({ quizId, language = 'vi', version = 0 }: { quizId: string, language?: string, version?: number }) {
     const [results, setResults] = useState<QuizResult[]>([]);
 
     useEffect(() => {
         getQuizLeaderboard(quizId).then(setResults);
-    }, [quizId]);
+    }, [quizId, version]);
 
     return (
         <div className="w-full max-w-sm mx-auto mt-8 bg-white dark:bg-white/5 rounded-xl p-4 shadow-inner">
@@ -102,7 +108,7 @@ function QuestionTaker({
     onChange: (val: string | string[]) => void,
     readOnly?: boolean,
     isCorrect?: boolean,
-    onCheck?: () => void,
+    onCheck?: (val?: any) => void,
     isRevealed?: boolean,
     language?: string,
     onReport?: () => void
@@ -156,7 +162,7 @@ function QuestionTaker({
                                     />
                                     {onCheck && !showResult && (selected as string)?.length > 0 && (
                                         <div className="flex justify-end">
-                                            <Button size="sm" onClick={onCheck} className="rounded-full">
+                                            <Button size="sm" onClick={() => onCheck(selected)} className="rounded-full">
                                                 {language === 'vi' ? 'Kiểm tra' : 'Check'}
                                             </Button>
                                         </div>
@@ -210,7 +216,14 @@ function QuestionTaker({
                                                 name={`question-${index}`}
                                                 className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 shrink-0 mt-0.5"
                                                 checked={!!isSelected}
-                                                onChange={() => !showResult && (isMultiple ? handleMultiChange(opt, !isSelected) : onChange(opt))}
+                                                onChange={() => {
+                                                    if (!showResult) {
+                                                        onChange(opt);
+                                                        if (!isMultiple && onCheck) {
+                                                            onCheck(opt);
+                                                        }
+                                                    }
+                                                }}
                                                 disabled={showResult}
                                             />
                                             <div className="flex-1 flex items-start justify-between gap-2">
@@ -230,7 +243,7 @@ function QuestionTaker({
                         </div>
                         {onCheck && isMultiple && !showResult && (selected as string[])?.length > 0 && (
                             <div className="mt-4 flex justify-end">
-                                <Button size="sm" variant="secondary" onClick={onCheck} className="rounded-full">
+                                <Button size="sm" variant="secondary" onClick={() => onCheck(selected)} className="rounded-full">
                                     {language === 'vi' ? 'Xác nhận đáp án' : 'Confirm Answer'}
                                 </Button>
                             </div>
@@ -299,7 +312,7 @@ function ScorePath({ score, total, language = 'vi' }: { score: number, total: nu
 export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
-    const { user, guestName, setGuestName, login } = useAuth();
+    const { user, userData, guestName, setGuestName, login, refreshUserData } = useAuth();
     const { t, language } = useLanguage();
     const [quiz, setQuiz] = useState<QuizData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -317,7 +330,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
     // New state for starting the quiz
     const [isReadyToStart, setIsReadyToStart] = useState(false);
-    const streakRef = useRef(0);
+    const [leaderboardVersion, setLeaderboardVersion] = useState(0);
 
 
     const [subjectWrongQuestions, setSubjectWrongQuestions] = useState<any[]>([]);
@@ -464,36 +477,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         setAnswers(prev => ({ ...prev, [qIndex]: val }));
     };
 
-    const handleCheckIndividual = (qIndex: number) => {
-        setRevealed(prev => ({ ...prev, [qIndex]: true }));
-        checkStreakAfterAnswer(qIndex, answers[qIndex]);
-    };
 
-    const checkStreakAfterAnswer = (qIndex: number, val: any) => {
-        if (!quiz) return;
-        const q = quiz.questions[qIndex];
-        const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
-        let isCorrect = false;
-
-        if (q.type === 'multiple') {
-            isCorrect = arraysEqual(val as string[], correctArr);
-        } else if (q.type === 'single') {
-            isCorrect = correctArr.includes(val as string);
-        } else {
-            // Open ended - simple match
-            isCorrect = (val as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
-        }
-
-        if (isCorrect) {
-            streakRef.current = streakRef.current + 1;
-            if (streakRef.current >= 5) {
-                triggerConfetti();
-                toast.success(language === 'vi' ? `TUYỆT VỜI! Chuỗi ${streakRef.current} câu đúng liên tiếp! 🔥` : `AMAZING! Streak of ${streakRef.current} correct answers! 🔥`, { duration: 4000 });
-            }
-        } else {
-            streakRef.current = 0;
-        }
-    };
 
     const onPreSubmit = () => {
         if (!quiz) return;
@@ -563,6 +547,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             quizTitle: quiz.title
         });
 
+        // Trigger leaderboard refresh
+        setLeaderboardVersion(prev => prev + 1);
+
         // Sync Subject Wrong Questions (Global Pool)
         if (user && quiz.subject) {
             const results = quiz.questions.map((q, i) => ({
@@ -584,6 +571,25 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 link: `/courses/${id}`
             });
         }
+
+        // Award Snowy Coins
+        if (user && userData) {
+            const earnedCoins = Math.round((calculatedScore / quiz.questions.length) * 1000);
+            if (earnedCoins > 0) {
+                try {
+                    const { doc, updateDoc, increment } = await import("firebase/firestore");
+                    const { db } = await import("@/lib/firebase");
+                    const userRef = doc(db, "users", user.uid);
+                    await updateDoc(userRef, {
+                        snowyCoins: increment(earnedCoins)
+                    });
+                    if (refreshUserData) await refreshUserData();
+                    toast.success(language === 'vi' ? `Bạn nhận được ${earnedCoins} Snowy Coins! ❄️` : `You earned ${earnedCoins} Snowy Coins! ❄️`);
+                } catch (err) {
+                    console.error("Error adding coins", err);
+                }
+            }
+        }
     };
 
     const handleRetakeWrong = () => {
@@ -600,8 +606,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         setElapsedTime(0);
         setWrongQuestionIndices([]);
         setIsRetakeMode(true);
-        streakRef.current = 0;
-        
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -616,7 +620,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         setElapsedTime(0);
         setWrongQuestionIndices([]);
         setIsRetakeMode(false);
-        streakRef.current = 0;
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -781,6 +784,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     return (
         <div className="min-h-screen bg-[rgb(var(--background))]">
             <Navbar />
+
+
+
             <main className="pt-24 md:pt-32 px-4 md:px-6 max-w-4xl mx-auto pb-20">
                 <div className="mb-8 text-center">
                     <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
@@ -848,7 +854,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     <p className="text-[rgb(var(--muted-foreground))]">{language === 'vi' ? 'Thời gian' : 'Time'}: {formatTime(finalTimeMs, language)}</p>
                                     <ScorePath score={score} total={quiz.questions.length} language={language} />
 
-                                    <Leaderboard quizId={quiz.id!} language={language} />
+                                    <Leaderboard quizId={quiz.id!} language={language} version={leaderboardVersion} />
 
                                     <div className="flex flex-wrap justify-center gap-4 mt-4">
                                         <Button onClick={handleRestartFull} variant="outline" className="gap-2 rounded-full px-6">
@@ -922,7 +928,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                         readOnly={isSubmitted}
                                         isRevealed={revealed[i]}
                                         isCorrect={isCorrect}
-                                        onCheck={undefined}
                                         onReport={() => {
                                             setReportingIndex(i);
                                             setReportOpen(true);
@@ -1008,6 +1013,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 title={language === 'vi' ? "Báo cáo lỗi" : "Report Error"}
                             />
                         )}
+
                     </div>
                 )}
             </main>

@@ -126,10 +126,49 @@ export interface QuizInvitation {
 
 export const saveQuizResult = async (result: Omit<QuizResult, "id" | "createdAt">) => {
     try {
-        await addDoc(collection(db, "quiz_results"), {
-            ...result,
-            createdAt: serverTimestamp()
-        });
+        const isGuest = !result.userId || result.userId === "guest";
+        let q;
+        if (isGuest) {
+            q = query(
+                collection(db, "quiz_results"),
+                where("quizId", "==", result.quizId),
+                where("userName", "==", result.userName),
+                where("userId", "==", "guest")
+            );
+        } else {
+            q = query(
+                collection(db, "quiz_results"),
+                where("quizId", "==", result.quizId),
+                where("userId", "==", result.userId)
+            );
+        }
+        
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+            // Document already exists, compare scores
+            const existingDoc = snapshot.docs[0];
+            const existingData = existingDoc.data() as QuizResult;
+            
+            const isBetterScore = result.score > existingData.score;
+            const isEqualScoreBetterTime = result.score === existingData.score && result.timeTakenMs < existingData.timeTakenMs;
+            
+            if (isBetterScore || isEqualScoreBetterTime) {
+                const docRef = doc(db, "quiz_results", existingDoc.id);
+                await updateDoc(docRef, {
+                    score: result.score,
+                    timeTakenMs: result.timeTakenMs,
+                    wrongQuestions: result.wrongQuestions || [],
+                    createdAt: serverTimestamp()
+                });
+            }
+        } else {
+            // No existing document, add new record
+            await addDoc(collection(db, "quiz_results"), {
+                ...result,
+                createdAt: serverTimestamp()
+            });
+        }
     } catch (error) {
         console.error("Error saving result:", error);
         throw error;
