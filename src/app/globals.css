@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 
 :root {
   /* Snowy Light Mode */
@@ -25,27 +26,25 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Midnight Snow Dark Mode */
-    --background: 15, 23, 42;
-    --foreground: 241, 245, 249;
-    
-    --primary: 56, 189, 248;
-    --primary-foreground: 255, 255, 255;
-    
-    --secondary: 30, 41, 59;
-    --secondary-foreground: 241, 245, 249;
-    
-    --muted: 30, 41, 59;
-    --muted-foreground: 148, 163, 184;
-    
-    --card: 30, 41, 59;
-    --card-foreground: 241, 245, 249;
-    
-    --border: 51, 65, 85;
-    --input: 51, 65, 85;
-  }
+.dark {
+  /* Midnight Snow Dark Mode */
+  --background: 15, 23, 42;
+  --foreground: 241, 245, 249;
+  
+  --primary: 56, 189, 248;
+  --primary-foreground: 255, 255, 255;
+  
+  --secondary: 30, 41, 59;
+  --secondary-foreground: 241, 245, 249;
+  
+  --muted: 30, 41, 59;
+  --muted-foreground: 148, 163, 184;
+  
+  --card: 30, 41, 59;
+  --card-foreground: 241, 245, 249;
+  
+  --border: 51, 65, 85;
+  --input: 51, 65, 85;
 }
 
 body {

@@ -346,7 +346,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                     <div className="max-w-4xl mx-auto bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md p-4 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xl pointer-events-auto">
                         <div className="flex justify-between items-center mb-3">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-2xl flex items-center justify-center">
+                                <div className="w-10 h-10 bg-sky-50 dark:bg-sky-900/20 text-sky-600 rounded-2xl flex items-center justify-center">
                                     <LayoutGrid className="h-5 w-5" />
                                 </div>
                                 <div>
@@ -356,14 +356,14 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                             </div>
                             <div className="text-right">
                                 <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Tiến độ</p>
-                                <p className="text-lg font-black text-indigo-600">{answeredCount} <span className="text-zinc-400 text-sm">/ {questions.length}</span></p>
+                                <p className="text-lg font-black text-sky-600">{answeredCount} <span className="text-zinc-400 text-sm">/ {questions.length}</span></p>
                             </div>
                         </div>
-                        <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="h-3 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${progress}%` }}
-                                className="h-full bg-indigo-500"
+                                className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 transition-all duration-500 ease-out"
                             />
                         </div>
                     </div>

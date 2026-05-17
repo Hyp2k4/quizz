@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { Zap, LogIn, LogOut, User as UserIcon, Menu, X, PlusCircle, LayoutDashboard, Settings, BookOpen, Shield } from "lucide-react";
+import { Zap, LogIn, LogOut, User as UserIcon, Menu, X, PlusCircle, LayoutDashboard, Settings, BookOpen, Shield, Sun, Moon } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
@@ -19,6 +19,24 @@ export function Navbar() {
     const pathname = usePathname();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+    useEffect(() => {
+        const activeTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        setTheme(activeTheme);
+    }, []);
+
+    const toggleTheme = () => {
+        const nextTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(nextTheme);
+        if (nextTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    };
 
     // Close menu when route changes
     useEffect(() => {
@@ -90,6 +108,39 @@ export function Navbar() {
                                     EN
                                 </button>
                             </div>
+
+                            {/* Theme Toggle Desktop */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={toggleTheme}
+                                className="h-10 w-10 text-zinc-500 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-zinc-800 rounded-full transition-colors relative flex items-center justify-center shrink-0"
+                                aria-label="Toggle Night Mode"
+                            >
+                                <AnimatePresence mode="wait" initial={false}>
+                                    {theme === 'dark' ? (
+                                        <motion.div
+                                            key="moon"
+                                            initial={{ rotate: -90, opacity: 0 }}
+                                            animate={{ rotate: 0, opacity: 1 }}
+                                            exit={{ rotate: 90, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                        >
+                                            <Moon className="h-5 w-5 text-sky-400" />
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key="sun"
+                                            initial={{ rotate: -90, opacity: 0 }}
+                                            animate={{ rotate: 0, opacity: 1 }}
+                                            exit={{ rotate: 90, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                        >
+                                            <Sun className="h-5 w-5 text-amber-500" />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </Button>
 
                             {user && (
                                 <Link href="/my-courses">
@@ -279,6 +330,20 @@ export function Navbar() {
                                         <button onClick={() => setLanguage('vi')} className={`flex-1 py-2 px-4 rounded-xl border text-sm font-bold ${language === 'vi' ? 'bg-zinc-900 text-white dark:bg-white dark:text-black border-zinc-900' : 'bg-transparent text-zinc-500 border-zinc-200 dark:border-zinc-800'}`}>VN</button>
                                         <button onClick={() => setLanguage('en')} className={`flex-1 py-2 px-4 rounded-xl border text-sm font-bold ${language === 'en' ? 'bg-zinc-900 text-white dark:bg-white dark:text-black border-zinc-900' : 'bg-transparent text-zinc-500 border-zinc-200 dark:border-zinc-800'}`}>EN</button>
                                     </div>
+
+                                    {/* Night Mode Switcher Mobile */}
+                                    <button
+                                        onClick={toggleTheme}
+                                        className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-bold border border-zinc-200 dark:border-zinc-800 mt-2"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            {theme === 'dark' ? <Moon className="h-5 w-5 text-sky-400" /> : <Sun className="h-5 w-5 text-amber-500" />}
+                                            <span>{language === 'vi' ? 'Chế độ tối' : 'Night Mode'}</span>
+                                        </div>
+                                        <div className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ${theme === 'dark' ? 'bg-sky-500 justify-end' : 'bg-zinc-200 justify-start'}`}>
+                                            <div className="bg-white w-4 h-4 rounded-full shadow-md" />
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
 
