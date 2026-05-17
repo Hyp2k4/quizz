@@ -954,13 +954,24 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                         {/* Subject Wrong Questions Pool */}
                         {!isSubmitted && subjectWrongQuestions.length > 0 && (
                             <div className="mt-12 space-y-6 pt-12 border-t border-zinc-100 dark:border-white/5">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
-                                        <AlertCircle className="h-5 w-5" />
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
+                                                <AlertCircle className="h-5 w-5" />
+                                            </div>
+                                            <h2 className="text-xl font-black">{language === 'vi' ? `Câu hỏi cần ôn tập cho môn ${quiz.subject}` : `Review questions for ${quiz.subject}`}</h2>
+                                        </div>
+                                        <p className="text-sm text-zinc-500">{language === 'vi' ? 'Đây là những câu bạn từng trả lời sai trong môn học này. Hãy ôn tập lại để khắc sâu kiến thức nhé!' : 'These are questions you answered incorrectly in this subject. Review them to solidify your knowledge!'}</p>
                                     </div>
-                                    <h2 className="text-xl font-black">{language === 'vi' ? `Câu hỏi cần ôn tập cho môn ${quiz.subject}` : `Review questions for ${quiz.subject}`}</h2>
+                                    <Button 
+                                        onClick={() => router.push(`/practice/${encodeURIComponent(quiz.subject || '')}?mode=wrong`)}
+                                        className="rounded-2xl bg-red-600 hover:bg-red-700 font-bold shadow-lg shadow-red-500/20 gap-2 shrink-0 h-12 px-6"
+                                    >
+                                        <RotateCcw className="h-4 w-4" />
+                                        {language === 'vi' ? `Luyện tập câu sai (${subjectWrongQuestions.length})` : `Practice Errors (${subjectWrongQuestions.length})`}
+                                    </Button>
                                 </div>
-                                <p className="text-sm text-zinc-500">{language === 'vi' ? 'Đây là những câu bạn từng trả lời sai trong môn học này. Hãy xem lại để khắc sâu kiến thức nhé!' : 'These are questions you answered incorrectly in this subject. Review them to solidify your knowledge!'}</p>
                                 
                                 <div className="space-y-4">
                                     {subjectWrongQuestions.map((sq, si) => (

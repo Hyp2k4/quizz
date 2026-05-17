@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState, use, useRef } from "react";
+import { useEffect, useState, use, useRef, Suspense } from "react";
 import {
     getAllSubjectQuestions,
-    createNotification
+    createNotification,
+    getSubjectWrongQuestions,
+    syncSubjectWrongQuestions
 } from "@/services/quizService";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
@@ -161,10 +163,12 @@ function PracticeQuestion({
     );
 }
 
-export default function SubjectPracticePage({ params }: { params: Promise<{ subject: string }> }) {
+function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
     const { subject: rawSubject } = use(params);
     const subject = decodeURIComponent(rawSubject);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const mode = searchParams.get('mode');
     const { user, userData, login, refreshUserData } = useAuth();
     const { language } = useLanguage();
 
@@ -178,12 +182,19 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
     useEffect(() => {
         async function fetch() {
             setLoading(true);
-            const qs = await getAllSubjectQuestions(subject);
+            let qs = [];
+            if (mode === 'wrong' && user) {
+                qs = await getSubjectWrongQuestions(user.uid, subject);
+            } else {
+                qs = await getAllSubjectQuestions(subject);
+            }
             setQuestions(qs);
             setLoading(false);
         }
-        fetch();
-    }, [subject]);
+        if (user || mode !== 'wrong') {
+            fetch();
+        }
+    }, [subject, mode, user]);
 
     const handleReveal = (idx: number, currentAnswer?: any) => {
         if (revealed[idx]) return;
@@ -201,6 +212,11 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
 
         if (isCorrect) {
             setScore(prev => prev + 1);
+        }
+
+        // Real-time sync with subject wrong questions
+        if (user && subject) {
+            syncSubjectWrongQuestions(user.uid, subject, [{ question: q, isCorrect }]);
         }
 
         // Check if finished
@@ -257,6 +273,7 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
     }
 
     if (!isStarted) {
+        const noQuestions = questions.length === 0;
         return (
             <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
                 <Navbar />
@@ -266,23 +283,46 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
                             <LayoutGrid className="h-12 w-12" />
                         </div>
                         <div className="space-y-4">
-                            <h1 className="text-4xl font-black text-zinc-900 dark:text-zinc-50">Luyện tập {subject}</h1>
+                            <h1 className="text-4xl font-black text-zinc-900 dark:text-zinc-50">
+                                {mode === 'wrong' 
+                                    ? (language === 'vi' ? `Ôn tập câu sai: ${subject}` : `Review Errors: ${subject}`)
+                                    : (language === 'vi' ? `Luyện tập môn ${subject}` : `Practice: ${subject}`)}
+                            </h1>
                             <p className="text-zinc-500 leading-relaxed">
-                                Bạn sẽ làm toàn bộ các câu hỏi có trong môn học này mà không giới hạn thời gian.
-                                Đáp án sẽ được hiển thị ngay sau khi bạn trả lời.
+                                {noQuestions 
+                                    ? (language === 'vi' 
+                                        ? 'Chúc mừng! Bạn hiện tại không có câu hỏi nào bị trả lời sai trong môn học này.' 
+                                        : 'Congratulations! You currently have no incorrect questions in this subject.')
+                                    : (mode === 'wrong'
+                                        ? (language === 'vi' 
+                                            ? 'Bạn đang ôn tập lại toàn bộ câu hỏi đã từng trả lời sai của môn học này. Hãy trả lời chính xác để tự động loại bỏ chúng khỏi danh sách ôn tập!' 
+                                            : 'You are reviewing all questions you previously answered incorrectly. Answer correctly to automatically remove them from the review list!')
+                                        : (language === 'vi'
+                                            ? 'Bạn sẽ làm toàn bộ các câu hỏi có trong môn học này mà không giới hạn thời gian. Đáp án sẽ được hiển thị ngay sau khi bạn trả lời.'
+                                            : 'You will go through all the questions in this subject with no time limit. Answers will be shown immediately.'))}
                             </p>
-                            <div className="flex justify-center gap-6 py-4">
-                                <div className="flex items-center gap-2 text-zinc-600 font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-2xl">
-                                    <BookOpen className="h-5 w-5 text-indigo-500" /> {questions.length} Câu hỏi
+                            {!noQuestions && (
+                                <div className="flex justify-center gap-6 py-4">
+                                    <div className="flex items-center gap-2 text-zinc-600 font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-2xl">
+                                        <BookOpen className="h-5 w-5 text-indigo-500" /> {questions.length} {language === 'vi' ? 'Câu hỏi' : 'Questions'}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-zinc-600 font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-2xl">
+                                        <Zap className="h-5 w-5 text-yellow-500" /> {language === 'vi' ? 'Không giới hạn' : 'Unlimited'}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-zinc-600 font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-2xl">
-                                    <Zap className="h-5 w-5 text-yellow-500" /> Không giới hạn
-                                </div>
-                            </div>
+                            )}
                         </div>
-                        <Button onClick={() => setIsStarted(true)} className="w-full h-16 rounded-3xl bg-indigo-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-indigo-500/20">
-                            Bắt đầu luyện tập
-                        </Button>
+                        {noQuestions ? (
+                            <Button onClick={() => router.push('/review')} className="w-full h-16 rounded-3xl bg-indigo-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-indigo-500/20">
+                                {language === 'vi' ? 'Quay lại trang Ôn tập' : 'Back to Review'}
+                            </Button>
+                        ) : (
+                            <Button onClick={() => setIsStarted(true)} className="w-full h-16 rounded-3xl bg-indigo-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-indigo-500/20">
+                                {mode === 'wrong' 
+                                    ? (language === 'vi' ? 'Bắt đầu ôn tập' : 'Start Review') 
+                                    : (language === 'vi' ? 'Bắt đầu luyện tập' : 'Start Practice')}
+                            </Button>
+                        )}
                         <Button variant="ghost" onClick={() => router.back()} className="text-zinc-400">Quay lại</Button>
                     </Card>
                 </main>
@@ -331,7 +371,7 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
 
 
 
-                <div className={`space-y-6 pt-6 transition-all ${'pointer-events-none opacity-50'} ${'blur-md pointer-events-none'}`}>
+                <div className="space-y-6 pt-6 transition-all">
                     {questions.map((q, i) => (
                         <PracticeQuestion
                             key={i}
@@ -348,5 +388,17 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
 
             </main>
         </div>
+    );
+}
+
+export default function SubjectPracticePage({ params }: { params: Promise<{ subject: string }> }) {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center gap-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+            </div>
+        }>
+            <PracticeContent params={params} />
+        </Suspense>
     );
 }
