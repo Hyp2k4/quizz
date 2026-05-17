@@ -64,10 +64,10 @@ function PracticeQuestion({
     ) : undefined;
 
     return (
-        <Card className={`mb-6 border-l-4 transition-all duration-300 ${isRevealed ? (isCorrect ? 'border-l-green-500 bg-green-50/5' : 'border-l-red-500 bg-red-50/5') : 'border-l-indigo-500'}`}>
+        <Card className={`mb-6 border-l-4 transition-all duration-300 ${isRevealed ? (isCorrect ? 'border-l-green-500 bg-green-50/5' : 'border-l-red-500 bg-red-50/5') : 'border-l-sky-500'}`}>
             <CardContent className="pt-6">
                 <div className="flex flex-col sm:flex-row gap-4">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm ${isRevealed ? (isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-indigo-100 text-indigo-700'}`}>
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm ${isRevealed ? (isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-sky-100 text-sky-700'}`}>
                         {isRevealed ? (isCorrect ? <CheckCircle className="h-6 w-6" /> : <XCircle className="h-6 w-6" />) : index + 1}
                     </div>
                     <div className="w-full">
@@ -83,7 +83,7 @@ function PracticeQuestion({
                             {isOpen ? (
                                 <div className="space-y-3">
                                     <textarea
-                                        className="w-full p-4 rounded-xl border bg-white dark:bg-black/20 min-h-[120px] outline-none focus:ring-2 ring-indigo-500/20 transition-all"
+                                        className="w-full p-4 rounded-xl border bg-white dark:bg-black/20 min-h-[120px] outline-none focus:ring-2 ring-sky-500/20 transition-all"
                                         placeholder={language === 'vi' ? "Nhập câu trả lời của bạn..." : "Type your answer..."}
                                         value={selected as string || ''}
                                         onChange={(e) => !isRevealed && onChange(e.target.value)}
@@ -103,14 +103,14 @@ function PracticeQuestion({
                                         const isSelected = isMultiple ? (selected as string[])?.includes(opt) : selected === opt;
                                         const isActuallyCorrect = isRevealed && (isMultiple ? question.correctAnswer?.includes(opt) : question.correctAnswer?.[0] === opt);
 
-                                        let optionClass = `flex items-start gap-3 p-4 rounded-2xl border-2 transition-all ${isRevealed ? 'cursor-default' : 'cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-zinc-800/50'}`;
+                                        let optionClass = `flex items-start gap-3 p-4 rounded-2xl border-2 transition-all ${isRevealed ? 'cursor-default' : 'cursor-pointer hover:bg-sky-50/50 dark:hover:bg-zinc-800/50'}`;
 
                                         if (isRevealed) {
                                             if (isActuallyCorrect) optionClass += " border-green-500 bg-green-50 dark:bg-green-900/20";
                                             else if (isSelected) optionClass += " border-red-500 bg-red-50 dark:bg-red-900/20";
                                             else optionClass += " border-transparent opacity-60";
                                         } else if (isSelected) {
-                                            optionClass += " border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20";
+                                            optionClass += " border-sky-500 bg-sky-50 dark:bg-sky-900/20";
                                         } else {
                                             optionClass += " border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900";
                                         }
@@ -122,7 +122,7 @@ function PracticeQuestion({
                                                     checked={!!isSelected}
                                                     onChange={() => !isRevealed && (isMultiple ? handleMultiChange(opt, !isSelected) : (onChange(opt), onReveal()))}
                                                     disabled={isRevealed}
-                                                    className="mt-1 w-4 h-4 text-indigo-600"
+                                                    className="mt-1 w-4 h-4 text-sky-600"
                                                 />
                                                 <span className="text-sm font-medium">{opt}</span>
                                             </label>
@@ -144,9 +144,9 @@ function PracticeQuestion({
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="mt-6 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
+                                className="mt-6 p-4 rounded-2xl bg-sky-50 dark:bg-sky-900/10 border border-sky-100 dark:border-sky-800"
                             >
-                                <div className="flex items-center gap-2 mb-2 text-indigo-600 dark:text-indigo-400 font-bold text-sm">
+                                <div className="flex items-center gap-2 mb-2 text-sky-600 dark:text-sky-400 font-bold text-sm">
                                     <AlertCircle className="h-4 w-4" />
                                     {language === 'vi' ? 'Giải thích & Đáp án' : 'Explanation & Answer'}
                                 </div>
@@ -249,7 +249,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
 
     if (loading) return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-600"></div>
             <p className="text-zinc-500 font-medium animate-pulse">Đang chuẩn bị bộ câu hỏi môn {subject}...</p>
         </div>
     );
@@ -260,12 +260,12 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                 <Navbar />
                 <main className="flex-1 flex items-center justify-center p-6">
                     <Card className="max-w-md w-full p-10 text-center space-y-8 rounded-[3rem] shadow-2xl border-none">
-                        <div className="mx-auto w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-[2rem] flex items-center justify-center mb-2 shadow-inner transform -rotate-6">
+                        <div className="mx-auto w-24 h-24 bg-sky-50 dark:bg-sky-900/20 text-sky-600 rounded-[2rem] flex items-center justify-center mb-2 shadow-inner transform -rotate-6">
                             <LogIn className="h-12 w-12" />
                         </div>
                         <h2 className="text-3xl font-black">Đăng nhập để luyện tập</h2>
                         <p className="text-zinc-500">Hãy đăng nhập để theo dõi tiến độ luyện tập của bạn.</p>
-                        <Button onClick={() => login()} className="w-full h-14 rounded-2xl bg-indigo-600 text-lg font-bold">Đăng nhập ngay</Button>
+                        <Button onClick={() => login()} className="w-full h-14 rounded-2xl bg-sky-600 text-lg font-bold shadow-lg shadow-sky-500/20">Đăng nhập ngay</Button>
                     </Card>
                 </main>
             </div>
@@ -279,7 +279,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                 <Navbar />
                 <main className="pt-32 px-6 max-w-2xl mx-auto pb-20">
                     <Card className="p-10 text-center space-y-8 rounded-[3rem] shadow-2xl border-none">
-                        <div className="mx-auto w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-[2rem] flex items-center justify-center mb-2 shadow-inner">
+                        <div className="mx-auto w-24 h-24 bg-sky-50 dark:bg-sky-900/20 text-sky-600 rounded-[2rem] flex items-center justify-center mb-2 shadow-inner">
                             <LayoutGrid className="h-12 w-12" />
                         </div>
                         <div className="space-y-4">
@@ -304,7 +304,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                             {!noQuestions && (
                                 <div className="flex justify-center gap-6 py-4">
                                     <div className="flex items-center gap-2 text-zinc-600 font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-2xl">
-                                        <BookOpen className="h-5 w-5 text-indigo-500" /> {questions.length} {language === 'vi' ? 'Câu hỏi' : 'Questions'}
+                                        <BookOpen className="h-5 w-5 text-sky-500" /> {questions.length} {language === 'vi' ? 'Câu hỏi' : 'Questions'}
                                     </div>
                                     <div className="flex items-center gap-2 text-zinc-600 font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-2xl">
                                         <Zap className="h-5 w-5 text-yellow-500" /> {language === 'vi' ? 'Không giới hạn' : 'Unlimited'}
@@ -313,11 +313,11 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                             )}
                         </div>
                         {noQuestions ? (
-                            <Button onClick={() => router.push('/review')} className="w-full h-16 rounded-3xl bg-indigo-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-indigo-500/20">
+                            <Button onClick={() => router.push('/review')} className="w-full h-16 rounded-3xl bg-sky-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-sky-500/20">
                                 {language === 'vi' ? 'Quay lại trang Ôn tập' : 'Back to Review'}
                             </Button>
                         ) : (
-                            <Button onClick={() => setIsStarted(true)} className="w-full h-16 rounded-3xl bg-indigo-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-indigo-500/20">
+                            <Button onClick={() => setIsStarted(true)} className="w-full h-16 rounded-3xl bg-sky-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-sky-500/20">
                                 {mode === 'wrong' 
                                     ? (language === 'vi' ? 'Bắt đầu ôn tập' : 'Start Review') 
                                     : (language === 'vi' ? 'Bắt đầu luyện tập' : 'Start Practice')}
@@ -395,7 +395,7 @@ export default function SubjectPracticePage({ params }: { params: Promise<{ subj
     return (
         <Suspense fallback={
             <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center gap-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-600"></div>
             </div>
         }>
             <PracticeContent params={params} />
