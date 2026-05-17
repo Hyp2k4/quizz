@@ -340,31 +340,29 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
 
 
 
-            <main className="pt-32 px-6 max-w-4xl mx-auto pb-32">
-                {/* Fixed Progress Bar */}
-                <div className="fixed top-24 left-0 right-0 z-40 px-4 sm:px-6 pointer-events-none">
-                    <div className="max-w-4xl mx-auto bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md p-4 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xl pointer-events-auto">
-                        <div className="flex justify-between items-center mb-3">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-sky-50 dark:bg-sky-900/20 text-sky-600 rounded-2xl flex items-center justify-center">
-                                    <LayoutGrid className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Đang luyện tập môn</p>
-                                    <p className="text-sm font-black truncate max-w-[150px] sm:max-w-none">{subject}</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Tiến độ</p>
-                                <p className="text-lg font-black text-sky-600">{answeredCount} <span className="text-zinc-400 text-sm">/ {questions.length}</span></p>
-                            </div>
+            <main className="pt-32 px-6 max-w-4xl mx-auto pb-32 space-y-6">
+                {/* Sticky Progress Bar */}
+                <div className="flex flex-col sm:flex-row justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 p-3 md:p-4 rounded-xl sticky top-20 z-10 backdrop-blur-md shadow-sm gap-2 sm:gap-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-sky-100 dark:bg-sky-900/30 text-sky-600 rounded-[1.25rem] flex items-center justify-center shrink-0">
+                            <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
-                        <div className="h-3 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                        <div>
+                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-300 uppercase tracking-widest leading-none mb-1">Đang luyện tập môn</p>
+                            <p className="text-sm font-black truncate max-w-[150px] sm:max-w-none text-zinc-900 dark:text-zinc-50">{subject}</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-1 sm:max-w-[400px] w-full items-center gap-4">
+                        <div className="flex-1 h-3 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${progress}%` }}
                                 className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 transition-all duration-500 ease-out"
                             />
+                        </div>
+                        <div className="text-right shrink-0">
+                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-300 uppercase tracking-widest leading-none mb-1">Tiến độ</p>
+                            <p className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400">{answeredCount} <span className="text-zinc-400 text-xs">/ {questions.length}</span></p>
                         </div>
                     </div>
                 </div>
