@@ -3,6 +3,7 @@
 import { useEffect, useState, use, useRef, Suspense } from "react";
 import {
     getAllSubjectQuestions,
+    getQuizzesBySubject,
     createNotification,
     getSubjectWrongQuestions,
     syncSubjectWrongQuestions
@@ -18,7 +19,7 @@ import { db } from "@/lib/firebase";
 
 import {
     Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle,
-    BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap
+    BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap, Check
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
@@ -172,6 +173,8 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
     const { user, userData, login, refreshUserData } = useAuth();
     const { language } = useLanguage();
 
+    const [quizzes, setQuizzes] = useState<any[]>([]);
+    const [selectedQuizzes, setSelectedQuizzes] = useState<Record<string, boolean>>({});
     const [questions, setQuestions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isStarted, setIsStarted] = useState(false);
@@ -182,19 +185,62 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
     useEffect(() => {
         async function fetch() {
             setLoading(true);
-            let qs = [];
-            if (mode === 'wrong' && user) {
-                qs = await getSubjectWrongQuestions(user.uid, subject);
-            } else {
-                qs = await getAllSubjectQuestions(subject);
+            try {
+                if (mode === 'wrong' && user) {
+                    const qs = await getSubjectWrongQuestions(user.uid, subject);
+                    setQuestions(qs);
+                } else {
+                    const subjectQuizzes = await getQuizzesBySubject(subject, undefined, 100);
+                    setQuizzes(subjectQuizzes);
+                    
+                    // Default: select all
+                    const initialSelected: Record<string, boolean> = {};
+                    subjectQuizzes.forEach(q => {
+                        if (q.id) initialSelected[q.id] = true;
+                    });
+                    setSelectedQuizzes(initialSelected);
+                }
+            } catch (error) {
+                console.error("Error fetching subject data:", error);
+            } finally {
+                setLoading(false);
             }
-            setQuestions(qs);
-            setLoading(false);
         }
         if (user || mode !== 'wrong') {
             fetch();
         }
     }, [subject, mode, user]);
+
+    const handleStartPractice = () => {
+        const selectedIds = Object.keys(selectedQuizzes).filter(id => selectedQuizzes[id]);
+        if (selectedIds.length === 0) {
+            toast.error(language === 'vi' ? "Vui lòng chọn ít nhất 1 chương để luyện tập!" : "Please select at least 1 chapter to practice!");
+            return;
+        }
+
+        let allQuestions: any[] = [];
+        quizzes.forEach(quiz => {
+            if (quiz.id && selectedQuizzes[quiz.id]) {
+                const validQs = (quiz.questions || []).filter((q: any) => 
+                    q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
+                );
+                allQuestions = [...allQuestions, ...validQs];
+            }
+        });
+
+        if (allQuestions.length === 0) {
+            toast.error(language === 'vi' ? "Các chương được chọn không có câu hỏi hợp lệ!" : "Selected chapters have no valid questions!");
+            return;
+        }
+
+        // Shuffle questions
+        const shuffled = allQuestions.sort(() => Math.random() - 0.5);
+        // Take 40 questions (or less if total is less than 40)
+        const practiceQuestions = shuffled.slice(0, 40);
+
+        setQuestions(practiceQuestions);
+        setIsStarted(true);
+    };
 
     const handleReveal = (idx: number, currentAnswer?: any) => {
         if (revealed[idx]) return;
@@ -273,6 +319,177 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
     }
 
     if (!isStarted) {
+        if (mode !== 'wrong') {
+            const noQuizzes = quizzes.length === 0;
+            const totalSelected = quizzes
+                .filter(q => q.id && selectedQuizzes[q.id])
+                .reduce((sum, q) => sum + (q.questions?.filter((question: any) => 
+                    question.type === 'open' || (question.correctAnswer && question.correctAnswer.length > 0)
+                ).length || 0), 0);
+
+            const allSelected = quizzes.length > 0 && quizzes.every(q => q.id && selectedQuizzes[q.id]);
+            const selectedCount = Object.values(selectedQuizzes).filter(Boolean).length;
+
+            return (
+                <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+                    <Navbar />
+                    <main className="pt-32 px-6 max-w-3xl mx-auto pb-20">
+                        <Card className="p-8 md:p-10 space-y-8 rounded-[3rem] shadow-2xl border-none bg-white dark:bg-zinc-900/80 backdrop-blur-xl">
+                            <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left justify-between pb-6 border-b border-zinc-100 dark:border-zinc-800">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 bg-sky-50 dark:bg-sky-900/20 text-sky-600 rounded-2xl flex items-center justify-center shadow-inner shrink-0">
+                                        <Zap className="h-8 w-8 text-yellow-500" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-50">
+                                            {language === 'vi' ? `Luyện tập môn ${subject}` : `Practice: ${subject}`}
+                                        </h1>
+                                        <p className="text-zinc-500 text-sm mt-1">
+                                            {language === 'vi' ? 'Chọn chương/bài tập để tạo bộ câu hỏi ngẫu nhiên.' : 'Select chapters/exercises to generate a random question set.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {noQuizzes ? (
+                                <div className="text-center py-10 space-y-6">
+                                    <div className="mx-auto w-20 h-20 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 rounded-3xl flex items-center justify-center">
+                                        <BookOpen className="h-10 w-10" />
+                                    </div>
+                                    <p className="text-zinc-500 max-w-sm mx-auto">
+                                        {language === 'vi'
+                                            ? 'Môn học này hiện chưa có chương/bài tập nào để luyện tập.'
+                                            : 'This subject does not have any chapters/exercises to practice yet.'}
+                                    </p>
+                                    <Button onClick={() => router.back()} className="rounded-2xl px-8 h-12 bg-sky-600">
+                                        {language === 'vi' ? 'Quay lại' : 'Go Back'}
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                            {language === 'vi' ? `Danh sách chương (${quizzes.length})` : `Chapter List (${quizzes.length})`}
+                                        </p>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                if (allSelected) {
+                                                    const noneSelected: Record<string, boolean> = {};
+                                                    quizzes.forEach(q => { if (q.id) noneSelected[q.id] = false; });
+                                                    setSelectedQuizzes(noneSelected);
+                                                } else {
+                                                    const allSelected: Record<string, boolean> = {};
+                                                    quizzes.forEach(q => { if (q.id) allSelected[q.id] = true; });
+                                                    setSelectedQuizzes(allSelected);
+                                                }
+                                            }}
+                                            className="text-xs font-bold text-sky-600 hover:text-sky-700 h-8 px-3 rounded-xl hover:bg-sky-50 dark:hover:bg-sky-950/20"
+                                        >
+                                            {allSelected 
+                                                ? (language === 'vi' ? 'Bỏ chọn tất cả' : 'Deselect All') 
+                                                : (language === 'vi' ? 'Chọn tất cả' : 'Select All')}
+                                        </Button>
+                                    </div>
+
+                                    {/* Chapters Checklist */}
+                                    <div className="max-h-[300px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800">
+                                        {quizzes.map((quiz) => {
+                                            const validCount = quiz.questions?.filter((q: any) => 
+                                                q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
+                                            ).length || 0;
+                                            const isChecked = !!selectedQuizzes[quiz.id!];
+
+                                            return (
+                                                <motion.div
+                                                    key={quiz.id}
+                                                    whileHover={{ scale: 1.01 }}
+                                                    onClick={() => {
+                                                        setSelectedQuizzes(prev => ({
+                                                            ...prev,
+                                                            [quiz.id!]: !prev[quiz.id!]
+                                                        }));
+                                                    }}
+                                                    className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer select-none ${
+                                                        isChecked
+                                                            ? 'border-sky-500 bg-sky-50/50 dark:bg-sky-900/20'
+                                                            : 'border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
+                                                            isChecked
+                                                                ? 'bg-sky-500 border-sky-500 text-white'
+                                                                : 'border-zinc-300 dark:border-zinc-700'
+                                                        }`}>
+                                                            {isChecked && <Check className="w-4 h-4 stroke-[3px]" />}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <BookOpen className="h-4 w-4 text-sky-500 shrink-0" />
+                                                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100 line-clamp-1">
+                                                                {quiz.title}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-xs font-semibold px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 rounded-lg shrink-0">
+                                                        {validCount} {language === 'vi' ? 'câu' : 'qs'}
+                                                    </span>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Selection Info Box */}
+                                    <div className="p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-100 dark:border-zinc-800 space-y-3">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-zinc-500 font-medium">
+                                                {language === 'vi' ? 'Đã chọn:' : 'Selected Chapters:'}
+                                            </span>
+                                            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                                                {selectedCount} / {quizzes.length} {language === 'vi' ? 'chương' : 'chapters'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-zinc-500 font-medium">
+                                                {language === 'vi' ? 'Tổng số câu hỏi hiện có:' : 'Available pool:'}
+                                            </span>
+                                            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                                                {totalSelected} {language === 'vi' ? 'câu hỏi' : 'questions'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm pt-2 border-t border-zinc-200/50 dark:border-zinc-800/50">
+                                            <span className="text-zinc-500 font-bold">
+                                                {language === 'vi' ? 'Số câu trong bài luyện tập:' : 'Questions in practice set:'}
+                                            </span>
+                                            <span className="font-black text-sky-600 dark:text-sky-400 text-base">
+                                                {totalSelected > 40 ? '40' : totalSelected} {language === 'vi' ? 'câu ngẫu nhiên' : 'random questions'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Start & Back Buttons */}
+                                    <div className="flex flex-col gap-3 pt-2">
+                                        <Button
+                                            onClick={handleStartPractice}
+                                            disabled={selectedCount === 0 || totalSelected === 0}
+                                            className="w-full h-16 rounded-3xl bg-sky-600 text-xl font-bold hover:scale-102 transition-all shadow-xl shadow-sky-500/20"
+                                        >
+                                            {language === 'vi' ? 'Bắt đầu luyện tập' : 'Start Practice'}
+                                        </Button>
+                                        <Button variant="ghost" onClick={() => router.back()} className="text-zinc-400 hover:text-zinc-600 h-12">
+                                            {language === 'vi' ? 'Quay lại' : 'Back'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </Card>
+                    </main>
+                </div>
+            );
+        }
+
+        // Keep wrong questions start screen simple as before
         const noQuestions = questions.length === 0;
         return (
             <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -284,22 +501,16 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                         </div>
                         <div className="space-y-4">
                             <h1 className="text-4xl font-black text-zinc-900 dark:text-zinc-50">
-                                {mode === 'wrong' 
-                                    ? (language === 'vi' ? `Ôn tập câu sai: ${subject}` : `Review Errors: ${subject}`)
-                                    : (language === 'vi' ? `Luyện tập môn ${subject}` : `Practice: ${subject}`)}
+                                {language === 'vi' ? `Ôn tập câu sai: ${subject}` : `Review Errors: ${subject}`}
                             </h1>
                             <p className="text-zinc-500 leading-relaxed">
                                 {noQuestions 
                                     ? (language === 'vi' 
                                         ? 'Chúc mừng! Bạn hiện tại không có câu hỏi nào bị trả lời sai trong môn học này.' 
                                         : 'Congratulations! You currently have no incorrect questions in this subject.')
-                                    : (mode === 'wrong'
-                                        ? (language === 'vi' 
-                                            ? 'Bạn đang ôn tập lại toàn bộ câu hỏi đã từng trả lời sai của môn học này. Hãy trả lời chính xác để tự động loại bỏ chúng khỏi danh sách ôn tập!' 
-                                            : 'You are reviewing all questions you previously answered incorrectly. Answer correctly to automatically remove them from the review list!')
-                                        : (language === 'vi'
-                                            ? 'Bạn sẽ làm toàn bộ các câu hỏi có trong môn học này mà không giới hạn thời gian. Đáp án sẽ được hiển thị ngay sau khi bạn trả lời.'
-                                            : 'You will go through all the questions in this subject with no time limit. Answers will be shown immediately.'))}
+                                    : (language === 'vi' 
+                                        ? 'Bạn đang ôn tập lại toàn bộ câu hỏi đã từng trả lời sai của môn học này. Hãy trả lời chính xác để tự động loại bỏ chúng khỏi danh sách ôn tập!' 
+                                        : 'You are reviewing all questions you previously answered incorrectly. Answer correctly to automatically remove them from the review list!')}
                             </p>
                             {!noQuestions && (
                                 <div className="flex justify-center gap-6 py-4">
@@ -318,9 +529,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                             </Button>
                         ) : (
                             <Button onClick={() => setIsStarted(true)} className="w-full h-16 rounded-3xl bg-sky-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-sky-500/20">
-                                {mode === 'wrong' 
-                                    ? (language === 'vi' ? 'Bắt đầu ôn tập' : 'Start Review') 
-                                    : (language === 'vi' ? 'Bắt đầu luyện tập' : 'Start Practice')}
+                                {language === 'vi' ? 'Bắt đầu ôn tập' : 'Start Review'}
                             </Button>
                         )}
                         <Button variant="ghost" onClick={() => router.back()} className="text-zinc-400">Quay lại</Button>
