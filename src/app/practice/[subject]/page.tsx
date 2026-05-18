@@ -44,6 +44,7 @@ function PracticeQuestion({
     onReveal,
     language = 'vi'
 }: any) {
+    if (!question) return null;
     const isMultiple = question.type === 'multiple';
     const isOpen = question.type === 'open';
 
@@ -180,7 +181,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
             try {
                 if (mode === 'wrong' && user) {
                     const qs = await getSubjectWrongQuestions(user.uid, subject);
-                    setQuestions(qs);
+                    setQuestions(qs.filter(Boolean));
                 } else {
                     const subjectQuizzes = await getQuizzesBySubject(subject, undefined, 100);
                     const sortedQuizzes = [...subjectQuizzes].sort((a, b) => {
@@ -238,8 +239,26 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
         // Take 40 questions (or less if total is less than 40)
         const practiceQuestions = shuffled.slice(0, 40);
 
-        setQuestions(practiceQuestions);
+        setQuestions(practiceQuestions.filter(Boolean));
         setIsStarted(true);
+    };
+
+    const handleCheckCurrent = async () => {
+        const q = questions[currentQuestionIndex];
+        if (!q) return;
+        const userAns = answers[currentQuestionIndex];
+        const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
+        let isCorrect = false;
+
+        if (q.type === 'multiple') isCorrect = arraysEqual(userAns as string[], correctArr);
+        else if (q.type === 'single') isCorrect = correctArr.includes(userAns as string);
+        else isCorrect = (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+
+        setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }));
+        
+        if (mode === 'wrong' && user && subject) {
+            await syncSubjectWrongQuestions(user.uid, subject, [{ question: q, isCorrect }]);
+        }
     };
 
     const onPreSubmit = () => {
@@ -668,8 +687,8 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                             <PracticeQuestion
                                 index={currentQuestionIndex}
                                 question={questions[currentQuestionIndex]}
-                                selected={answers[currentQuestionIndex] || (questions[currentQuestionIndex].type === 'multiple' ? [] : "")}
-                                onChange={(val: any) => setAnswers(prev => ({ ...prev, [currentQuestionIndex]: val }))}
+                                selected={answers[currentQuestionIndex] || (questions[currentQuestionIndex]?.type === 'multiple' ? [] : "")}
+                                onChange={(val: any) => { setAnswers(prev => ({ ...prev, [currentQuestionIndex]: val })); setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true })); }}
                                 isRevealed={revealed[currentQuestionIndex]}
                                 language={language}
                             />
@@ -689,21 +708,32 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                     <span className="text-zinc-900 dark:text-zinc-100">{currentQuestionIndex + 1}</span> / {questions.length}
                                 </span>
                                 
-                                {currentQuestionIndex < questions.length - 1 ? (
-                                    <Button
-                                        onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                                        className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-sky-600 text-white hover:bg-sky-700 shadow-lg shadow-sky-500/20"
-                                    >
-                                        {language === 'vi' ? 'Tiếp theo' : 'Next'}
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        onClick={onPreSubmit}
-                                        className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/25"
-                                    >
-                                        {language === 'vi' ? 'Nộp bài' : 'Submit'}
-                                    </Button>
-                                )}
+                                <div className="flex gap-2">
+                                    {mode === 'wrong' && !revealed[currentQuestionIndex] && (
+                                        <Button
+                                            onClick={handleCheckCurrent}
+                                            disabled={answers[currentQuestionIndex] === undefined || (Array.isArray(answers[currentQuestionIndex]) && answers[currentQuestionIndex].length === 0) || answers[currentQuestionIndex] === ""}
+                                            className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-yellow-500 text-white hover:bg-yellow-600 shadow-lg shadow-yellow-500/20"
+                                        >
+                                            {language === 'vi' ? 'Kiểm tra' : 'Check'}
+                                        </Button>
+                                    )}
+                                    {currentQuestionIndex < questions.length - 1 ? (
+                                        <Button
+                                            onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                                            className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-sky-600 text-white hover:bg-sky-700 shadow-lg shadow-sky-500/20"
+                                        >
+                                            {language === 'vi' ? 'Tiếp theo' : 'Next'}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={onPreSubmit}
+                                            className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/25"
+                                        >
+                                            {language === 'vi' ? 'Nộp bài' : 'Submit'}
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -713,7 +743,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                             key={i}
                             index={i}
                             question={q}
-                            selected={answers[i] || (q.type === 'multiple' ? [] : "")}
+                            selected={answers[i] || (q?.type === 'multiple' ? [] : "")}
                             onChange={(val: any) => setAnswers(prev => ({ ...prev, [i]: val }))}
                             isRevealed={revealed[i]}
                             language={language}
