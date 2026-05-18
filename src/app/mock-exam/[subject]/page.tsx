@@ -5,7 +5,8 @@ import {
     getMockExamQuestions, 
     saveMockExamResult, 
     getMockExamLeaderboard,
-    createNotification
+    createNotification,
+    getQuizzesBySubject
 } from "@/services/quizService";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +18,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 import { 
     Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, 
-    Timer, Sparkles, BookOpen, LogIn, ArrowRight, Home
+    Timer, Sparkles, BookOpen, LogIn, ArrowRight, Home, Check
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
@@ -132,22 +133,86 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
     const { user, userData, login, refreshUserData } = useAuth();
     const { language } = useLanguage();
 
+    const [quizzes, setQuizzes] = useState<any[]>([]);
+    const [selectedQuizzes, setSelectedQuizzes] = useState<Record<string, boolean>>({});
     const [questions, setQuestions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isStarted, setIsStarted] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [timeLeft, setTimeLeft] = useState(3600); // 60 minutes
+    const [totalTimeLimit, setTotalTimeLimit] = useState(3600);
     const [answers, setAnswers] = useState<Record<number, any>>({});
     const [score, setScore] = useState(0);
     const [leaderboard, setLeaderboard] = useState<any[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
 
+    const allSelected = quizzes.length > 0 && quizzes.every(q => selectedQuizzes[q.id!]);
+    const selectedCount = Object.values(selectedQuizzes).filter(Boolean).length;
+    
+    // Calculate total pool of selected questions
+    const selectedQuizzesList = quizzes.filter(q => selectedQuizzes[q.id!]);
+    let totalSelectedQuestionsCount = 0;
+    selectedQuizzesList.forEach(q => {
+        const validCount = q.questions?.filter((question: any) => 
+            question.type === 'open' || (question.correctAnswer && question.correctAnswer.length > 0)
+        ).length || 0;
+        totalSelectedQuestionsCount += validCount;
+    });
+
+    const handleStartExam = () => {
+        const activeQuizzes = quizzes.filter(q => selectedQuizzes[q.id!]);
+        let pool: any[] = [];
+        activeQuizzes.forEach(quiz => {
+            const valid = quiz.questions.filter((q: any) => 
+                q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
+            );
+            pool = [...pool, ...valid];
+        });
+
+        if (pool.length === 0) {
+            toast.error(language === 'vi' ? "Vui lòng chọn chương có câu hỏi để thi!" : "Please select chapters containing questions to start the exam!");
+            return;
+        }
+
+        // Pick up to 40 questions randomly
+        const shuffled = pool.sort(() => Math.random() - 0.5);
+        const examQuestions = shuffled.slice(0, 40);
+
+        setQuestions(examQuestions);
+        
+        // 90 seconds per question, up to 60 mins
+        const limit = Math.min(3600, Math.max(300, examQuestions.length * 90));
+        setTimeLeft(limit);
+        setTotalTimeLimit(limit);
+        
+        setIsStarted(true);
+    };
+
     useEffect(() => {
         async function fetch() {
             setLoading(true);
-            const qs = await getMockExamQuestions(subject);
-            setQuestions(qs);
-            setLoading(false);
+            try {
+                const subjectQuizzes = await getQuizzesBySubject(subject, undefined, 100);
+                const sortedQuizzes = [...subjectQuizzes].sort((a, b) => {
+                    const aVal = a.chapter !== undefined && a.chapter !== null && (a.chapter as any) !== "" ? Number(a.chapter) : Infinity;
+                    const bVal = b.chapter !== undefined && b.chapter !== null && (b.chapter as any) !== "" ? Number(b.chapter) : Infinity;
+                    if (aVal === bVal) {
+                        return (a.title || "").localeCompare(b.title || "");
+                    }
+                    return aVal - bVal;
+                });
+                setQuizzes(sortedQuizzes);
+
+                const initialSelected: Record<string, boolean> = {};
+                sortedQuizzes.forEach(q => {
+                    if (q.id) initialSelected[q.id] = true;
+                });
+                setSelectedQuizzes(initialSelected);
+            } catch (error) {
+                console.error("Error loading mock exam quizzes:", error);
+            } finally {
+                setLoading(false);
+            }
         }
         fetch();
         getMockExamLeaderboard(subject).then(setLeaderboard);
@@ -192,7 +257,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                 userName: user.displayName || "Anonymous",
                 score: calculatedScore,
                 totalQuestions: questions.length,
-                timeTakenMs: (3600 - timeLeft) * 1000
+                timeTakenMs: (totalTimeLimit - timeLeft) * 1000
             });
             getMockExamLeaderboard(subject).then(setLeaderboard);
 
@@ -256,26 +321,137 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
             <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
                 <Navbar />
                 <main className="pt-32 px-4 sm:px-6 max-w-2xl mx-auto pb-20">
-                    <Card className="p-6 sm:p-10 text-center space-y-6 sm:space-y-8 rounded-[2rem] sm:rounded-[3rem] shadow-2xl border-none bg-white dark:bg-zinc-900">
-                        <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center mb-2 shadow-inner transform -rotate-6">
-                            <Trophy className="h-10 w-10 sm:h-12 sm:w-12" />
+                    <Card className="p-6 sm:p-10 space-y-6 sm:space-y-8 rounded-[2rem] sm:rounded-[3rem] shadow-2xl border-none bg-white dark:bg-zinc-900">
+                        <div className="text-center">
+                            <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center mb-4 shadow-inner transform -rotate-6">
+                                <Trophy className="h-10 w-10 sm:h-12 sm:w-12" />
+                            </div>
+                            <h1 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-zinc-50 leading-tight">
+                                {language === 'vi' ? `Thi thử môn ${subject}` : `Mock Exam: ${subject}`}
+                            </h1>
+                            <p className="text-zinc-500 text-sm mt-2">
+                                {language === 'vi' ? 'Chọn các chương bạn muốn thi thử. Hệ thống sẽ lấy ngẫu nhiên tối đa 40 câu hỏi và tính giờ làm bài.' : 'Select chapters to include in your mock exam. Up to 40 random questions will be drawn with a countdown timer.'}
+                            </p>
                         </div>
-                        <div className="space-y-4">
-                            <h1 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-zinc-50 leading-tight">Thi thử môn {subject}</h1>
-                            <div className="flex flex-wrap justify-center gap-3 sm:gap-6 py-4">
-                                <div className="flex items-center gap-2 text-zinc-600 text-sm sm:text-base font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl">
-                                    <BookOpen className="h-4 w-4 sm:h-5 sm:w-5" /> 40 {language === 'vi' ? 'Câu hỏi' : 'Questions'}
+
+                        {quizzes.length === 0 ? (
+                            <div className="text-center py-6 text-zinc-400">
+                                {language === 'vi' ? 'Môn học này chưa có chương nào để thi thử.' : 'No chapters available for this subject yet.'}
+                            </div>
+                        ) : (
+                            <div className="space-y-4 border-y border-zinc-100 dark:border-zinc-800 py-6">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                        {language === 'vi' ? `Chọn chương để thi (${quizzes.length})` : `Select chapters (${quizzes.length})`}
+                                    </p>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            if (allSelected) {
+                                                const noneSelected: Record<string, boolean> = {};
+                                                quizzes.forEach(q => { if (q.id) noneSelected[q.id] = false; });
+                                                setSelectedQuizzes(noneSelected);
+                                            } else {
+                                                const allSelected: Record<string, boolean> = {};
+                                                quizzes.forEach(q => { if (q.id) allSelected[q.id] = true; });
+                                                setSelectedQuizzes(allSelected);
+                                            }
+                                        }}
+                                        className="text-xs font-bold text-indigo-600 hover:text-indigo-750 h-8 px-3 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/20"
+                                    >
+                                        {allSelected 
+                                            ? (language === 'vi' ? 'Bỏ chọn tất cả' : 'Deselect All') 
+                                            : (language === 'vi' ? 'Chọn tất cả' : 'Select All')}
+                                    </Button>
                                 </div>
-                                <div className="flex items-center gap-2 text-zinc-600 text-sm sm:text-base font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl">
-                                    <Timer className="h-4 w-4 sm:h-5 sm:w-5" /> 60 {language === 'vi' ? 'Phút' : 'Minutes'}
+
+                                <div className="max-h-[260px] overflow-y-auto space-y-2.5 pr-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-850">
+                                    {quizzes.map((quiz) => {
+                                        const validCount = quiz.questions?.filter((q: any) => 
+                                            q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
+                                        ).length || 0;
+                                        const isChecked = !!selectedQuizzes[quiz.id!];
+
+                                        return (
+                                            <motion.div
+                                                key={quiz.id}
+                                                whileHover={{ scale: 1.005 }}
+                                                onClick={() => {
+                                                    setSelectedQuizzes(prev => ({
+                                                        ...prev,
+                                                        [quiz.id!]: !prev[quiz.id!]
+                                                    }));
+                                                }}
+                                                className={`flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
+                                                    isChecked
+                                                        ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20'
+                                                        : 'border-zinc-150 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
+                                                        isChecked
+                                                            ? 'bg-indigo-500 border-indigo-500 text-white'
+                                                            : 'border-zinc-300 dark:border-zinc-700'
+                                                    }`}>
+                                                        {isChecked && <Check className="w-4 h-4 stroke-[3px]" />}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <BookOpen className="h-4 w-4 text-indigo-500 shrink-0" />
+                                                        <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100 line-clamp-1 flex items-center gap-1">
+                                                            {quiz.chapter !== undefined && quiz.chapter !== null && (quiz.chapter as any) !== "" ? (
+                                                                <span className="text-indigo-600 dark:text-indigo-400 font-extrabold mr-1 shrink-0">
+                                                                    [{language === 'vi' ? `Chương ${quiz.chapter}` : `Ch ${quiz.chapter}`}]
+                                                                </span>
+                                                            ) : null}
+                                                            <span>{quiz.title}</span>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-xs font-semibold px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 rounded-lg shrink-0">
+                                                    {validCount} {language === 'vi' ? 'câu' : 'qs'}
+                                                </span>
+                                            </motion.div>
+                                        );
+                                    })}
                                 </div>
-                                <div className="flex items-center gap-2 text-zinc-600 text-sm sm:text-base font-bold bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl">
-                                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" /> {language === 'vi' ? 'Ngẫu nhiên' : 'Random'}
+
+                                <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-150 dark:border-zinc-800 space-y-2 text-sm">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-zinc-500 font-medium">
+                                            {language === 'vi' ? 'Đã chọn:' : 'Selected Chapters:'}
+                                        </span>
+                                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                                            {selectedCount} / {quizzes.length} {language === 'vi' ? 'chương' : 'chapters'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-zinc-500 font-medium">
+                                            {language === 'vi' ? 'Tổng số câu hỏi sẽ thi (tối đa 40):' : 'Exam questions pool (max 40):'}
+                                        </span>
+                                        <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                            {Math.min(40, totalSelectedQuestionsCount)} {language === 'vi' ? 'câu hỏi' : 'questions'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-zinc-500 font-medium">
+                                            {language === 'vi' ? 'Thời gian làm bài:' : 'Time Limit:'}
+                                        </span>
+                                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                                            {Math.round(Math.min(3600, Math.max(300, Math.min(40, totalSelectedQuestionsCount) * 90)) / 60)} {language === 'vi' ? 'phút' : 'minutes'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <Button onClick={() => setIsStarted(true)} className="w-full h-14 sm:h-16 rounded-2xl sm:rounded-3xl bg-indigo-600 text-lg sm:text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-indigo-500/20">
-                            Bắt đầu thi ngay
+                        )}
+
+                        <Button 
+                            onClick={handleStartExam} 
+                            disabled={selectedCount === 0 || totalSelectedQuestionsCount === 0}
+                            className="w-full h-14 sm:h-16 rounded-2xl sm:rounded-3xl bg-indigo-600 text-lg sm:text-xl font-bold hover:scale-[1.01] active:scale-95 transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 disabled:pointer-events-none"
+                        >
+                            {language === 'vi' ? 'Bắt đầu thi ngay' : 'Start Exam Now'}
                         </Button>
                     </Card>
 
