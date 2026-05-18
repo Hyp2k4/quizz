@@ -135,6 +135,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
 
     const [quizzes, setQuizzes] = useState<any[]>([]);
     const [selectedQuizzes, setSelectedQuizzes] = useState<Record<string, boolean>>({});
+    const [examQuestionLimit, setExamQuestionLimit] = useState<40 | 60>(40);
     const [questions, setQuestions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isStarted, setIsStarted] = useState(false);
@@ -174,14 +175,21 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
             return;
         }
 
-        // Pick up to 40 questions randomly
+        // Pick up to the selected limit of questions randomly
         const shuffled = pool.sort(() => Math.random() - 0.5);
-        const examQuestions = shuffled.slice(0, 40);
+        const examQuestions = shuffled.slice(0, examQuestionLimit);
 
         setQuestions(examQuestions);
         
-        // 90 seconds per question, up to 60 mins
-        const limit = Math.min(3600, Math.max(300, examQuestions.length * 90));
+        // Calculate limit: 40 qs -> 60 mins, 60 qs -> 90 mins
+        const chosenLimit = examQuestionLimit;
+        const timeLimitForMode = chosenLimit === 40 ? 3600 : 5400;
+        
+        // Scale time limit down if there are fewer questions than the selected limit
+        const limit = examQuestions.length >= chosenLimit 
+            ? timeLimitForMode 
+            : Math.max(300, Math.round((examQuestions.length / chosenLimit) * timeLimitForMode));
+
         setTimeLeft(limit);
         setTotalTimeLimit(limit);
         
@@ -417,7 +425,40 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                                     })}
                                 </div>
 
-                                <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-150 dark:border-zinc-800 space-y-2 text-sm">
+                                {/* Select questions limit and time limit */}
+                                <div className="space-y-3 pt-2">
+                                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                        {language === 'vi' ? 'Chọn số câu hỏi và thời gian thi' : 'Select question count and time limit'}
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div
+                                            onClick={() => setExamQuestionLimit(40)}
+                                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-1 ${
+                                                examQuestionLimit === 40
+                                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm shadow-indigo-500/10'
+                                                    : 'border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
+                                            }`}
+                                        >
+                                            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">40</span>
+                                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{language === 'vi' ? '40 câu hỏi' : '40 questions'}</span>
+                                            <span className="text-xs text-zinc-500">{language === 'vi' ? 'Thời gian: 60 phút' : 'Time: 60 mins'}</span>
+                                        </div>
+                                        <div
+                                            onClick={() => setExamQuestionLimit(60)}
+                                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-1 ${
+                                                examQuestionLimit === 60
+                                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm shadow-indigo-500/10'
+                                                    : 'border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
+                                            }`}
+                                        >
+                                            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">60</span>
+                                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{language === 'vi' ? '60 câu hỏi' : '60 questions'}</span>
+                                            <span className="text-xs text-zinc-500">{language === 'vi' ? 'Thời gian: 90 phút' : 'Time: 90 mins'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-150 dark:border-zinc-800 space-y-2 text-sm mt-4">
                                     <div className="flex justify-between items-center">
                                         <span className="text-zinc-500 font-medium">
                                             {language === 'vi' ? 'Đã chọn:' : 'Selected Chapters:'}
@@ -428,10 +469,10 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-zinc-500 font-medium">
-                                            {language === 'vi' ? 'Tổng số câu hỏi sẽ thi (tối đa 40):' : 'Exam questions pool (max 40):'}
+                                            {language === 'vi' ? `Tổng số câu hỏi sẽ thi (tối đa ${examQuestionLimit}):` : `Exam questions pool (max ${examQuestionLimit}):`}
                                         </span>
                                         <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                                            {Math.min(40, totalSelectedQuestionsCount)} {language === 'vi' ? 'câu hỏi' : 'questions'}
+                                            {Math.min(examQuestionLimit, totalSelectedQuestionsCount)} {language === 'vi' ? 'câu hỏi' : 'questions'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
@@ -439,7 +480,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                                             {language === 'vi' ? 'Thời gian làm bài:' : 'Time Limit:'}
                                         </span>
                                         <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                                            {Math.round(Math.min(3600, Math.max(300, Math.min(40, totalSelectedQuestionsCount) * 90)) / 60)} {language === 'vi' ? 'phút' : 'minutes'}
+                                            {Math.round((Math.min(examQuestionLimit, totalSelectedQuestionsCount) >= examQuestionLimit ? (examQuestionLimit === 40 ? 3600 : 5400) : Math.max(300, Math.round((Math.min(examQuestionLimit, totalSelectedQuestionsCount) / examQuestionLimit) * (examQuestionLimit === 40 ? 3600 : 5400)))) / 60)} {language === 'vi' ? 'phút' : 'minutes'}
                                         </span>
                                     </div>
                                 </div>
@@ -566,8 +607,15 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                         setConfirmOpen(false);
                         handleSubmit();
                     }}
-                    title="Nộp bài thi?"
-                    description={`Bạn đã làm được ${Object.keys(answers).length}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài không?`}
+                    title={language === 'vi' ? "Nộp bài thi?" : "Submit Exam?"}
+                    description={questions.length - Object.keys(answers).length > 0 
+                        ? (language === 'vi' 
+                            ? `Bạn còn ${questions.length - Object.keys(answers).length} câu hỏi chưa chọn đáp án. Bạn có chắc chắn muốn nộp bài thi không?` 
+                            : `You have ${questions.length - Object.keys(answers).length} unanswered questions. Are you sure you want to submit the exam?`)
+                        : (language === 'vi' 
+                            ? "Bạn đã hoàn thành tất cả câu hỏi. Bạn có chắc chắn muốn nộp bài thi không?" 
+                            : "You have answered all questions. Are you sure you want to submit the exam?")
+                    }
                 />
             </main>
         </div>

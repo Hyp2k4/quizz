@@ -331,7 +331,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     // New state for starting the quiz
     const [isReadyToStart, setIsReadyToStart] = useState(false);
     const [leaderboardVersion, setLeaderboardVersion] = useState(0);
-
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
     const [subjectWrongQuestions, setSubjectWrongQuestions] = useState<any[]>([]);
 
@@ -836,9 +836,18 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     {isSubmitted ? formatTime(finalTimeMs, language) : formatTime(elapsedTime, language)}
                                 </span>
                                 {!isSubmitted && (
-                                    <span className="text-sm text-[rgb(var(--muted-foreground))]">
-                                        {Object.keys(answers).length} / {quiz.questions.length}
-                                    </span>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-sm text-[rgb(var(--muted-foreground))] hidden sm:inline">
+                                            {Object.keys(answers).length} / {quiz.questions.length}
+                                        </span>
+                                        <Button
+                                            size="sm"
+                                            onClick={onPreSubmit}
+                                            className="rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold h-8 px-3 shadow-md shadow-green-500/20"
+                                        >
+                                            {language === 'vi' ? 'Nộp bài' : 'Submit'}
+                                        </Button>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -902,8 +911,109 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             </div>
                         )}
 
-                        {/* Questions List */}
-                        {quiz.questions?.map((q, i) => {
+                        {/* Questions navigation and active question */}
+                        {!isSubmitted && quiz.questions && quiz.questions.length > 0 && (
+                            <div className="space-y-6">
+                                {/* Visual Question Map */}
+                                <div className="p-4 md:p-6 bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-150 dark:border-zinc-800 shadow-sm space-y-4">
+                                    <div className="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                        <span>{language === 'vi' ? 'Bản đồ câu hỏi' : 'Question Map'}</span>
+                                        <span className="text-indigo-600 dark:text-indigo-400">{Object.keys(answers).length} / {quiz.questions.length} {language === 'vi' ? 'đã làm' : 'answered'}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 md:gap-3">
+                                        {quiz.questions.map((_, idx) => {
+                                            const ans = answers[idx];
+                                            const isAnswered = ans !== undefined && (Array.isArray(ans) ? ans.length > 0 : String(ans).trim() !== "");
+                                            const isActive = idx === currentQuestionIndex;
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setCurrentQuestionIndex(idx)}
+                                                    className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl font-bold text-sm md:text-base transition-all flex items-center justify-center border-2 ${
+                                                        isActive
+                                                            ? 'border-indigo-500 bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110 z-10'
+                                                            : isAnswered
+                                                                ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-400 hover:border-indigo-300'
+                                                                : 'border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400 hover:border-zinc-300'
+                                                    }`}
+                                                >
+                                                    {idx + 1}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Active Question Card */}
+                                <div className="transition-all duration-300">
+                                    <QuestionTaker
+                                        index={currentQuestionIndex}
+                                        question={quiz.questions[currentQuestionIndex]}
+                                        selected={answers[currentQuestionIndex] || (quiz.questions[currentQuestionIndex].type === 'multiple' ? [] : "")}
+                                        onChange={(val) => {
+                                            handleAnswer(currentQuestionIndex, val);
+                                        }}
+                                        readOnly={isSubmitted}
+                                        isRevealed={revealed[currentQuestionIndex]}
+                                        isCorrect={(() => {
+                                            const q = quiz.questions[currentQuestionIndex];
+                                            const userAns = answers[currentQuestionIndex];
+                                            if (userAns === undefined) return undefined;
+                                            const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
+                                            if (q.type === 'multiple') {
+                                                return arraysEqual(userAns as string[], correctArr);
+                                            } else if (q.type === 'single') {
+                                                return correctArr.includes(userAns as string);
+                                            } else {
+                                                return (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+                                            }
+                                        })()}
+                                        onReport={() => {
+                                            setReportingIndex(currentQuestionIndex);
+                                            setReportOpen(true);
+                                        }}
+                                        language={language}
+                                    />
+                                </div>
+
+                                {/* Navigation Bar */}
+                                <div className="flex justify-between items-center bg-white dark:bg-zinc-900 p-4 md:p-6 rounded-[2rem] border border-zinc-150 dark:border-zinc-800 shadow-md">
+                                    <Button
+                                        variant="outline"
+                                        disabled={currentQuestionIndex === 0}
+                                        onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                                        className="rounded-2xl px-4 md:px-6 font-bold h-12"
+                                    >
+                                        <ArrowLeft className="h-5 w-5 mr-1 hidden sm:block" />
+                                        {language === 'vi' ? 'Quay lại' : 'Previous'}
+                                    </Button>
+                                    
+                                    <span className="font-extrabold text-sm md:text-base text-zinc-500 dark:text-zinc-400">
+                                        <span className="text-zinc-900 dark:text-zinc-100">{currentQuestionIndex + 1}</span> / {quiz.questions.length}
+                                    </span>
+                                    
+                                    {currentQuestionIndex < quiz.questions.length - 1 ? (
+                                        <Button
+                                            onClick={() => setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1))}
+                                            className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
+                                        >
+                                            {language === 'vi' ? 'Tiếp theo' : 'Next'}
+                                            <ArrowLeft className="h-5 w-5 ml-1 rotate-180 hidden sm:block" />
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={onPreSubmit}
+                                            className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/25"
+                                        >
+                                            {language === 'vi' ? 'Nộp bài' : 'Submit'}
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* If submitted, show full vertical list for easy review */}
+                        {isSubmitted && quiz.questions?.map((q, i) => {
                             const userAns = answers[i];
                             const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
                             let isCorrect = false;
@@ -921,7 +1031,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     <QuestionTaker
                                         index={i}
                                         question={q}
-                                        selected={answers[i]}
+                                        selected={answers[i] || (q.type === 'multiple' ? [] : "")}
                                         onChange={(val) => {
                                             handleAnswer(i, val);
                                         }}
@@ -936,20 +1046,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     />
                                 </div>
                             );
-
                         })}
-
-                        {!isSubmitted && (
-                            <div className="flex justify-center pt-8 pb-20">
-                                <Button
-                                    size="lg"
-                                    className="rounded-full px-12 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1"
-                                    onClick={onPreSubmit}
-                                >
-                                    {language === 'vi' ? 'Nộp kết quả cuối cùng' : 'Submit Final Result'}
-                                </Button>
-                            </div>
-                        )}
 
                         {/* Subject Wrong Questions Pool */}
                         {!isSubmitted && subjectWrongQuestions.length > 0 && (
