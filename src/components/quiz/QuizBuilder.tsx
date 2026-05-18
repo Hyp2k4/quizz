@@ -48,6 +48,8 @@ export default function QuizBuilder() {
     const [title, setTitle] = useState(t.builder.untitled);
     const [description, setDescription] = useState("");
     const [subject, setSubject] = useState("");
+    const [chapter, setChapter] = useState<number | "">("");
+    const [chapterName, setChapterName] = useState("");
     const [isImporting, setIsImporting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(!!editId);
@@ -71,6 +73,8 @@ export default function QuizBuilder() {
                     setTitle(data.title);
                     setDescription(data.description);
                     setSubject(data.subject || "");
+                    setChapter(data.chapter !== undefined && data.chapter !== null ? data.chapter : "");
+                    setChapterName(data.chapterName || "");
                     setQuestions(data.questions);
                     
                     // Scroll to specific question if requested
@@ -463,6 +467,8 @@ export default function QuizBuilder() {
                 title,
                 description,
                 subject,
+                chapter: chapter === "" ? undefined : Number(chapter),
+                chapterName: chapterName.trim() || undefined,
                 questions,
             };
 
@@ -620,22 +626,46 @@ export default function QuizBuilder() {
                     className="w-full text-center text-2xl md:text-5xl font-black bg-transparent border-none focus:outline-none placeholder-zinc-300 dark:placeholder-zinc-700 text-zinc-900 dark:text-white transition-all tracking-tight"
                     placeholder={t.builder.untitled}
                 />
-                <div className="flex flex-col md:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
-                    <div className="relative w-full md:w-1/3">
-                        <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-400" />
-                        <Input
-                            value={subject}
-                            onChange={(e) => setSubject(e.target.value)}
-                            onFocus={() => handleFocusQuestion(null)}
-                            className="pl-10 h-10 rounded-2xl bg-white dark:bg-zinc-800/50 border-sky-100 dark:border-sky-900/30 focus:ring-sky-500 text-sm font-bold"
-                            placeholder={language === 'vi' ? "Tên môn học/Nhóm..." : "Subject/Group name..."}
-                        />
+                <div className="flex flex-col gap-3 max-w-2xl mx-auto bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-3xl border border-zinc-200/50 dark:border-white/5 shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+                        <div className="relative w-full sm:flex-[1.5]">
+                            <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-400" />
+                            <Input
+                                value={subject}
+                                onChange={(e) => setSubject(e.target.value)}
+                                onFocus={() => handleFocusQuestion(null)}
+                                className="pl-10 h-10 rounded-2xl bg-white dark:bg-zinc-800/80 border-sky-100 dark:border-sky-900/30 focus:ring-sky-500 text-sm font-bold"
+                                placeholder={language === 'vi' ? "Tên môn học/Nhóm..." : "Subject/Group name..."}
+                            />
+                        </div>
+                        <div className="relative w-full sm:w-[100px] shrink-0">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-sky-400">#</span>
+                            <Input
+                                type="number"
+                                value={chapter}
+                                onChange={(e) => setChapter(e.target.value === "" ? "" : Number(e.target.value))}
+                                onFocus={() => handleFocusQuestion(null)}
+                                className="pl-8 h-10 rounded-2xl bg-white dark:bg-zinc-800/80 border-sky-100 dark:border-sky-900/30 focus:ring-sky-500 text-sm font-bold text-center"
+                                placeholder={language === 'vi' ? "Chương..." : "Chap..."}
+                                min={1}
+                            />
+                        </div>
+                        <div className="relative w-full sm:flex-[2]">
+                            <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-400" />
+                            <Input
+                                value={chapterName}
+                                onChange={(e) => setChapterName(e.target.value)}
+                                onFocus={() => handleFocusQuestion(null)}
+                                className="pl-10 h-10 rounded-2xl bg-white dark:bg-zinc-800/80 border-sky-100 dark:border-sky-900/30 focus:ring-sky-500 text-sm font-bold"
+                                placeholder={language === 'vi' ? "Tên chương (ví dụ: Hàm số)..." : "Chapter name..."}
+                            />
+                        </div>
                     </div>
                     <Textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         onFocus={() => handleFocusQuestion(null)}
-                        className="flex-1 text-center md:text-left border-none resize-none shadow-none text-zinc-400 font-medium bg-transparent focus:ring-0 text-sm md:text-base min-h-[40px] py-2"
+                        className="w-full text-center sm:text-left border-none resize-none shadow-none text-zinc-400 font-medium bg-transparent focus:ring-0 text-sm min-h-[40px] py-1 px-3"
                         placeholder={t.builder.descPlaceholder}
                         rows={1}
                     />

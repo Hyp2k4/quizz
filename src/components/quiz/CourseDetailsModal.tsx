@@ -372,6 +372,12 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                             <span className="px-3 py-1 bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 rounded-full">
                                 {currentQuiz.subject || (language === 'vi' ? "Chưa phân loại" : "Uncategorized")}
                             </span>
+                            {currentQuiz.chapter !== undefined && currentQuiz.chapter !== null && (currentQuiz.chapter as any) !== "" && (
+                                <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full font-bold border border-indigo-100/50 dark:border-indigo-900/30">
+                                    {language === 'vi' ? `Chương ${currentQuiz.chapter}` : `Chapter ${currentQuiz.chapter}`}
+                                    {currentQuiz.chapterName && `: ${currentQuiz.chapterName}`}
+                                </span>
+                            )}
                             <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full">
                                 {currentQuiz.questions.length} {language === 'vi' ? 'câu hỏi' : 'questions'}
                             </span>

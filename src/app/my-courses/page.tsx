@@ -177,7 +177,15 @@ function MyCoursesContent() {
                                 acc[subject].push(quiz);
                                 return acc;
                             }, {} as Record<string, QuizData[]>)
-                        ).map(([subject, subjectQuizzes]) => {
+                        ).map(([subject, rawQuizzes]) => {
+                            const subjectQuizzes = [...rawQuizzes].sort((a, b) => {
+                                const aVal = a.chapter !== undefined && a.chapter !== null && (a.chapter as any) !== "" ? Number(a.chapter) : Infinity;
+                                const bVal = b.chapter !== undefined && b.chapter !== null && (b.chapter as any) !== "" ? Number(b.chapter) : Infinity;
+                                if (aVal === bVal) {
+                                    return (a.title || "").localeCompare(b.title || "");
+                                }
+                                return aVal - bVal;
+                            });
                             const isExpanded = expandedSubjects[subject] !== false;
                             return (
                                 <div key={subject} className="space-y-6">
@@ -257,6 +265,14 @@ function MyCoursesContent() {
                                                                         </div>
                                                                     )}
                                                                 </div>
+                                                                {quiz.chapter !== undefined && quiz.chapter !== null && (quiz.chapter as any) !== "" && (
+                                                                    <div className="text-xs font-extrabold text-sky-600 dark:text-sky-400 mb-2 flex items-center gap-1.5">
+                                                                        <span className="px-2 py-0.5 bg-sky-50 dark:bg-sky-950/40 rounded-md border border-sky-100/50 dark:border-sky-900/30">
+                                                                            {language === 'vi' ? `Chương ${quiz.chapter}` : `Chapter ${quiz.chapter}`}
+                                                                        </span>
+                                                                        {quiz.chapterName && <span className="truncate max-w-[150px]">— {quiz.chapterName}</span>}
+                                                                    </div>
+                                                                )}
                                                                 <CardTitle className="line-clamp-1 flex items-center justify-between gap-2 text-lg font-bold">
                                                                     {quiz.title}
                                                                     {quiz.userId !== user?.uid && (

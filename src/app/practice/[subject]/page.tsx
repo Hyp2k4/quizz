@@ -191,11 +191,19 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                     setQuestions(qs);
                 } else {
                     const subjectQuizzes = await getQuizzesBySubject(subject, undefined, 100);
-                    setQuizzes(subjectQuizzes);
+                    const sortedQuizzes = [...subjectQuizzes].sort((a, b) => {
+                        const aVal = a.chapter !== undefined && a.chapter !== null && (a.chapter as any) !== "" ? Number(a.chapter) : Infinity;
+                        const bVal = b.chapter !== undefined && b.chapter !== null && (b.chapter as any) !== "" ? Number(b.chapter) : Infinity;
+                        if (aVal === bVal) {
+                            return (a.title || "").localeCompare(b.title || "");
+                        }
+                        return aVal - bVal;
+                    });
+                    setQuizzes(sortedQuizzes);
                     
                     // Default: select all
                     const initialSelected: Record<string, boolean> = {};
-                    subjectQuizzes.forEach(q => {
+                    sortedQuizzes.forEach(q => {
                         if (q.id) initialSelected[q.id] = true;
                     });
                     setSelectedQuizzes(initialSelected);
@@ -427,8 +435,13 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                                         </div>
                                                         <div className="flex items-center gap-2">
                                                             <BookOpen className="h-4 w-4 text-sky-500 shrink-0" />
-                                                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100 line-clamp-1">
-                                                                {quiz.title}
+                                                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100 line-clamp-1 flex items-center gap-1">
+                                                                {quiz.chapter !== undefined && quiz.chapter !== null && (quiz.chapter as any) !== "" ? (
+                                                                    <span className="text-sky-600 dark:text-sky-400 font-extrabold mr-1 shrink-0">
+                                                                        [{language === 'vi' ? `Chương ${quiz.chapter}` : `Ch ${quiz.chapter}`}]
+                                                                    </span>
+                                                                ) : null}
+                                                                <span>{quiz.title}</span>
                                                             </span>
                                                         </div>
                                                     </div>

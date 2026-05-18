@@ -46,6 +46,8 @@ export interface QuizData {
   accessCode?: string; // Optional code for private access
   views?: number;
   subject?: string; // Group quizzes by subject
+  chapter?: number; // Order/Number of the chapter
+  chapterName?: string; // Chapter name
 }
 
 
