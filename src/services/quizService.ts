@@ -48,6 +48,7 @@ export interface QuizData {
   subject?: string; // Group quizzes by subject
   chapter?: number; // Order/Number of the chapter
   chapterName?: string; // Chapter name
+  shuffleOptions?: boolean; // Whether to shuffle options during practice/exam
 }
 
 

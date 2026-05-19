@@ -50,6 +50,7 @@ export default function QuizBuilder() {
     const [subject, setSubject] = useState("");
     const [chapter, setChapter] = useState<number | "">("");
     const [chapterName, setChapterName] = useState("");
+    const [shuffleOptions, setShuffleOptions] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(!!editId);
@@ -75,6 +76,7 @@ export default function QuizBuilder() {
                     setSubject(data.subject || "");
                     setChapter(data.chapter !== undefined && data.chapter !== null ? data.chapter : "");
                     setChapterName(data.chapterName || "");
+                    setShuffleOptions(data.shuffleOptions ?? false);
                     setQuestions(data.questions);
                     
                     // Scroll to specific question if requested
@@ -315,9 +317,13 @@ export default function QuizBuilder() {
 
             // Phát hiện marker đáp án đúng: gạch chân (từ HTML) hoặc marker tùy chỉnh
             const isUnderlined = originalLine.includes('<u>') || originalLine.includes('<ins>') || originalLine.includes('__u__');
+            const isBold = originalLine.includes('<b>') || originalLine.includes('<strong>') || originalLine.includes('__b__');
 
-            // Làm sạch dòng để so khớp (xóa tag gạch chân)
-            const line = originalLine.replace(/<\/?(u|ins)>/g, "").replace(/__u__/g, "").trim();
+            // Làm sạch dòng để so khớp (xóa tag gạch chân và in đậm)
+            const line = originalLine
+                .replace(/<\/?(u|ins|b|strong)\b[^>]*>/g, "")
+                .replace(/__u__|__b__/g, "")
+                .trim();
 
             const questionMatch = line.match(/^(Câu|Question|Q)?\s*(\d+)[\.\:\/\-)]\s*(.*)/i);
             // Hỗ trợ A., B), [A], *A., **A.**
@@ -328,7 +334,7 @@ export default function QuizBuilder() {
                 if (currentQ) newQuestions.push(finalizeQuestion(currentQ));
                 currentQ = {
                     id: Math.random().toString(36).substr(2, 9),
-                    text: questionMatch[3] || line,
+                    text: originalLine.trim(),
                     type: "single",
                     options: [],
                     correctAnswer: [],
@@ -341,9 +347,11 @@ export default function QuizBuilder() {
                     const isInlineCorrect = line.startsWith('*') ||
                         line.includes('**') ||
                         (line.startsWith('[') && line.includes(']')) ||
-                        isUnderlined;
+                        isUnderlined || isBold;
                     const optText = optionMatch[2];
-                    currentQ.options?.push(optText);
+                    // Preserve HTML formatting for option text
+                    const formattedOpt = originalLine.substring(originalLine.indexOf(optionMatch[2]));
+                    currentQ.options?.push(formattedOpt);
                     if (isInlineCorrect) {
                         if (!currentQ.correctAnswer) currentQ.correctAnswer = [];
                         if (!currentQ.correctAnswer.includes(optText)) {
@@ -417,7 +425,8 @@ export default function QuizBuilder() {
                 {
                     styleMap: [
                         "u => u",
-                        "strike => s"
+                        "strike => s",
+                        "b => b"
                     ]
                 }
             );
@@ -427,8 +436,8 @@ export default function QuizBuilder() {
                 .replace(/<\/p>/g, "\n")
                 .replace(/<p[^>]*>/g, "")
                 .replace(/<br\s*\/?>/g, "\n")
-                // Giữ lại tag <u> và <ins>, loại bỏ các tag HTML khác
-                .replace(/<(?!(\/)?(u|ins)\b)[^>]+>/g, "");
+                // Giữ lại tag <u>, <ins>, <b>, <strong>, loại bỏ các tag HTML khác
+                .replace(/<(?!(\/)?(u|ins|b|strong)\b)[^>]+>/g, "");
 
             const newQuestions = parseTextToQuestions(text);
 
@@ -469,6 +478,7 @@ export default function QuizBuilder() {
                 subject,
                 chapter: chapter === "" ? undefined : Number(chapter),
                 chapterName: chapterName.trim() || undefined,
+                shuffleOptions,
                 questions,
             };
 
@@ -669,6 +679,18 @@ export default function QuizBuilder() {
                         placeholder={t.builder.descPlaceholder}
                         rows={1}
                     />
+                    <div className="flex items-center gap-2 px-3 pt-2">
+                        <input
+                            type="checkbox"
+                            id="shuffleOptions"
+                            checked={shuffleOptions}
+                            onChange={(e) => setShuffleOptions(e.target.checked)}
+                            className="w-4 h-4 text-sky-600 rounded border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                        />
+                        <label htmlFor="shuffleOptions" className="text-sm font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
+                            {language === 'vi' ? 'Xáo trộn đáp án (khi luyện tập/thi)' : 'Shuffle options (during practice/exam)'}
+                        </label>
+                    </div>
                 </div>
             </div>
 

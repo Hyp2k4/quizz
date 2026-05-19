@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -48,6 +48,79 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
         return true;
     };
 
+    // Add formatting helper functions
+    const wrapWithTag = (text: string, tag: string) => {
+      const openTag = `<${tag}>`;
+      const closeTag = `</${tag}>`;
+      if (text.startsWith(openTag) && text.endsWith(closeTag)) {
+        // Remove existing tags
+        return text.slice(openTag.length, text.length - closeTag.length);
+      }
+      return `${openTag}${text}${closeTag}`;
+    };
+
+    const toggleFormat = (value: string, format: 'bold' | 'underline') => {
+      if (format === 'bold') return wrapWithTag(value, 'b');
+      return wrapWithTag(value, 'u');
+    };
+
+    // Render question text with possible formatting
+    const renderRichText = (html: string) => (
+      <span dangerouslySetInnerHTML={{ __html: html }} />
+    );
+
+    // Updated option rendering with formatting buttons
+    const renderOption = (opt: string, idx: number) => {
+      const isSelected = question.correctAnswer.includes(opt);
+      const isActive = isSelected;
+      return (
+        <div key={idx} className="flex items-center gap-2 group/opt">
+          <div
+            className={`flex items-center justify-center h-5 w-5 cursor-pointer transition-all ${question.type === 'multiple' ? 'rounded-md' : 'rounded-full'} border ${isActive && opt !== '' ? 'bg-[rgb(var(--primary))] border-[rgb(var(--primary))]' : 'border-[rgb(var(--muted-foreground))] hover:border-[rgb(var(--primary))]'}`}
+            onClick={() => toggleAnswer(opt)}
+          >
+            {isActive && opt !== '' && (
+              question.type === 'multiple' ? (
+                <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              ) : (
+                <div className="h-2 w-2 rounded-full bg-white" />
+              )
+            )}
+          </div>
+          <Input
+            value={opt}
+            onChange={(e) => {
+              const newVal = e.target.value;
+              handleOptionChange(idx, newVal);
+            }}
+            placeholder={`${t.builder.optionPlaceholder} ${idx + 1}`}
+            className="flex-1 bg-zinc-50 dark:bg-zinc-900/50 border-zinc-100 dark:border-white/5 hover:border-sky-500/50 focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 transition-all h-11 sm:h-10 text-sm font-medium rounded-xl"
+          />
+          {/* Formatting buttons */}
+          <Button variant="ghost" size="sm" onClick={() => {
+            const formatted = toggleFormat(opt, 'bold');
+            handleOptionChange(idx, formatted);
+          }} title="Bold">
+            B
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => {
+            const formatted = toggleFormat(opt, 'underline');
+            handleOptionChange(idx, formatted);
+          }} title="Underline">
+            U
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => removeOption(idx)} className="h-8 w-8 opacity-0 group-hover/opt:opacity-100 transition-opacity">
+            <Trash2 className="h-4 w-4 text-[rgb(var(--muted-foreground))]" />
+          </Button>
+        </div>
+      );
+    };
+
+    // Updated question title rendering with formatting (question.text may contain HTML tags)
+    const renderQuestionTitle = (text: string) => (
+      <h3 className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100" dangerouslySetInnerHTML={{ __html: text }} />
+    );
+
     const handleOptionChange = (optIndex: number, value: string) => {
         const newOptions = [...question.options];
         const oldOption = newOptions[optIndex];
@@ -86,6 +159,28 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
     };
 
     const hasNoCorrectAnswer = question.type !== 'open' && question.correctAnswer.length === 0;
+
+    // Ref for textarea to manipulate selection
+    const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Helper to apply format to selected text
+    const applyFormatToText = (format: 'bold' | 'underline') => {
+        const textarea = textAreaRef.current;
+        if (!textarea) return;
+        const { selectionStart, selectionEnd, value } = textarea;
+        const selectedText = value.slice(selectionStart, selectionEnd) || value;
+        const formatted = toggleFormat(selectedText, format);
+        const newValue = value.slice(0, selectionStart) + formatted + value.slice(selectionEnd);
+        onUpdate(question.id, { text: newValue });
+    };
+
+    // Rendering toolbar before textarea
+    const renderTextToolbar = () => (
+        <div className="flex space-x-2 mb-2">
+            <Button variant="ghost" size="sm" onClick={() => applyFormatToText('bold')} title="Bold">B</Button>
+            <Button variant="ghost" size="sm" onClick={() => applyFormatToText('underline')} title="Underline">U</Button>
+        </div>
+    );
 
     return (
         <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg border-[rgb(var(--border))] group ${hasNoCorrectAnswer ? 'opacity-60 grayscale-[0.3]' : ''}`}>
@@ -165,13 +260,18 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                             />
                         </div>
                     </div>
-                    <Textarea
-                        placeholder={t.builder.statementPlaceholder}
-                        value={question.text}
-                        onChange={(e) => onUpdate(question.id, { text: e.target.value })}
-                        className="text-base md:text-xl font-bold leading-relaxed resize-none bg-transparent border-none focus:ring-0 px-0 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-700"
-                        rows={2}
-                    />
+
+
+            {renderTextToolbar()}
+            <Textarea
+              ref={textAreaRef}
+              placeholder={t.builder.statementPlaceholder}
+              value={question.text}
+              onChange={(e) => onUpdate(question.id, { text: e.target.value })}
+              className="text-base md:text-xl font-bold leading-relaxed resize-none bg-transparent border-none focus:ring-0 px-0 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-700"
+              rows={2}
+            />
+
                     {question.imageUrl && (
                         <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-100 group/img max-w-sm mx-auto">
                             <img src={question.imageUrl} alt="Question" className="w-full h-full object-contain" />
@@ -194,33 +294,7 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                             {question.type === "mixed" && <span className="text-[rgb(var(--primary))] text-[10px] bg-[rgb(var(--primary))/10] px-2 py-0.5 rounded-full">{t.builder.part1}</span>}
                         </label>
                         <div className="grid gap-3">
-                            {question.options.map((opt, i) => {
-                                const isSelected = question.correctAnswer.includes(opt);
-                                return (
-                                    <div key={i} className="flex items-center gap-2 group/opt">
-                                        <div
-                                            className={`flex items-center justify-center h-5 w-5 cursor-pointer transition-all ${question.type === 'multiple' ? 'rounded-md' : 'rounded-full'} border ${isSelected && opt !== "" ? "bg-[rgb(var(--primary))] border-[rgb(var(--primary))]" : "border-[rgb(var(--muted-foreground))] hover:border-[rgb(var(--primary))]"}`}
-                                            onClick={() => toggleAnswer(opt)}
-                                        >
-                                            {isSelected && opt !== "" && (
-                                                question.type === 'multiple'
-                                                    ? <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                                                    : <div className="h-2 w-2 rounded-full bg-white" />
-                                            )}
-                                        </div>
-
-                                        <Input
-                                            value={opt}
-                                            onChange={(e) => handleOptionChange(i, e.target.value)}
-                                            placeholder={`${t.builder.optionPlaceholder} ${i + 1}`}
-                                            className="flex-1 bg-zinc-50 dark:bg-zinc-900/50 border-zinc-100 dark:border-white/5 hover:border-sky-500/50 focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 transition-all h-11 sm:h-10 text-sm font-medium rounded-xl"
-                                        />
-                                        <Button variant="ghost" size="icon" onClick={() => removeOption(i)} className="h-8 w-8 opacity-0 group-hover/opt:opacity-100 transition-opacity">
-                                            <Trash2 className="h-4 w-4 text-[rgb(var(--muted-foreground))]" />
-                                        </Button>
-                                    </div>
-                                );
-                            })}
+                            {question.options.map((opt, idx) => renderOption(opt, idx))}
                         </div>
                         <Button variant="outline" size="sm" onClick={addOption} className="w-full mt-2 border-dashed hover:border-[rgb(var(--primary))] hover:text-[rgb(var(--primary))]">
                             <Plus className="mr-2 h-4 w-4" /> {t.builder.addOption}

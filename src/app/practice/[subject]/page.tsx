@@ -74,7 +74,7 @@ function PracticeQuestion({
                         {isRevealed ? (isCorrect ? <CheckCircle className="h-6 w-6" /> : <XCircle className="h-6 w-6" />) : index + 1}
                     </div>
                     <div className="w-full">
-                        <h3 className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100">{question.text}</h3>
+                    <h3 className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100" dangerouslySetInnerHTML={{ __html: question.text }} />
 
                         {question.imageUrl && (
                             <div className="mb-6 rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
@@ -120,7 +120,7 @@ function PracticeQuestion({
                                                     disabled={isRevealed}
                                                     className="mt-1 w-4 h-4 text-sky-600"
                                                 />
-                                                <span className="text-sm font-medium">{opt}</span>
+                                                <span className="text-sm font-medium" dangerouslySetInnerHTML={{ __html: opt }} />
                                             </label>
                                         );
                                     })}
