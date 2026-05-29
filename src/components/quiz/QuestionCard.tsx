@@ -59,6 +59,7 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
     const { t, language } = useLanguage();
     const [showCollisionWarning, setShowCollisionWarning] = useState(false);
     const [isAcknowledged, setIsAcknowledged] = useState(false);
+    const [highlightColor, setHighlightColor] = useState('#ffff00');
 
     const checkCollision = (e: React.FocusEvent | React.MouseEvent) => {
         if (activeEditors.length > 0 && !isAcknowledged) {
@@ -71,12 +72,27 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
     };
 
     // Rich text format commands
-    const applyFormat = (command: string) => {
+    const applyFormat = (command: string, value?: string) => {
         if (command === 'highlight') {
-            document.execCommand('backColor', false, 'yellow');
-            document.execCommand('hiliteColor', false, 'yellow');
+            const color = value || highlightColor;
+            document.execCommand('backColor', false, color);
+            document.execCommand('hiliteColor', false, color);
+            
+            // Calculate contrast for text color if the color overlaps
+            let hex = color.replace("#", "");
+            if (hex.length === 3) {
+                hex = hex.split('').map(c => c + c).join('');
+            }
+            if (hex.length === 6) {
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                const textColor = (yiq >= 128) ? '#000000' : '#ffffff';
+                document.execCommand('foreColor', false, textColor);
+            }
         } else {
-            document.execCommand(command, false, undefined);
+            document.execCommand(command, false, value);
         }
     };
 
@@ -166,10 +182,13 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
 
     // Rendering toolbar before textarea
     const renderTextToolbar = () => (
-        <div className="flex space-x-2 mb-2">
+        <div className="flex space-x-2 mb-2 items-center">
             <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('bold')} title="Bold" className="font-bold bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0">B</Button>
             <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('underline')} title="Underline" className="underline bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0">U</Button>
-            <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('highlight')} title="Highlight" className="text-amber-500 bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0"><Highlighter className="h-4 w-4" /></Button>
+            <div className="flex items-center border shadow-sm bg-white dark:bg-zinc-800 h-8 rounded-md overflow-hidden">
+                <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('highlight')} title="Highlight" className="text-amber-500 h-full w-8 p-0 rounded-none border-0 hover:bg-zinc-100 dark:hover:bg-zinc-700"><Highlighter className="h-4 w-4" /></Button>
+                <input type="color" value={highlightColor} onChange={(e) => setHighlightColor(e.target.value)} className="h-full w-8 p-0 border-0 bg-transparent cursor-pointer" title="Choose highlight color" />
+            </div>
         </div>
     );
 
@@ -324,10 +343,13 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                                 />
                             </div>
                         </div>
-                        <div className="flex space-x-2 mb-2 mt-2">
+                        <div className="flex space-x-2 mb-2 mt-2 items-center">
                             <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('bold')} title="Bold" className="font-bold bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0">B</Button>
                             <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('underline')} title="Underline" className="underline bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0">U</Button>
-                            <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('highlight')} title="Highlight" className="text-amber-500 bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0"><Highlighter className="h-4 w-4" /></Button>
+                            <div className="flex items-center border shadow-sm bg-white dark:bg-zinc-800 h-8 rounded-md overflow-hidden">
+                                <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('highlight')} title="Highlight" className="text-amber-500 h-full w-8 p-0 rounded-none border-0 hover:bg-zinc-100 dark:hover:bg-zinc-700"><Highlighter className="h-4 w-4" /></Button>
+                                <input type="color" value={highlightColor} onChange={(e) => setHighlightColor(e.target.value)} className="h-full w-8 p-0 border-0 bg-transparent cursor-pointer" title="Choose highlight color" />
+                            </div>
                         </div>
                         <div className="bg-[rgb(var(--secondary))/30] rounded-xl p-3 border border-zinc-200 dark:border-white/10">
                             <EditableRichText
