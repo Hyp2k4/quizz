@@ -157,10 +157,10 @@ export default function AdminDashboardPage() {
                             {t.admin.quizzes}
                         </button>
                         <button
-                            onClick={() => router.push('/admin/shop')}
+                            onClick={() => router.push('/admin/chat')}
                             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800`}
                         >
-                            {language === 'vi' ? 'Quản lý Shop' : 'Shop Management'}
+                            {language === 'vi' ? 'Quản lý Chat' : 'Chat Management'}
                         </button>
                     </div>
                 </div>

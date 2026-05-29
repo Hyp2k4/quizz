@@ -1,13 +1,35 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { Plus, Trash2, HelpCircle, Lightbulb, Image, AlertTriangle, User as UserIcon } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Lightbulb, Image, AlertTriangle, User as UserIcon, Highlighter } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UserPresence } from "@/services/quizService";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+
+const EditableRichText = ({ value, onChange, placeholder, className }: { value: string, onChange: (val: string) => void, placeholder: string, className?: string }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    
+    useEffect(() => {
+        if (ref.current && value !== ref.current.innerHTML) {
+            ref.current.innerHTML = value || '';
+        }
+    }, [value]);
+
+    return (
+        <div
+            ref={ref}
+            contentEditable
+            suppressContentEditableWarning
+            className={`outline-none cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-400 empty:before:pointer-events-none ${className}`}
+            data-placeholder={placeholder}
+            onInput={(e) => onChange(e.currentTarget.innerHTML)}
+            onBlur={(e) => onChange(e.currentTarget.innerHTML)}
+        />
+    );
+};
 
 export type QuestionType = "single" | "multiple" | "open" | "mixed";
 
@@ -48,20 +70,14 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
         return true;
     };
 
-    // Add formatting helper functions
-    const wrapWithTag = (text: string, tag: string) => {
-      const openTag = `<${tag}>`;
-      const closeTag = `</${tag}>`;
-      if (text.startsWith(openTag) && text.endsWith(closeTag)) {
-        // Remove existing tags
-        return text.slice(openTag.length, text.length - closeTag.length);
-      }
-      return `${openTag}${text}${closeTag}`;
-    };
-
-    const toggleFormat = (value: string, format: 'bold' | 'underline') => {
-      if (format === 'bold') return wrapWithTag(value, 'b');
-      return wrapWithTag(value, 'u');
+    // Rich text format commands
+    const applyFormat = (command: string) => {
+        if (command === 'highlight') {
+            document.execCommand('backColor', false, 'yellow');
+            document.execCommand('hiliteColor', false, 'yellow');
+        } else {
+            document.execCommand(command, false, undefined);
+        }
     };
 
     // Render question text with possible formatting
@@ -87,30 +103,18 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
               )
             )}
           </div>
-          <Input
+          <EditableRichText
             value={opt}
-            onChange={(e) => {
-              const newVal = e.target.value;
-              handleOptionChange(idx, newVal);
-            }}
+            onChange={(newVal) => handleOptionChange(idx, newVal)}
             placeholder={`${t.builder.optionPlaceholder} ${idx + 1}`}
-            className="flex-1 bg-zinc-50 dark:bg-zinc-900/50 border-zinc-100 dark:border-white/5 hover:border-sky-500/50 focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 transition-all h-11 sm:h-10 text-sm font-medium rounded-xl"
+            className={`flex-1 transition-all min-h-[40px] py-2 px-3 text-sm rounded-xl border ${
+              isActive 
+                ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-500 text-amber-900 dark:text-amber-100 font-bold focus:ring-2 focus:ring-amber-500/50' 
+                : 'bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-white/10 hover:border-sky-500/50 focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 font-medium'
+            }`}
           />
-          {/* Formatting buttons */}
-          <Button variant="ghost" size="sm" onClick={() => {
-            const formatted = toggleFormat(opt, 'bold');
-            handleOptionChange(idx, formatted);
-          }} title="Bold">
-            B
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => {
-            const formatted = toggleFormat(opt, 'underline');
-            handleOptionChange(idx, formatted);
-          }} title="Underline">
-            U
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => removeOption(idx)} className="h-8 w-8 opacity-0 group-hover/opt:opacity-100 transition-opacity">
-            <Trash2 className="h-4 w-4 text-[rgb(var(--muted-foreground))]" />
+          <Button variant="ghost" size="icon" onClick={() => removeOption(idx)} className="h-8 w-8 opacity-0 group-hover/opt:opacity-100 transition-opacity shrink-0">
+            <Trash2 className="h-4 w-4 text-zinc-400 hover:text-red-500" />
           </Button>
         </div>
       );
@@ -160,25 +164,12 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
 
     const hasNoCorrectAnswer = question.type !== 'open' && question.correctAnswer.length === 0;
 
-    // Ref for textarea to manipulate selection
-    const textAreaRef = useRef<HTMLTextAreaElement>(null);
-
-    // Helper to apply format to selected text
-    const applyFormatToText = (format: 'bold' | 'underline') => {
-        const textarea = textAreaRef.current;
-        if (!textarea) return;
-        const { selectionStart, selectionEnd, value } = textarea;
-        const selectedText = value.slice(selectionStart, selectionEnd) || value;
-        const formatted = toggleFormat(selectedText, format);
-        const newValue = value.slice(0, selectionStart) + formatted + value.slice(selectionEnd);
-        onUpdate(question.id, { text: newValue });
-    };
-
     // Rendering toolbar before textarea
     const renderTextToolbar = () => (
         <div className="flex space-x-2 mb-2">
-            <Button variant="ghost" size="sm" onClick={() => applyFormatToText('bold')} title="Bold">B</Button>
-            <Button variant="ghost" size="sm" onClick={() => applyFormatToText('underline')} title="Underline">U</Button>
+            <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('bold')} title="Bold" className="font-bold bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0">B</Button>
+            <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('underline')} title="Underline" className="underline bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0">U</Button>
+            <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('highlight')} title="Highlight" className="text-amber-500 bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0"><Highlighter className="h-4 w-4" /></Button>
         </div>
     );
 
@@ -263,14 +254,14 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
 
 
             {renderTextToolbar()}
-            <Textarea
-              ref={textAreaRef}
-              placeholder={t.builder.statementPlaceholder}
-              value={question.text}
-              onChange={(e) => onUpdate(question.id, { text: e.target.value })}
-              className="text-base md:text-xl font-bold leading-relaxed resize-none bg-transparent border-none focus:ring-0 px-0 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-700"
-              rows={2}
-            />
+            <div className="bg-white/50 dark:bg-black/20 rounded-xl p-3 border border-zinc-200 dark:border-white/10">
+                <EditableRichText
+                  placeholder={t.builder.statementPlaceholder}
+                  value={question.text}
+                  onChange={(val) => onUpdate(question.id, { text: val })}
+                  className="text-base md:text-xl font-bold leading-relaxed min-h-[80px]"
+                />
+            </div>
 
                     {question.imageUrl && (
                         <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-100 group/img max-w-sm mx-auto">
@@ -333,12 +324,19 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                                 />
                             </div>
                         </div>
-                        <Textarea
-                            placeholder={t.builder.userAnswerPlaceholder}
-                            value={question.correctAnswer[0] || ""}
-                            onChange={(e) => onUpdate(question.id, { correctAnswer: [e.target.value] })}
-                            className="bg-[rgb(var(--secondary))/30]"
-                        />
+                        <div className="flex space-x-2 mb-2 mt-2">
+                            <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('bold')} title="Bold" className="font-bold bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0">B</Button>
+                            <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('underline')} title="Underline" className="underline bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0">U</Button>
+                            <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFormat('highlight')} title="Highlight" className="text-amber-500 bg-white dark:bg-zinc-800 border shadow-sm h-8 w-8 p-0"><Highlighter className="h-4 w-4" /></Button>
+                        </div>
+                        <div className="bg-[rgb(var(--secondary))/30] rounded-xl p-3 border border-zinc-200 dark:border-white/10">
+                            <EditableRichText
+                                placeholder={t.builder.userAnswerPlaceholder}
+                                value={question.correctAnswer[0] || ""}
+                                onChange={(val) => onUpdate(question.id, { correctAnswer: [val] })}
+                                className="min-h-[60px]"
+                            />
+                        </div>
                         {question.answerImageUrl && (
                             <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-100 group/ansimg max-w-sm mx-auto">
                                 <img src={question.answerImageUrl} alt="Answer" className="w-full h-full object-contain" />

@@ -388,8 +388,13 @@ export const deleteQuiz = async (id: string) => {
 
 export const updateQuiz = async (id: string, quiz: Partial<QuizData>) => {
     const { id: _, createdAt, ...data } = quiz;
+    
+    const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined)
+    );
+
     await updateDoc(doc(db, "quizzes", id), {
-        ...data,
+        ...cleanData,
         updatedAt: serverTimestamp()
     });
 };
@@ -397,9 +402,14 @@ export const updateQuiz = async (id: string, quiz: Partial<QuizData>) => {
 export const saveQuizToFirestore = async (quiz: QuizData) => {
   try {
     const { id, ...data } = quiz; 
+    
+    const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined)
+    );
+
     const docRef = await addDoc(collection(db, "quizzes"), {
-      ...data,
-      visibility: data.visibility || 'public',
+      ...cleanData,
+      visibility: cleanData.visibility || 'public',
       createdAt: serverTimestamp(),
     });
     return docRef.id;

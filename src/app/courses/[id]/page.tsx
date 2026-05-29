@@ -142,7 +142,7 @@ function QuestionTaker({
                         {showResult ? (isCorrect ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />) : index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-lg mb-4 break-words">{question.text}</h3>
+                        <h3 className="font-semibold text-lg mb-4 break-words" dangerouslySetInnerHTML={{ __html: question.text }}></h3>
                         
                         {question.imageUrl && (
                             <div className="mb-6 rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
@@ -175,7 +175,7 @@ function QuestionTaker({
                                                 </div>
                                             )}
                                             <div className="text-sm text-[rgb(var(--muted-foreground))]">
-                                                <strong>{language === 'vi' ? 'Đáp án mẫu' : 'Model Answer'}:</strong> {question.correctAnswer?.[0] || (language === 'vi' ? "Chưa có đáp án mẫu" : "No model answer provided")}
+                                                <strong>{language === 'vi' ? 'Đáp án mẫu' : 'Model Answer'}:</strong> <span dangerouslySetInnerHTML={{ __html: question.correctAnswer?.[0] || (language === 'vi' ? "Chưa có đáp án mẫu" : "No model answer provided") }} />
                                             </div>
                                         </div>
                                     )}
@@ -227,7 +227,7 @@ function QuestionTaker({
                                                 disabled={showResult}
                                             />
                                             <div className="flex-1 flex items-start justify-between gap-2">
-                                                <span className="text-sm break-words">{opt}</span>
+                                                <span className="text-sm break-words" dangerouslySetInnerHTML={{ __html: opt }} />
                                                 {showResult && (
                                                     isActuallyCorrect ? (
                                                         <CheckCircle className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />

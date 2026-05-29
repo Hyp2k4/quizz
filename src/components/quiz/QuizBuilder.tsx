@@ -316,12 +316,13 @@ export default function QuizBuilder() {
             if (!originalLine) continue;
 
             // Phát hiện marker đáp án đúng: gạch chân (từ HTML) hoặc marker tùy chỉnh
+            const isHighlighted = originalLine.includes('<mark>');
             const isUnderlined = originalLine.includes('<u>') || originalLine.includes('<ins>') || originalLine.includes('__u__');
             const isBold = originalLine.includes('<b>') || originalLine.includes('<strong>') || originalLine.includes('__b__');
 
-            // Làm sạch dòng để so khớp (xóa tag gạch chân và in đậm)
+            // Làm sạch dòng để so khớp (xóa tag gạch chân, in đậm và highlight)
             const line = originalLine
-                .replace(/<\/?(u|ins|b|strong)\b[^>]*>/g, "")
+                .replace(/<\/?(u|ins|b|strong|mark)\b[^>]*>/g, "")
                 .replace(/__u__|__b__/g, "")
                 .trim();
 
@@ -343,11 +344,11 @@ export default function QuizBuilder() {
                 };
             } else if (currentQ) {
                 if (optionMatch) {
-                    // Nhận diện đáp án đúng inline: *A, [A], **A**, Gạch chân
+                    // Nhận diện đáp án đúng inline: *A, [A], **A**, Gạch chân, In đậm, Highlight
                     const isInlineCorrect = line.startsWith('*') ||
                         line.includes('**') ||
                         (line.startsWith('[') && line.includes(']')) ||
-                        isUnderlined || isBold;
+                        isUnderlined || isBold || isHighlighted;
                     const optText = optionMatch[2];
                     // Preserve HTML formatting for option text
                     const formattedOpt = originalLine.substring(originalLine.indexOf(optionMatch[2]));
@@ -426,7 +427,8 @@ export default function QuizBuilder() {
                     styleMap: [
                         "u => u",
                         "strike => s",
-                        "b => b"
+                        "b => b",
+                        "highlight => mark"
                     ]
                 }
             );
@@ -436,8 +438,8 @@ export default function QuizBuilder() {
                 .replace(/<\/p>/g, "\n")
                 .replace(/<p[^>]*>/g, "")
                 .replace(/<br\s*\/?>/g, "\n")
-                // Giữ lại tag <u>, <ins>, <b>, <strong>, loại bỏ các tag HTML khác
-                .replace(/<(?!(\/)?(u|ins|b|strong)\b)[^>]+>/g, "");
+                // Giữ lại tag <u>, <ins>, <b>, <strong>, <mark>, loại bỏ các tag HTML khác
+                .replace(/<(?!(\/)?(u|ins|b|strong|mark)\b)[^>]+>/g, "");
 
             const newQuestions = parseTextToQuestions(text);
 

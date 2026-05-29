@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Snowflakes } from "@/components/ui/Snowflakes";
+import { SupportChatWidget } from "@/components/chat/SupportChatWidget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -62,7 +63,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased relative`}
       >
         <Snowflakes />
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <SupportChatWidget />
+        </Providers>
       </body>
     </html>
   );
