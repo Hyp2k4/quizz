@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Save, Upload, FileUp, ArrowLeft, ClipboardList, Sparkles, Trash2, Eraser, Zap, X, Search, BookOpen } from "lucide-react";
+import { Plus, Save, Upload, FileUp, ArrowLeft, ClipboardList, Sparkles, Trash2, Eraser, Zap, X, Search, BookOpen, RotateCcw } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Question, QuestionCard } from "@/components/quiz/QuestionCard";
@@ -64,6 +64,8 @@ export default function QuizBuilder() {
     const [originalQuiz, setOriginalQuiz] = useState<QuizData | null>(null);
     const [presences, setPresences] = useState<UserPresence[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [showResetFormatInput, setShowResetFormatInput] = useState(false);
+    const [resetFormatRangeText, setResetFormatRangeText] = useState("");
 
     // Load quiz for editing
     useEffect(() => {
@@ -205,6 +207,47 @@ export default function QuizBuilder() {
 
         setDeleteRangeText("");
         setShowRangeDeleteInput(false);
+    };
+
+    // Hàm xóa toàn bộ HTML tags, chỉ giữ plain text
+    const stripHtml = (html: string) => {
+        if (typeof document === 'undefined') return html.replace(/<[^>]*>/g, '');
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || '';
+    };
+
+    const resetFormatForQuestion = (q: Question): Question => ({
+        ...q,
+        text: stripHtml(q.text),
+        options: q.options.map(stripHtml),
+        correctAnswer: q.correctAnswer.map(stripHtml),
+    });
+
+    const resetAllFormat = () => {
+        setQuestions(qs => qs.map(resetFormatForQuestion));
+        toast.success('Đã reset toàn bộ định dạng chữ!');
+        setShowResetFormatInput(false);
+    };
+
+    const resetFormatByRange = () => {
+        if (!resetFormatRangeText.trim()) return;
+        const indices = new Set<number>();
+        resetFormatRangeText.split(',').forEach(part => {
+            const rangeMatch = part.match(/(\d+)\s*-\s*(\d+)/);
+            if (rangeMatch) {
+                const start = parseInt(rangeMatch[1]);
+                const end = parseInt(rangeMatch[2]);
+                for (let i = Math.min(start, end); i <= Math.max(start, end); i++) indices.add(i - 1);
+            } else {
+                const num = parseInt(part.trim());
+                if (!isNaN(num)) indices.add(num - 1);
+            }
+        });
+        setQuestions(qs => qs.map((q, idx) => indices.has(idx) ? resetFormatForQuestion(q) : q));
+        toast.success(`Đã reset định dạng ${indices.size} câu hỏi!`);
+        setResetFormatRangeText('');
+        setShowResetFormatInput(false);
     };
 
     const handleApplyAnswerKey = () => {
@@ -717,6 +760,44 @@ export default function QuizBuilder() {
                         <Eraser className="h-4 w-4" />
                         <span className="text-xs font-bold uppercase tracking-wide">{t.builder.tools.deleteRange}</span>
                     </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-violet-500 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 gap-2 rounded-full h-10 px-4"
+                        onClick={() => setShowResetFormatInput(!showResetFormatInput)}
+                    >
+                        <RotateCcw className="h-4 w-4" />
+                        <span className="text-xs font-bold uppercase tracking-wide">{language === 'vi' ? 'Reset định dạng' : 'Reset Format'}</span>
+                    </Button>
+                    <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 rounded-full px-3 h-10 ml-2">
+                        <span className="text-xs font-bold text-zinc-500 uppercase hidden sm:block">{language === 'vi' ? 'Câu hỏi:' : 'Question:'}</span>
+                        <Button 
+                            variant="ghost" size="sm" 
+                            className="h-7 w-8 p-0 text-zinc-600 hover:text-zinc-900 font-bold" 
+                            onClick={() => setQuestions(qs => qs.map(q => ({ ...q, fontSize: Math.max(12, (q.fontSize || 16) - 2) })))}
+                            title="Giảm cỡ chữ tất cả câu hỏi"
+                        >A-</Button>
+                        <Button 
+                            variant="ghost" size="sm" 
+                            className="h-7 w-8 p-0 text-zinc-600 hover:text-zinc-900 font-bold" 
+                            onClick={() => setQuestions(qs => qs.map(q => ({ ...q, fontSize: Math.min(48, (q.fontSize || 16) + 2) })))}
+                            title="Tăng cỡ chữ tất cả câu hỏi"
+                        >A+</Button>
+                        <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1" />
+                        <span className="text-xs font-bold text-emerald-600 uppercase hidden sm:block">{language === 'vi' ? 'Đáp án:' : 'Answer:'}</span>
+                        <Button 
+                            variant="ghost" size="sm" 
+                            className="h-7 w-8 p-0 text-emerald-600 hover:text-emerald-900 font-bold" 
+                            onClick={() => setQuestions(qs => qs.map(q => ({ ...q, answerFontSize: Math.max(12, (q.answerFontSize || 14) - 2) })))}
+                            title="Giảm cỡ chữ đáp án tất cả"
+                        >A-</Button>
+                        <Button 
+                            variant="ghost" size="sm" 
+                            className="h-7 w-8 p-0 text-emerald-600 hover:text-emerald-900 font-bold" 
+                            onClick={() => setQuestions(qs => qs.map(q => ({ ...q, answerFontSize: Math.min(48, (q.answerFontSize || 14) + 2) })))}
+                            title="Tăng cỡ chữ đáp án tất cả"
+                        >A+</Button>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 justify-center md:justify-end">
@@ -785,6 +866,56 @@ export default function QuizBuilder() {
                         <Button variant="destructive" onClick={deleteByRange} disabled={!deleteRangeText.trim()}>
                             {t.builder.tools.deleteBtn}
                         </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Reset Format Panel */}
+            {showResetFormatInput && (
+                <Card className="bg-violet-50/30 dark:bg-violet-950/10 border-violet-500/20 animation-scale-in">
+                    <CardContent className="pt-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-bold flex items-center gap-2 text-violet-700 dark:text-violet-400">
+                                <RotateCcw className="h-4 w-4" />
+                                {language === 'vi' ? 'Reset định dạng chữ' : 'Reset Text Formatting'}
+                            </h3>
+                            <span className="text-xs text-zinc-400">
+                                {language === 'vi' ? 'Xóa toàn bộ bold, highlight, italic khỏi nội dung' : 'Strips bold, highlight, italic from content'}
+                            </span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="flex-1 space-y-2">
+                                <label className="text-xs font-bold uppercase text-violet-600">
+                                    {language === 'vi' ? 'Theo số câu (ví dụ: 1-5, 8, 10)' : 'By question numbers (e.g. 1-5, 8, 10)'}
+                                </label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder={language === 'vi' ? 'VD: 1-3, 5, 8' : 'e.g. 1-3, 5, 8'}
+                                        value={resetFormatRangeText}
+                                        onChange={(e) => setResetFormatRangeText(e.target.value)}
+                                        className="bg-white dark:bg-black/20"
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        className="border-violet-400 text-violet-600 hover:bg-violet-50 shrink-0"
+                                        onClick={resetFormatByRange}
+                                        disabled={!resetFormatRangeText.trim()}
+                                    >
+                                        <RotateCcw className="h-4 w-4 mr-1" />
+                                        {language === 'vi' ? 'Reset theo câu' : 'Reset Range'}
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="flex items-end">
+                                <Button
+                                    className="bg-violet-600 hover:bg-violet-700 text-white gap-2 w-full sm:w-auto"
+                                    onClick={resetAllFormat}
+                                >
+                                    <RotateCcw className="h-4 w-4" />
+                                    {language === 'vi' ? 'Reset toàn bộ' : 'Reset All'}
+                                </Button>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             )}

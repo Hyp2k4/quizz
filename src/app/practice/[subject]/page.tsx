@@ -20,7 +20,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import {
     Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle,
-    BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap, Check
+    BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap, Check, Lightbulb
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
@@ -44,6 +44,7 @@ function PracticeQuestion({
     onReveal,
     language = 'vi'
 }: any) {
+    const [showHint, setShowHint] = useState(false);
     if (!question) return null;
     const isMultiple = question.type === 'multiple';
     const isOpen = question.type === 'open';
@@ -58,13 +59,26 @@ function PracticeQuestion({
         }
     };
 
-    const isCorrect = isRevealed ? (
-        isMultiple
-            ? arraysEqual(selected, question.correctAnswer)
-            : isOpen
-                ? (selected || "").trim().toLowerCase() === (question.correctAnswer?.[0] || "").trim().toLowerCase()
-                : (question.correctAnswer || []).includes(selected)
-    ) : undefined;
+    const isCorrect = isRevealed ? (() => {
+        if (isMultiple) return arraysEqual(selected, question.correctAnswer);
+        if (!isOpen) return (question.correctAnswer || []).includes(selected);
+        
+        const uStr = (selected as string || "").trim().toLowerCase();
+        const cStr = Array.isArray(question.correctAnswer) ? (question.correctAnswer[0] || "") : (question.correctAnswer || "");
+        const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+        const cWords = cStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+        if (cWords.length === 0) return uWords.length === 0;
+        let matches = 0;
+        const cWordsTemp = [...cWords];
+        uWords.forEach(w => {
+            const idx = cWordsTemp.indexOf(w);
+            if (idx !== -1) {
+                matches++;
+                cWordsTemp.splice(idx, 1);
+            }
+        });
+        return (matches / cWords.length) >= 0.5;
+    })() : undefined;
 
     return (
         <Card className={`mb-6 border-l-4 transition-all duration-300 ${isRevealed ? (isCorrect ? 'border-l-green-500 bg-green-50/5' : 'border-l-red-500 bg-red-50/5') : 'border-l-sky-500'}`}>
@@ -74,7 +88,11 @@ function PracticeQuestion({
                         {isRevealed ? (isCorrect ? <CheckCircle className="h-6 w-6" /> : <XCircle className="h-6 w-6" />) : index + 1}
                     </div>
                     <div className="w-full">
-                    <h3 className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100" dangerouslySetInnerHTML={{ __html: question.text }} />
+                        <h3 
+                            className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100" 
+                            style={{ fontSize: question.fontSize ? `${question.fontSize}px` : undefined, lineHeight: 1.5 }}
+                            dangerouslySetInnerHTML={{ __html: question.text }} 
+                        />
 
                         {question.imageUrl && (
                             <div className="mb-6 rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
@@ -85,13 +103,58 @@ function PracticeQuestion({
                         <div className="space-y-3">
                             {isOpen ? (
                                 <div className="space-y-3">
-                                    <textarea
-                                        className="w-full p-4 rounded-xl border bg-white dark:bg-black/20 min-h-[120px] outline-none focus:ring-2 ring-sky-500/20 transition-all"
-                                        placeholder={language === 'vi' ? "Nhập câu trả lời của bạn..." : "Type your answer..."}
-                                        value={selected as string || ''}
-                                        onChange={(e) => !isRevealed && onChange(e.target.value)}
-                                        disabled={isRevealed}
-                                    />
+                                    {isRevealed ? (
+                                        <div className="w-full p-4 rounded-xl border bg-white dark:bg-black/20 min-h-[120px]">
+                                            <p className="mb-4 text-zinc-800 dark:text-zinc-200 text-base leading-relaxed">
+                                                {(() => {
+                                                    const uStr = selected as string || "";
+                                                    const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
+                                                    const cWords = cStr.toLowerCase().split(/\s+/).filter(Boolean);
+                                                    
+                                                    return uStr.split(/(\s+)/).map((wordOrSpace, idx) => {
+                                                        if (!wordOrSpace.trim()) return <span key={idx}>{wordOrSpace}</span>;
+                                                        
+                                                        const cleanWord = wordOrSpace.toLowerCase().replace(/[.,!?;:()]/g, "");
+                                                        const isMatch = cWords.some(cw => cw.replace(/[.,!?;:()]/g, "") === cleanWord);
+                                                        
+                                                        return (
+                                                            <span key={idx} className={isMatch ? "text-green-600 font-bold bg-green-100 dark:bg-green-900/30 px-1 rounded" : ""}>
+                                                                {wordOrSpace}
+                                                            </span>
+                                                        );
+                                                    });
+                                                })()}
+                                            </p>
+                                            
+                                            <div className="mt-4 p-4 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/50 rounded-xl">
+                                                <p className="text-sm mt-3 font-medium text-sky-700 dark:text-sky-300 bg-white dark:bg-black/20 inline-block px-3 py-1 rounded-lg">
+                                                    Tỉ lệ khớp: {(() => {
+                                                        const uStr = selected as string || "";
+                                                        const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
+                                                        const cWords = cStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                                                        const uWords = uStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                                                        let matches = 0;
+                                                        const cWordsTemp = [...cWords];
+                                                        uWords.forEach(w => {
+                                                            const idx = cWordsTemp.indexOf(w);
+                                                            if (idx !== -1) {
+                                                                matches++;
+                                                                cWordsTemp.splice(idx, 1);
+                                                            }
+                                                        });
+                                                        return cWords.length > 0 ? Math.round((matches / cWords.length) * 100) : 0;
+                                                    })()}%
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <textarea
+                                            className="w-full p-4 rounded-xl border bg-white dark:bg-black/20 min-h-[120px] outline-none focus:ring-2 ring-sky-500/20 transition-all"
+                                            placeholder={language === 'vi' ? "Nhập câu trả lời của bạn..." : "Type your answer..."}
+                                            value={selected as string || ''}
+                                            onChange={(e) => onChange(e.target.value)}
+                                        />
+                                    )}
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 gap-3">
@@ -120,7 +183,11 @@ function PracticeQuestion({
                                                     disabled={isRevealed}
                                                     className="mt-1 w-4 h-4 text-sky-600"
                                                 />
-                                                <span className="text-sm font-medium" dangerouslySetInnerHTML={{ __html: opt }} />
+                                                <span 
+                                                    className="text-sm font-medium" 
+                                                    dangerouslySetInnerHTML={{ __html: opt }} 
+                                                    style={{ fontSize: question.answerFontSize ? `${question.answerFontSize}px` : undefined }}
+                                                />
                                             </label>
                                         );
                                     })}
@@ -128,7 +195,39 @@ function PracticeQuestion({
                             )}
                         </div>
 
-
+                        {question.hint && !isRevealed && (
+                            <div className="mt-4">
+                                {!showHint ? (
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setShowHint(true)}
+                                        className="text-amber-600 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full flex items-center gap-2 font-bold shadow-sm"
+                                    >
+                                        <Lightbulb className="h-4 w-4" />
+                                        {language === 'vi' ? 'Gợi ý thông minh' : 'Smart Hint'}
+                                    </Button>
+                                ) : (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: -10 }} 
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl flex gap-3 shadow-sm"
+                                    >
+                                        <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                                            <Lightbulb className="h-5 w-5 text-amber-600" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-amber-800 dark:text-amber-500 mb-1 text-sm">
+                                                {language === 'vi' ? 'Gợi ý' : 'Hint'}
+                                            </h4>
+                                            <p className="text-sm text-amber-900/80 dark:text-amber-200/80 leading-relaxed font-medium">
+                                                {question.hint}
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </div>
+                        )}
 
                         {isRevealed && (
                             <motion.div
@@ -252,7 +351,26 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
 
         if (q.type === 'multiple') isCorrect = arraysEqual(userAns as string[], correctArr);
         else if (q.type === 'single') isCorrect = correctArr.includes(userAns as string);
-        else isCorrect = (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+        else {
+            const uStr = (userAns as string || "").trim().toLowerCase();
+            const cStr = (correctArr[0] as string || "").trim().toLowerCase();
+            const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+            const cWords = cStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+            if (cWords.length === 0) {
+                isCorrect = uWords.length === 0;
+            } else {
+                let matches = 0;
+                const cWordsTemp = [...cWords];
+                uWords.forEach(w => {
+                    const idx = cWordsTemp.indexOf(w);
+                    if (idx !== -1) {
+                        matches++;
+                        cWordsTemp.splice(idx, 1);
+                    }
+                });
+                isCorrect = (matches / cWords.length) >= 0.5;
+            }
+        }
 
         setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }));
         
@@ -287,7 +405,26 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
 
             if (q.type === 'multiple') isCorrect = arraysEqual(userAns as string[], correctArr);
             else if (q.type === 'single') isCorrect = correctArr.includes(userAns as string);
-            else isCorrect = (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+            else {
+                const uStr = (userAns as string || "").trim().toLowerCase();
+                const cStr = (correctArr[0] as string || "").trim().toLowerCase();
+                const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                const cWords = cStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                if (cWords.length === 0) {
+                    isCorrect = uWords.length === 0;
+                } else {
+                    let matches = 0;
+                    const cWordsTemp = [...cWords];
+                    uWords.forEach(w => {
+                        const idx = cWordsTemp.indexOf(w);
+                        if (idx !== -1) {
+                            matches++;
+                            cWordsTemp.splice(idx, 1);
+                        }
+                    });
+                    isCorrect = (matches / cWords.length) >= 0.5;
+                }
+            }
 
             if (isCorrect) {
                 calculatedScore++;
@@ -308,7 +445,26 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                 let isCorrect = false;
                 if (q.type === 'multiple') isCorrect = arraysEqual(userAns as string[], correctArr);
                 else if (q.type === 'single') isCorrect = correctArr.includes(userAns as string);
-                else isCorrect = (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+                else {
+                    const uStr = (userAns as string || "").trim().toLowerCase();
+                    const cStr = (correctArr[0] as string || "").trim().toLowerCase();
+                    const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                    const cWords = cStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                    if (cWords.length === 0) {
+                        isCorrect = uWords.length === 0;
+                    } else {
+                        let matches = 0;
+                        const cWordsTemp = [...cWords];
+                        uWords.forEach(w => {
+                            const idx = cWordsTemp.indexOf(w);
+                            if (idx !== -1) {
+                                matches++;
+                                cWordsTemp.splice(idx, 1);
+                            }
+                        });
+                        isCorrect = (matches / cWords.length) >= 0.5;
+                    }
+                }
                 return { question: q, isCorrect };
             });
             await syncSubjectWrongQuestions(user.uid, subject, syncData);

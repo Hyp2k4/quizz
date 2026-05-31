@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
-import { 
-    getMockExamQuestions, 
-    saveMockExamResult, 
+import {
+    getMockExamQuestions,
+    saveMockExamResult,
     getMockExamLeaderboard,
     createNotification,
     getQuizzesBySubject
@@ -16,8 +16,8 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
-import { 
-    Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, 
+import {
+    Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle,
     Timer, Sparkles, BookOpen, LogIn, ArrowRight, Home, Check
 } from "lucide-react";
 import confetti from "canvas-confetti";
@@ -71,8 +71,13 @@ function ExamQuestion({
                         {readOnly ? (isCorrect ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />) : index + 1}
                     </div>
                     <div className="w-full min-w-0">
-                        <h3 className="font-semibold text-base sm:text-lg mb-4 text-zinc-800 dark:text-zinc-100 break-words">{question.text}</h3>
-                        
+                        <h3 
+                            className="font-semibold text-base sm:text-lg mb-4 text-zinc-800 dark:text-zinc-100 break-words"
+                            style={{ fontSize: question.fontSize ? `${question.fontSize}px` : undefined, lineHeight: 1.5 }}
+                        >
+                            {question.text}
+                        </h3>
+
                         {question.imageUrl && (
                             <div className="mb-6 rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
                                 <img src={question.imageUrl} alt="Question" className="max-h-[300px] w-auto mx-auto object-contain" />
@@ -81,18 +86,67 @@ function ExamQuestion({
 
                         <div className="grid grid-cols-1 gap-3">
                             {isOpen ? (
-                                <textarea
-                                    className="w-full p-4 rounded-xl border-2 border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black/20 min-h-[120px] focus:border-indigo-500 outline-none transition-all"
-                                    placeholder={language === 'vi' ? "Nhập câu trả lời..." : "Type answer..."}
-                                    value={selected as string || ''}
-                                    onChange={(e) => !readOnly && onChange(e.target.value)}
-                                    disabled={readOnly}
-                                />
+                                readOnly ? (
+                                    <div className="w-full p-4 rounded-xl border-2 border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black/20 min-h-[120px]">
+                                        <p className="mb-4 text-zinc-800 dark:text-zinc-200 text-base leading-relaxed">
+                                            {(() => {
+                                                const uStr = selected as string || "";
+                                                const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
+                                                const cWords = cStr.toLowerCase().split(/\s+/).filter(Boolean);
+                                                
+                                                return uStr.split(/(\s+)/).map((wordOrSpace, idx) => {
+                                                    if (!wordOrSpace.trim()) return <span key={idx}>{wordOrSpace}</span>;
+                                                    
+                                                    // Remove punctuation for checking if needed, but simple includes is ok
+                                                    const cleanWord = wordOrSpace.toLowerCase().replace(/[.,!?;:()]/g, "");
+                                                    const isMatch = cWords.some(cw => cw.replace(/[.,!?;:()]/g, "") === cleanWord);
+                                                    
+                                                    return (
+                                                        <span key={idx} className={isMatch ? "text-green-600 font-bold bg-green-100 dark:bg-green-900/30 px-1 rounded" : ""}>
+                                                            {wordOrSpace}
+                                                        </span>
+                                                    );
+                                                });
+                                            })()}
+                                        </p>
+                                        
+                                        <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-900/50 rounded-xl">
+                                            <p className="text-sm font-bold text-indigo-800 dark:text-indigo-400 mb-1">Đáp án mẫu:</p>
+                                            <p className="text-indigo-700 dark:text-indigo-300">{Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : question.correctAnswer}</p>
+                                            <p className="text-sm mt-3 font-medium text-indigo-700 dark:text-indigo-300 bg-white dark:bg-black/20 inline-block px-3 py-1 rounded-lg">
+                                                Tỉ lệ khớp: {(() => {
+                                                    const uStr = selected as string || "";
+                                                    const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
+                                                    const cWords = cStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                                                    const uWords = uStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                                                    let matches = 0;
+                                                    const cWordsTemp = [...cWords];
+                                                    uWords.forEach(w => {
+                                                        const idx = cWordsTemp.indexOf(w);
+                                                        if (idx !== -1) {
+                                                            matches++;
+                                                            cWordsTemp.splice(idx, 1);
+                                                        }
+                                                    });
+                                                    return cWords.length > 0 ? Math.round((matches / cWords.length) * 100) : 0;
+                                                })()}%
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <textarea
+                                        className="w-full p-4 rounded-xl border-2 border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black/20 min-h-[120px] focus:border-indigo-500 outline-none transition-all"
+                                        placeholder={language === 'vi' ? "Nhập câu trả lời..." : "Type answer..."}
+                                        value={selected as string || ''}
+                                        onChange={(e) => !readOnly && onChange(e.target.value)}
+                                        disabled={readOnly}
+                                    />
+                                )
                             ) : (
                                 question.options?.map((opt: string, i: number) => {
                                     const isSelected = isMultiple ? (selected as string[])?.includes(opt) : selected === opt;
                                     const isActuallyCorrect = readOnly && (isMultiple ? question.correctAnswer?.includes(opt) : question.correctAnswer?.[0] === opt);
-                                    
+
                                     let optionClass = `flex items-start gap-3 p-4 rounded-2xl border-2 transition-all ${readOnly ? 'cursor-default' : 'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`;
                                     if (readOnly) {
                                         if (isActuallyCorrect) optionClass += " border-green-500 bg-green-50 dark:bg-green-900/20";
@@ -113,7 +167,12 @@ function ExamQuestion({
                                                 disabled={readOnly}
                                                 className="mt-1 w-4 h-4 text-indigo-600"
                                             />
-                                            <span className="text-sm font-medium">{opt}</span>
+                                            <span 
+                                                className="text-sm font-medium"
+                                                style={{ fontSize: question.answerFontSize ? `${question.answerFontSize}px` : undefined }}
+                                            >
+                                                {opt}
+                                            </span>
                                         </label>
                                     );
                                 })
@@ -149,12 +208,12 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
 
     const allSelected = quizzes.length > 0 && quizzes.every(q => selectedQuizzes[q.id!]);
     const selectedCount = Object.values(selectedQuizzes).filter(Boolean).length;
-    
+
     // Calculate total pool of selected questions
     const selectedQuizzesList = quizzes.filter(q => selectedQuizzes[q.id!]);
     let totalSelectedQuestionsCount = 0;
     selectedQuizzesList.forEach(q => {
-        const validCount = q.questions?.filter((question: any) => 
+        const validCount = q.questions?.filter((question: any) =>
             question.type === 'open' || (question.correctAnswer && question.correctAnswer.length > 0)
         ).length || 0;
         totalSelectedQuestionsCount += validCount;
@@ -164,7 +223,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
         const activeQuizzes = quizzes.filter(q => selectedQuizzes[q.id!]);
         let pool: any[] = [];
         activeQuizzes.forEach(quiz => {
-            const valid = quiz.questions.filter((q: any) => 
+            const valid = quiz.questions.filter((q: any) =>
                 q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
             );
             pool = [...pool, ...valid];
@@ -180,19 +239,19 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
         const examQuestions = shuffled.slice(0, examQuestionLimit);
 
         setQuestions(examQuestions);
-        
+
         // Calculate limit: 40 qs -> 60 mins, 60 qs -> 90 mins
         const chosenLimit = examQuestionLimit;
         const timeLimitForMode = chosenLimit === 40 ? 3600 : 5400;
-        
+
         // Scale time limit down if there are fewer questions than the selected limit
-        const limit = examQuestions.length >= chosenLimit 
-            ? timeLimitForMode 
+        const limit = examQuestions.length >= chosenLimit
+            ? timeLimitForMode
             : Math.max(300, Math.round((examQuestions.length / chosenLimit) * timeLimitForMode));
 
         setTimeLeft(limit);
         setTotalTimeLimit(limit);
-        
+
         setIsStarted(true);
     };
 
@@ -240,7 +299,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
 
     const handleSubmit = async () => {
         if (isSubmitted) return;
-        
+
         let calculatedScore = 0;
         questions.forEach((q, idx) => {
             const userAns = answers[idx];
@@ -249,7 +308,28 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
 
             if (q.type === 'multiple') isItemCorrect = arraysEqual(userAns as string[], correctArr);
             else if (q.type === 'single') isItemCorrect = correctArr.includes(userAns as string);
-            else isItemCorrect = (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+            else {
+                const uStr = (userAns as string || "").trim().toLowerCase();
+                const cStr = (correctArr[0] as string || "").trim().toLowerCase();
+                const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                const cWords = cStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                
+                if (cWords.length === 0) {
+                    isItemCorrect = uWords.length === 0;
+                } else {
+                    let matches = 0;
+                    const cWordsTemp = [...cWords];
+                    uWords.forEach(w => {
+                        const idx = cWordsTemp.indexOf(w);
+                        if (idx !== -1) {
+                            matches++;
+                            cWordsTemp.splice(idx, 1);
+                        }
+                    });
+                    const ratio = matches / cWords.length;
+                    isItemCorrect = ratio >= 0.5; // Consider correct if >= 50% words match
+                }
+            }
 
             if (isItemCorrect) calculatedScore++;
         });
@@ -296,7 +376,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                 }
             }
         }
-        
+
         if (calculatedScore / questions.length >= 0.8) {
             triggerConfetti();
         }
@@ -368,15 +448,15 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                                         }}
                                         className="text-xs font-bold text-indigo-600 hover:text-indigo-750 h-8 px-3 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/20"
                                     >
-                                        {allSelected 
-                                            ? (language === 'vi' ? 'Bỏ chọn tất cả' : 'Deselect All') 
+                                        {allSelected
+                                            ? (language === 'vi' ? 'Bỏ chọn tất cả' : 'Deselect All')
                                             : (language === 'vi' ? 'Chọn tất cả' : 'Select All')}
                                     </Button>
                                 </div>
 
                                 <div className="max-h-[260px] overflow-y-auto space-y-2.5 pr-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-850">
                                     {quizzes.map((quiz) => {
-                                        const validCount = quiz.questions?.filter((q: any) => 
+                                        const validCount = quiz.questions?.filter((q: any) =>
                                             q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
                                         ).length || 0;
                                         const isChecked = !!selectedQuizzes[quiz.id!];
@@ -391,18 +471,16 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                                                         [quiz.id!]: !prev[quiz.id!]
                                                     }));
                                                 }}
-                                                className={`flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
-                                                    isChecked
+                                                className={`flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${isChecked
                                                         ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20'
                                                         : 'border-zinc-150 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
-                                                        isChecked
+                                                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${isChecked
                                                             ? 'bg-indigo-500 border-indigo-500 text-white'
                                                             : 'border-zinc-300 dark:border-zinc-700'
-                                                    }`}>
+                                                        }`}>
                                                         {isChecked && <Check className="w-4 h-4 stroke-[3px]" />}
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -433,11 +511,10 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                                     <div className="grid grid-cols-2 gap-4">
                                         <div
                                             onClick={() => setExamQuestionLimit(40)}
-                                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-1 ${
-                                                examQuestionLimit === 40
+                                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-1 ${examQuestionLimit === 40
                                                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm shadow-indigo-500/10'
                                                     : 'border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
-                                            }`}
+                                                }`}
                                         >
                                             <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">40</span>
                                             <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{language === 'vi' ? '40 câu hỏi' : '40 questions'}</span>
@@ -445,11 +522,10 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                                         </div>
                                         <div
                                             onClick={() => setExamQuestionLimit(60)}
-                                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-1 ${
-                                                examQuestionLimit === 60
+                                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-1 ${examQuestionLimit === 60
                                                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm shadow-indigo-500/10'
                                                     : 'border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
-                                            }`}
+                                                }`}
                                         >
                                             <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">60</span>
                                             <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{language === 'vi' ? '60 câu hỏi' : '60 questions'}</span>
@@ -487,8 +563,8 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                             </div>
                         )}
 
-                        <Button 
-                            onClick={handleStartExam} 
+                        <Button
+                            onClick={handleStartExam}
                             disabled={selectedCount === 0 || totalSelectedQuestionsCount === 0}
                             className="w-full h-14 sm:h-16 rounded-2xl sm:rounded-3xl bg-indigo-600 text-lg sm:text-xl font-bold hover:scale-[1.01] active:scale-95 transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 disabled:pointer-events-none"
                         >
@@ -526,7 +602,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
             <Navbar />
-            
+
             <main className="pt-32 px-6 max-w-4xl mx-auto pb-32">
                 {/* Fixed Header with Timer */}
                 <div className="fixed top-20 sm:top-24 left-0 right-0 z-40 px-4 sm:px-6 pointer-events-none">
@@ -561,13 +637,25 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                             selected={answers[i]}
                             onChange={(val: any) => setAnswers(prev => ({ ...prev, [i]: val }))}
                             readOnly={isSubmitted}
-                            isCorrect={isSubmitted ? (
-                                q.type === 'multiple' 
-                                ? arraysEqual(answers[i], q.correctAnswer)
-                                : q.type === 'single'
-                                ? q.correctAnswer.includes(answers[i])
-                                : (answers[i] || "").trim().toLowerCase() === (q.correctAnswer[0] || "").trim().toLowerCase()
-                            ) : undefined}
+                            isCorrect={isSubmitted ? (() => {
+                                if (q.type === 'multiple') return arraysEqual(answers[i], q.correctAnswer);
+                                if (q.type === 'single') return (q.correctAnswer || []).includes(answers[i]);
+                                const uStr = (answers[i] || "").trim().toLowerCase();
+                                const cStr = Array.isArray(q.correctAnswer) ? (q.correctAnswer[0] || "") : (q.correctAnswer || "");
+                                const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                                const cWords = cStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+                                if (cWords.length === 0) return uWords.length === 0;
+                                let matches = 0;
+                                const cWordsTemp = [...cWords];
+                                uWords.forEach(w => {
+                                    const idx = cWordsTemp.indexOf(w);
+                                    if (idx !== -1) {
+                                        matches++;
+                                        cWordsTemp.splice(idx, 1);
+                                    }
+                                });
+                                return (matches / cWords.length) >= 0.5;
+                            })() : undefined}
                             language={language}
                         />
                     ))}
@@ -575,7 +663,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
 
                 {!isSubmitted && (
                     <div className="fixed bottom-6 sm:bottom-10 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 sm:px-6 z-40">
-                        <Button 
+                        <Button
                             onClick={() => setConfirmOpen(true)}
                             className="w-full h-14 sm:h-16 rounded-2xl sm:rounded-3xl bg-indigo-600 text-lg sm:text-xl font-bold shadow-2xl shadow-indigo-500/40 hover:scale-[1.02] transition-transform active:scale-95"
                         >
@@ -608,12 +696,12 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                         handleSubmit();
                     }}
                     title={language === 'vi' ? "Nộp bài thi?" : "Submit Exam?"}
-                    description={questions.length - Object.keys(answers).length > 0 
-                        ? (language === 'vi' 
-                            ? `Bạn còn ${questions.length - Object.keys(answers).length} câu hỏi chưa chọn đáp án. Bạn có chắc chắn muốn nộp bài thi không?` 
+                    description={questions.length - Object.keys(answers).length > 0
+                        ? (language === 'vi'
+                            ? `Bạn còn ${questions.length - Object.keys(answers).length} câu hỏi chưa chọn đáp án. Bạn có chắc chắn muốn nộp bài thi không?`
                             : `You have ${questions.length - Object.keys(answers).length} unanswered questions. Are you sure you want to submit the exam?`)
-                        : (language === 'vi' 
-                            ? "Bạn đã hoàn thành tất cả câu hỏi. Bạn có chắc chắn muốn nộp bài thi không?" 
+                        : (language === 'vi'
+                            ? "Bạn đã hoàn thành tất cả câu hỏi. Bạn có chắc chắn muốn nộp bài thi không?"
                             : "You have answered all questions. Are you sure you want to submit the exam?")
                     }
                 />

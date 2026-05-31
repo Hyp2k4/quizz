@@ -17,6 +17,7 @@ export default function FlashcardsPage() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [fontSize, setFontSize] = useState(24);
 
     useEffect(() => {
         if (id) {
@@ -58,12 +59,22 @@ export default function FlashcardsPage() {
         <div className="min-h-screen bg-[rgb(var(--background))]">
             <Navbar />
             <main className="pt-32 px-6 max-w-4xl mx-auto pb-20">
-                <div className="mb-8 flex items-center justify-between">
-                    <Button variant="ghost" onClick={() => router.back()} className="gap-2">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <Button variant="ghost" onClick={() => router.back()} className="gap-2 self-start sm:self-auto">
                         <ArrowLeft className="h-4 w-4" /> {t.flashcards.back}
                     </Button>
-                    <div className="text-sm font-bold text-zinc-400">
-                        {t.flashcards.progress}: {currentIndex + 1} / {total}
+                    <div className="flex items-center gap-6 self-end sm:self-auto">
+                        <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setFontSize(prev => Math.max(14, prev - 2))} title="Giảm cỡ chữ">
+                                <span className="font-bold text-sm">A-</span>
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setFontSize(prev => Math.min(48, prev + 2))} title="Tăng cỡ chữ">
+                                <span className="font-bold text-lg">A+</span>
+                            </Button>
+                        </div>
+                        <div className="text-sm font-bold text-zinc-400">
+                            {t.flashcards.progress}: {currentIndex + 1} / {total}
+                        </div>
                     </div>
                 </div>
 
@@ -92,9 +103,11 @@ export default function FlashcardsPage() {
                                         </div>
                                     )}
                                     
-                                    <h2 className="text-2xl md:text-3xl font-bold text-zinc-800 dark:text-zinc-100 leading-tight">
-                                        {currentQuestion.text}
-                                    </h2>
+                                    <h2 
+                                        className="font-bold text-zinc-800 dark:text-zinc-100 w-full overflow-y-auto max-h-[220px] scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-700 px-4"
+                                        style={{ fontSize: `${fontSize}px`, lineHeight: 1.4 }}
+                                        dangerouslySetInnerHTML={{ __html: currentQuestion.text }}
+                                    />
                                     
                                     <p className="mt-8 text-sm text-zinc-400 font-medium animate-pulse">
                                         {t.flashcards.flip}
@@ -113,14 +126,17 @@ export default function FlashcardsPage() {
                                         </div>
                                     )}
 
-                                    <div className="space-y-4 max-w-full">
-                                        <div className="text-2xl md:text-3xl font-black">
-                                            {currentQuestion.correctAnswer.join(", ")}
-                                        </div>
+                                    <div className="space-y-4 w-full px-4 overflow-y-auto max-h-[260px] scrollbar-thin scrollbar-thumb-indigo-400 dark:scrollbar-thumb-indigo-500">
+                                        <div 
+                                            className="font-black"
+                                            style={{ fontSize: `${fontSize}px`, lineHeight: 1.4 }}
+                                            dangerouslySetInnerHTML={{ __html: currentQuestion.correctAnswer.join(", ") }}
+                                        />
                                         {currentQuestion.explanation && (
-                                            <p className="text-sm text-indigo-100 italic leading-relaxed">
-                                                {currentQuestion.explanation}
-                                            </p>
+                                            <p 
+                                                className="text-sm text-indigo-100 italic leading-relaxed"
+                                                dangerouslySetInnerHTML={{ __html: currentQuestion.explanation }}
+                                            />
                                         )}
                                     </div>
                                 </div>

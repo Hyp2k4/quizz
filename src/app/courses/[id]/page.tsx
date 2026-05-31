@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
-import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers, Flag, LogIn, ArrowLeft, BookOpen, RotateCcw } from "lucide-react";
+import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock, Key, Layers, Flag, LogIn, ArrowLeft, BookOpen, RotateCcw, Lightbulb, Brain } from "lucide-react";
 import confetti from "canvas-confetti";
 import { Character, Expression } from "@/components/character/Character";
 import { motion, AnimatePresence } from "framer-motion";
@@ -113,6 +113,7 @@ function QuestionTaker({
     language?: string,
     onReport?: () => void
 }) {
+    const [showHint, setShowHint] = useState(false);
     const isMultiple = question.type === 'multiple';
     const isOpen = question.type === 'open';
 
@@ -241,6 +242,41 @@ function QuestionTaker({
                                 })
                             )}
                         </div>
+
+                        {question.hint && !showResult && (
+                            <div className="mt-4">
+                                {!showHint ? (
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setShowHint(true)}
+                                        className="text-amber-600 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full flex items-center gap-2 font-bold shadow-sm"
+                                    >
+                                        <Lightbulb className="h-4 w-4" />
+                                        {language === 'vi' ? 'Gợi ý thông minh' : 'Smart Hint'}
+                                    </Button>
+                                ) : (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: -10 }} 
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl flex gap-3 shadow-sm"
+                                    >
+                                        <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                                            <Lightbulb className="h-5 w-5 text-amber-600" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-amber-800 dark:text-amber-500 mb-1 text-sm">
+                                                {language === 'vi' ? 'Gợi ý' : 'Hint'}
+                                            </h4>
+                                            <p className="text-sm text-amber-900/80 dark:text-amber-200/80 leading-relaxed font-medium">
+                                                {question.hint}
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </div>
+                        )}
+
                         {onCheck && isMultiple && !showResult && (selected as string[])?.length > 0 && (
                             <div className="mt-4 flex justify-end">
                                 <Button size="sm" variant="secondary" onClick={() => onCheck(selected)} className="rounded-full">
@@ -777,6 +813,20 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     <Layers className="h-5 w-5" />
                     {t.flashcards.study}
                 </Button>
+                {quiz.questions.some(q => {
+                    if (q.type !== 'open' || !q.text) return false;
+                    return q.text.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim().length > 50;
+                }) && (
+                    <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-full rounded-full py-6 text-lg font-bold border-2 border-violet-100 hover:border-violet-500 hover:text-violet-600 dark:border-violet-900/40 dark:hover:border-violet-500 transition-all gap-2"
+                        onClick={() => router.push(`/courses/${id}/memorize`)}
+                    >
+                        <Brain className="h-5 w-5" />
+                        {language === 'vi' ? 'Học thuộc lòng' : 'Memorize'}
+                    </Button>
+                )}
             </div>
         </Card>
     );
