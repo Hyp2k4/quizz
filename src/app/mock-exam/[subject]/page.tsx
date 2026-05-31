@@ -99,7 +99,7 @@ function ExamQuestion({
                                                     
                                                     // Remove punctuation for checking if needed, but simple includes is ok
                                                     const cleanWord = wordOrSpace.toLowerCase().replace(/[.,!?;:()]/g, "");
-                                                    const isMatch = cWords.some(cw => cw.replace(/[.,!?;:()]/g, "") === cleanWord);
+                                                    const isMatch = cWords.some((cw: string) => cw.replace(/[.,!?;:()]/g, "") === cleanWord);
                                                     
                                                     return (
                                                         <span key={idx} className={isMatch ? "text-green-600 font-bold bg-green-100 dark:bg-green-900/30 px-1 rounded" : ""}>
@@ -647,7 +647,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                                 if (cWords.length === 0) return uWords.length === 0;
                                 let matches = 0;
                                 const cWordsTemp = [...cWords];
-                                uWords.forEach(w => {
+                                uWords.forEach((w: string) => {
                                     const idx = cWordsTemp.indexOf(w);
                                     if (idx !== -1) {
                                         matches++;
