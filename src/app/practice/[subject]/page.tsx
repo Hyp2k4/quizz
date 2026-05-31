@@ -62,7 +62,7 @@ function PracticeQuestion({
     const isCorrect = isRevealed ? (() => {
         if (isMultiple) return arraysEqual(selected, question.correctAnswer);
         if (!isOpen) return (question.correctAnswer || []).includes(selected);
-        
+
         const uStr = (selected as string || "").trim().toLowerCase();
         const cStr = Array.isArray(question.correctAnswer) ? (question.correctAnswer[0] || "") : (question.correctAnswer || "");
         const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
@@ -88,10 +88,10 @@ function PracticeQuestion({
                         {isRevealed ? (isCorrect ? <CheckCircle className="h-6 w-6" /> : <XCircle className="h-6 w-6" />) : index + 1}
                     </div>
                     <div className="w-full">
-                        <h3 
-                            className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100" 
+                        <h3
+                            className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100"
                             style={{ fontSize: question.fontSize ? `${question.fontSize}px` : undefined, lineHeight: 1.5 }}
-                            dangerouslySetInnerHTML={{ __html: question.text }} 
+                            dangerouslySetInnerHTML={{ __html: question.text }}
                         />
 
                         {question.imageUrl && (
@@ -110,13 +110,13 @@ function PracticeQuestion({
                                                     const uStr = selected as string || "";
                                                     const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
                                                     const cWords = cStr.toLowerCase().split(/\s+/).filter(Boolean);
-                                                    
+
                                                     return uStr.split(/(\s+)/).map((wordOrSpace, idx) => {
                                                         if (!wordOrSpace.trim()) return <span key={idx}>{wordOrSpace}</span>;
-                                                        
+
                                                         const cleanWord = wordOrSpace.toLowerCase().replace(/[.,!?;:()]/g, "");
-                                                        const isMatch = cWords.some(cw => cw.replace(/[.,!?;:()]/g, "") === cleanWord);
-                                                        
+                                                        const isMatch = cWords.some((cw: string) => cw.replace(/[.,!?;:()]/g, "") === cleanWord);
+
                                                         return (
                                                             <span key={idx} className={isMatch ? "text-green-600 font-bold bg-green-100 dark:bg-green-900/30 px-1 rounded" : ""}>
                                                                 {wordOrSpace}
@@ -125,7 +125,7 @@ function PracticeQuestion({
                                                     });
                                                 })()}
                                             </p>
-                                            
+
                                             <div className="mt-4 p-4 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/50 rounded-xl">
                                                 <p className="text-sm mt-3 font-medium text-sky-700 dark:text-sky-300 bg-white dark:bg-black/20 inline-block px-3 py-1 rounded-lg">
                                                     Tỉ lệ khớp: {(() => {
@@ -183,9 +183,9 @@ function PracticeQuestion({
                                                     disabled={isRevealed}
                                                     className="mt-1 w-4 h-4 text-sky-600"
                                                 />
-                                                <span 
-                                                    className="text-sm font-medium" 
-                                                    dangerouslySetInnerHTML={{ __html: opt }} 
+                                                <span
+                                                    className="text-sm font-medium"
+                                                    dangerouslySetInnerHTML={{ __html: opt }}
                                                     style={{ fontSize: question.answerFontSize ? `${question.answerFontSize}px` : undefined }}
                                                 />
                                             </label>
@@ -198,9 +198,9 @@ function PracticeQuestion({
                         {question.hint && !isRevealed && (
                             <div className="mt-4">
                                 {!showHint ? (
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={() => setShowHint(true)}
                                         className="text-amber-600 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full flex items-center gap-2 font-bold shadow-sm"
                                     >
@@ -208,8 +208,8 @@ function PracticeQuestion({
                                         {language === 'vi' ? 'Gợi ý thông minh' : 'Smart Hint'}
                                     </Button>
                                 ) : (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: -10 }} 
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl flex gap-3 shadow-sm"
                                     >
@@ -292,7 +292,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                         return aVal - bVal;
                     });
                     setQuizzes(sortedQuizzes);
-                    
+
                     // Default: select all
                     const initialSelected: Record<string, boolean> = {};
                     sortedQuizzes.forEach(q => {
@@ -321,7 +321,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
         let allQuestions: any[] = [];
         quizzes.forEach(quiz => {
             if (quiz.id && selectedQuizzes[quiz.id]) {
-                const validQs = (quiz.questions || []).filter((q: any) => 
+                const validQs = (quiz.questions || []).filter((q: any) =>
                     q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
                 );
                 allQuestions = [...allQuestions, ...validQs];
@@ -373,7 +373,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
         }
 
         setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }));
-        
+
         if (mode === 'wrong' && user && subject) {
             await syncSubjectWrongQuestions(user.uid, subject, [{ question: q, isCorrect }]);
         }
@@ -396,7 +396,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
         let calculatedScore = 0;
         const allRevealed: Record<number, boolean> = {};
         const wrongQs: any[] = [];
-        
+
         questions.forEach((q, idx) => {
             allRevealed[idx] = true;
             const userAns = answers[idx];
@@ -517,7 +517,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
             const noQuizzes = quizzes.length === 0;
             const totalSelected = quizzes
                 .filter(q => q.id && selectedQuizzes[q.id])
-                .reduce((sum, q) => sum + (q.questions?.filter((question: any) => 
+                .reduce((sum, q) => sum + (q.questions?.filter((question: any) =>
                     question.type === 'open' || (question.correctAnswer && question.correctAnswer.length > 0)
                 ).length || 0), 0);
 
@@ -581,8 +581,8 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                             }}
                                             className="text-xs font-bold text-sky-600 hover:text-sky-700 h-8 px-3 rounded-xl hover:bg-sky-50 dark:hover:bg-sky-950/20"
                                         >
-                                            {allSelected 
-                                                ? (language === 'vi' ? 'Bỏ chọn tất cả' : 'Deselect All') 
+                                            {allSelected
+                                                ? (language === 'vi' ? 'Bỏ chọn tất cả' : 'Deselect All')
                                                 : (language === 'vi' ? 'Chọn tất cả' : 'Select All')}
                                         </Button>
                                     </div>
@@ -590,7 +590,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                     {/* Chapters Checklist */}
                                     <div className="max-h-[300px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800">
                                         {quizzes.map((quiz) => {
-                                            const validCount = quiz.questions?.filter((q: any) => 
+                                            const validCount = quiz.questions?.filter((q: any) =>
                                                 q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
                                             ).length || 0;
                                             const isChecked = !!selectedQuizzes[quiz.id!];
@@ -605,18 +605,16 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                                             [quiz.id!]: !prev[quiz.id!]
                                                         }));
                                                     }}
-                                                    className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer select-none ${
-                                                        isChecked
+                                                    className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer select-none ${isChecked
                                                             ? 'border-sky-500 bg-sky-50/50 dark:bg-sky-900/20'
                                                             : 'border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
-                                                            isChecked
+                                                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${isChecked
                                                                 ? 'bg-sky-500 border-sky-500 text-white'
                                                                 : 'border-zinc-300 dark:border-zinc-700'
-                                                        }`}>
+                                                            }`}>
                                                             {isChecked && <Check className="w-4 h-4 stroke-[3px]" />}
                                                         </div>
                                                         <div className="flex items-center gap-2">
@@ -703,12 +701,12 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                 {language === 'vi' ? `Ôn tập câu sai: ${subject}` : `Review Errors: ${subject}`}
                             </h1>
                             <p className="text-zinc-500 leading-relaxed">
-                                {noQuestions 
-                                    ? (language === 'vi' 
-                                        ? 'Chúc mừng! Bạn hiện tại không có câu hỏi nào bị trả lời sai trong môn học này.' 
+                                {noQuestions
+                                    ? (language === 'vi'
+                                        ? 'Chúc mừng! Bạn hiện tại không có câu hỏi nào bị trả lời sai trong môn học này.'
                                         : 'Congratulations! You currently have no incorrect questions in this subject.')
-                                    : (language === 'vi' 
-                                        ? 'Bạn đang ôn tập lại toàn bộ câu hỏi đã từng trả lời sai của môn học này. Hãy trả lời chính xác để tự động loại bỏ chúng khỏi danh sách ôn tập!' 
+                                    : (language === 'vi'
+                                        ? 'Bạn đang ôn tập lại toàn bộ câu hỏi đã từng trả lời sai của môn học này. Hãy trả lời chính xác để tự động loại bỏ chúng khỏi danh sách ôn tập!'
                                         : 'You are reviewing all questions you previously answered incorrectly. Answer correctly to automatically remove them from the review list!')}
                             </p>
                             {!noQuestions && (
@@ -824,13 +822,12 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                             <button
                                                 key={idx}
                                                 onClick={() => setCurrentQuestionIndex(idx)}
-                                                className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl font-bold text-sm md:text-base transition-all flex items-center justify-center border-2 ${
-                                                    isActive
+                                                className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl font-bold text-sm md:text-base transition-all flex items-center justify-center border-2 ${isActive
                                                         ? 'border-sky-500 bg-sky-600 text-white shadow-lg shadow-sky-500/30 scale-110 z-10'
                                                         : isAnswered
                                                             ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-400 hover:border-sky-300'
                                                             : 'border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400 hover:border-zinc-300'
-                                                }`}
+                                                    }`}
                                             >
                                                 {idx + 1}
                                             </button>
@@ -859,11 +856,11 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                 >
                                     {language === 'vi' ? 'Quay lại' : 'Previous'}
                                 </Button>
-                                
+
                                 <span className="font-extrabold text-sm md:text-base text-zinc-500 dark:text-zinc-400">
                                     <span className="text-zinc-900 dark:text-zinc-100">{currentQuestionIndex + 1}</span> / {questions.length}
                                 </span>
-                                
+
                                 <div className="flex gap-2">
                                     {mode === 'wrong' && !revealed[currentQuestionIndex] && (
                                         <Button
