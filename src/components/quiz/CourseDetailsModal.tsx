@@ -364,7 +364,17 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                 className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl bg-white dark:bg-zinc-900 shadow-2xl flex flex-col"
             >
                 {/* Header */}
-                <div className="p-6 border-b dark:border-zinc-800 flex justify-between items-start bg-sky-50/50 dark:bg-sky-950/10">
+                <div 
+                    className="h-32 md:h-48 w-full bg-cover bg-center relative shrink-0"
+                    style={{ backgroundImage: `url('${currentQuiz.imageUrl || `https://picsum.photos/seed/${currentQuiz.id || encodeURIComponent(currentQuiz.title)}/800/400`}')` }}
+                >
+                    <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-zinc-900 via-transparent to-black/30" />
+                    <Button variant="ghost" size="icon" onClick={onClose} className="absolute top-4 right-4 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm z-10">
+                        <X className="h-5 w-5" />
+                    </Button>
+                </div>
+                
+                <div className="p-6 pt-0 border-b dark:border-zinc-800 bg-white dark:bg-zinc-900 relative z-10">
                     <div>
                         <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{currentQuiz.title}</h2>
                         <p className="text-zinc-500 dark:text-zinc-400 mt-1">{currentQuiz.description}</p>
@@ -390,9 +400,6 @@ export function CourseDetailsModal({ isOpen, onClose, quiz, initialTab }: Course
                             <span className="text-zinc-400">{language === 'vi' ? 'Tác giả' : 'Author'}: {currentQuiz.authorName || (language === 'vi' ? "Ẩn danh" : "Anonymous")}</span>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800">
-                        <X className="h-5 w-5" />
-                    </Button>
                 </div>
 
                 {/* Tabs for Owner */}

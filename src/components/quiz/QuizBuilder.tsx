@@ -51,6 +51,7 @@ export default function QuizBuilder() {
     const [chapter, setChapter] = useState<number | "">("");
     const [chapterName, setChapterName] = useState("");
     const [shuffleOptions, setShuffleOptions] = useState(false);
+    const [imageUrl, setImageUrl] = useState("");
     const [isImporting, setIsImporting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(!!editId);
@@ -79,6 +80,7 @@ export default function QuizBuilder() {
                     setChapter(data.chapter !== undefined && data.chapter !== null ? data.chapter : "");
                     setChapterName(data.chapterName || "");
                     setShuffleOptions(data.shuffleOptions ?? false);
+                    setImageUrl(data.imageUrl || "");
                     setQuestions(data.questions);
                     
                     // Scroll to specific question if requested
@@ -524,6 +526,7 @@ export default function QuizBuilder() {
                 chapter: chapter === "" ? undefined : Number(chapter),
                 chapterName: chapterName.trim() || undefined,
                 shuffleOptions,
+                imageUrl: imageUrl.trim() || undefined,
                 questions,
             };
 
@@ -723,6 +726,12 @@ export default function QuizBuilder() {
                         className="w-full text-center sm:text-left border-none resize-none shadow-none text-zinc-400 font-medium bg-transparent focus:ring-0 text-sm min-h-[40px] py-1 px-3"
                         placeholder={t.builder.descPlaceholder}
                         rows={1}
+                    />
+                    <Input
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="w-full text-center sm:text-left rounded-2xl bg-white dark:bg-zinc-800/80 border-sky-100 dark:border-sky-900/30 focus:ring-sky-500 text-sm font-medium"
+                        placeholder={language === 'vi' ? "URL ảnh bìa (tuỳ chọn)..." : "Cover image URL (optional)..."}
                     />
                     <div className="flex items-center gap-2 px-3 pt-2">
                         <input

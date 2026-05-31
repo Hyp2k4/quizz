@@ -783,10 +783,17 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     }
 
     const renderStartGate = () => (
-        <Card className="max-w-md mx-auto p-6 md:p-8 text-center space-y-6 shadow-2xl border-indigo-500/20 animate-scale-in">
-            <div className="h-16 w-16 md:h-20 md:w-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <PlayCircle className="h-10 w-10 text-indigo-600" />
+        <Card className="max-w-md mx-auto overflow-hidden text-center shadow-2xl border-indigo-500/20 animate-scale-in">
+            <div 
+                className="h-40 w-full bg-cover bg-center relative"
+                style={{ backgroundImage: `url('${quiz.imageUrl || `https://picsum.photos/seed/${quiz.id || encodeURIComponent(quiz.title)}/400/200`}')` }}
+            >
+                <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent" />
             </div>
+            <div className="p-6 md:p-8 space-y-6 relative -mt-16">
+                <div className="h-16 w-16 md:h-20 md:w-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-zinc-950 shadow-md">
+                    <PlayCircle className="h-10 w-10 text-indigo-600" />
+                </div>
             <div>
                 <h2 className="text-2xl font-black mb-2">{language === 'vi' ? 'Bạn đã sẵn sàng chưa?' : 'Are you ready?'}</h2>
                 <p className="text-[rgb(var(--muted-foreground))] leading-relaxed">
@@ -827,6 +834,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                         {language === 'vi' ? 'Học thuộc lòng' : 'Memorize'}
                     </Button>
                 )}
+            </div>
             </div>
         </Card>
     );

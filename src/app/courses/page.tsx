@@ -36,7 +36,7 @@ function CoursesContent() {
     const [joinCode, setJoinCode] = useState("");
     const [isJoining, setIsJoining] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-    const [expandedSubjects, setExpandedSubjects] = useState<Record<string, boolean>>({});
+    const [modalSubject, setModalSubject] = useState<{subject: string, quizzes: QuizData[]} | null>(null);
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -51,13 +51,6 @@ function CoursesContent() {
         const url = `${window.location.origin}/courses?subject=${encodeURIComponent(subject)}`;
         navigator.clipboard.writeText(url);
         toast.success(language === 'vi' ? `Đã sao chép liên kết môn ${subject}!` : `${subject} subject link copied!`);
-    };
-
-    const toggleSubject = (subject: string) => {
-        setExpandedSubjects(prev => ({
-            ...prev,
-            [subject]: prev[subject] === false ? true : false
-        }));
     };
 
     const handleShare = (quizId: string) => {
@@ -191,178 +184,193 @@ function CoursesContent() {
                                 </Button>
                             </motion.div>
                         ) : (
-                            <div className="space-y-20">
-                                {Object.entries(
-                                    filteredQuizzes.reduce((acc, quiz) => {
-                                        const subject = quiz.subject?.trim() || (language === 'vi' ? "Khác" : "Others");
-                                        if (!acc[subject]) acc[subject] = [];
-                                        acc[subject].push(quiz);
-                                        return acc;
-                                    }, {} as Record<string, QuizData[]>)
-                                ).map(([subject, rawQuizzes]) => {
-                                    const subjectQuizzes = [...rawQuizzes].sort((a, b) => {
-                                        const aVal = a.chapter !== undefined && a.chapter !== null && (a.chapter as any) !== "" ? Number(a.chapter) : Infinity;
-                                        const bVal = b.chapter !== undefined && b.chapter !== null && (b.chapter as any) !== "" ? Number(b.chapter) : Infinity;
-                                        if (aVal === bVal) {
-                                            return (a.title || "").localeCompare(b.title || "");
-                                        }
-                                        return aVal - bVal;
-                                    });
-                                    const isExpanded = expandedSubjects[subject] !== false;
-                                    return (
-                                        <div key={subject} className="space-y-10">
-                                            <div 
-                                                className="flex items-center justify-between group/header cursor-pointer"
-                                                onClick={() => toggleSubject(subject)}
+                            <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                    {Object.entries(
+                                        filteredQuizzes.reduce((acc, quiz) => {
+                                            const subject = quiz.subject?.trim() || (language === 'vi' ? "Khác" : "Others");
+                                            if (!acc[subject]) acc[subject] = [];
+                                            acc[subject].push(quiz);
+                                            return acc;
+                                        }, {} as Record<string, QuizData[]>)
+                                    ).map(([subject, rawQuizzes]) => {
+                                        // Use the first quiz's image or generate a deterministic random image for each subject
+                                        const imageUrl = rawQuizzes[0]?.imageUrl || `https://picsum.photos/seed/${encodeURIComponent(subject)}/600/400`;
+                                        return (
+                                            <div
+                                                key={subject}
+                                                onClick={() => setModalSubject({ subject, quizzes: rawQuizzes })}
+                                                className="group relative h-48 sm:h-56 w-full rounded-3xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl hover:ring-4 ring-sky-500/50 transition-all hover:-translate-y-1.5"
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <div className="h-12 w-1.5 bg-sky-600 rounded-full" />
-                                                    <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
-                                                        <BookOpen className="h-6 w-6 text-sky-500" />
+                                                {/* Background Image */}
+                                                <div 
+                                                    className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                                                    style={{ backgroundImage: `url('${imageUrl}')` }}
+                                                />
+                                                {/* Gradient Overlay */}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 group-hover:from-black/80 transition-colors duration-300" />
+                                                
+                                                {/* Content */}
+                                                <div className="absolute inset-0 p-6 flex flex-col justify-end items-start text-left z-10">
+                                                    <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md text-white flex items-center justify-center mb-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xl">
+                                                        <BookOpen className="h-6 w-6" />
+                                                    </div>
+                                                    
+                                                    <h3 className="text-2xl font-black text-white line-clamp-2 leading-tight mb-2 drop-shadow-md">
                                                         {subject}
-                                                        <span className="text-sm font-bold px-3 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 rounded-xl ml-2">
-                                                            {subjectQuizzes.length}
+                                                    </h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-sky-100 bg-sky-600/80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
+                                                            {rawQuizzes.length} {language === 'vi' ? 'chương/đề' : 'chapters'}
                                                         </span>
-                                                    </h2>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-1 sm:gap-2">
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <AnimatePresence>
+                                    {modalSubject && (
+                                        <motion.div
+                                            className="fixed inset-0 bg-zinc-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            onClick={() => setModalSubject(null)}
+                                        >
+                                            <motion.div
+                                                className="bg-white dark:bg-zinc-900 w-full max-w-5xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border dark:border-zinc-800 relative"
+                                                initial={{ scale: 0.95, y: 20 }}
+                                                animate={{ scale: 1, y: 0 }}
+                                                exit={{ scale: 0.95, y: 20 }}
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                {/* Header */}
+                                                <div className="p-6 md:p-8 border-b dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50 sticky top-0 z-10">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="h-12 w-1.5 bg-sky-600 rounded-full" />
+                                                        <div>
+                                                            <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 mb-1">{modalSubject.subject}</h2>
+                                                            <p className="text-sm font-medium text-zinc-500">
+                                                                {modalSubject.quizzes.length} {language === 'vi' ? 'chương/đề được tìm thấy' : 'chapters found'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 h-10 w-10 shrink-0"
+                                                            onClick={() => setModalSubject(null)}
+                                                        >
+                                                            <X className="h-5 w-5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="px-6 md:px-8 py-4 border-b dark:border-zinc-800 flex flex-wrap gap-3 bg-white dark:bg-zinc-900 z-10">
                                                     <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="rounded-full px-2 sm:px-4 border-sky-200 text-sky-600 hover:bg-sky-50 font-bold flex gap-1 sm:gap-2"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            router.push(`/practice/${encodeURIComponent(subject)}`);
-                                                        }}
+                                                        onClick={() => router.push(`/practice/${encodeURIComponent(modalSubject.subject)}`)}
+                                                        className="bg-sky-600 hover:bg-sky-700 text-white rounded-xl shadow-sm gap-2 h-11 px-6"
                                                     >
-                                                        <Zap className="h-4 w-4 text-yellow-500" />
-                                                        <span className="hidden xs:inline">{language === 'vi' ? 'Luyện tập' : 'Practice'}</span>
-                                                        <span className="xs:hidden">{language === 'vi' ? 'Luyện' : 'Prac'}</span>
+                                                        <Zap className="h-5 w-5 text-yellow-300" />
+                                                        <span className="font-bold">{language === 'vi' ? 'Luyện tập tổng hợp' : 'Practice All'}</span>
                                                     </Button>
                                                     <Button
                                                         variant="outline"
-                                                        size="sm"
-                                                        className="rounded-full px-2 sm:px-4 border-sky-200 text-sky-600 hover:bg-sky-50 font-bold flex gap-1 sm:gap-2"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            router.push(`/mock-exam/${encodeURIComponent(subject)}`);
-                                                        }}
+                                                        onClick={() => router.push(`/mock-exam/${encodeURIComponent(modalSubject.subject)}`)}
+                                                        className="rounded-xl gap-2 border-sky-200 text-sky-600 hover:bg-sky-50 h-11 px-6"
                                                     >
-                                                        <Trophy className="h-4 w-4" />
-                                                        <span className="hidden xs:inline">{language === 'vi' ? 'Thi thử' : 'Mock'}</span>
-                                                        <span className="xs:hidden">{language === 'vi' ? 'Thi' : 'Exam'}</span>
+                                                        <Trophy className="h-5 w-5" />
+                                                        <span className="font-bold">{language === 'vi' ? 'Thi thử toàn môn' : 'Full Mock Exam'}</span>
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 sm:h-10 sm:w-10 text-sky-500 hover:text-sky-600 hover:bg-sky-50 rounded-full"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleShareSubject(subject);
-                                                        }}
+                                                        onClick={() => handleShareSubject(modalSubject.subject)}
+                                                        className="rounded-xl gap-2 text-zinc-500 hover:text-sky-600 hover:bg-sky-50 h-11"
                                                     >
-                                                        <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 sm:h-12 sm:w-12 p-0 text-zinc-400 group-hover/header:bg-sky-50 group-hover/header:text-sky-600 transition-colors">
-                                                        {isExpanded ? <ChevronUp className="h-5 w-5 sm:h-6 sm:w-6" /> : <ChevronDown className="h-5 w-5 sm:h-6 sm:w-6" />}
+                                                        <Share2 className="h-5 w-5" />
+                                                        <span className="hidden sm:inline font-bold">{language === 'vi' ? 'Chia sẻ' : 'Share'}</span>
                                                     </Button>
                                                 </div>
-                                            </div>
 
-                                            <AnimatePresence initial={false}>
-                                                {isExpanded && (
-                                                    <motion.div
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: "auto", opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                                                        className="overflow-hidden"
-                                                    >
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 py-2">
-                                                            <AnimatePresence mode="popLayout">
-                                                                {subjectQuizzes.map(quiz => (
-                                                                    <motion.div
-                                                                        key={quiz.id}
-                                                                        layout
-                                                                        initial={{ opacity: 0, scale: 0.9 }}
-                                                                        animate={{ opacity: 1, scale: 1 }}
-                                                                        exit={{ opacity: 0, scale: 0.9 }}
-                                                                    >
-                                                                        <Card className="h-full border-none shadow-xl shadow-zinc-200/50 dark:shadow-none bg-white dark:bg-zinc-900 rounded-[2.5rem] overflow-hidden group hover:ring-2 ring-sky-500 transition-all duration-300">
-                                                                            <CardHeader className="p-8 pb-4">
-                                                                                <div className="flex justify-between items-start mb-6">
-                                                                                    <div className="w-14 h-14 bg-sky-50 dark:bg-sky-900/30 text-sky-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
-                                                                                        <BookOpen className="h-7 w-7" />
-                                                                                    </div>
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <Button
-                                                                                            variant="ghost"
-                                                                                            size="icon"
-                                                                                            className="h-9 w-9 text-sky-500 hover:text-sky-600 hover:bg-sky-50 rounded-full"
-                                                                                            onClick={(e) => {
-                                                                                                e.stopPropagation();
-                                                                                                quiz.id && handleShare(quiz.id);
-                                                                                            }}
-                                                                                        >
-                                                                                            <Share2 className="h-4 w-4" />
-                                                                                        </Button>
-                                                                                        <div className="px-3 py-1 bg-zinc-50 dark:bg-zinc-800 text-zinc-500 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                                                                            {quiz.questions?.length || 0} {language === 'vi' ? 'CÂU HỎI' : 'QUESTIONS'}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                {quiz.chapter !== undefined && quiz.chapter !== null && (quiz.chapter as any) !== "" && (
-                                                                                    <div className="text-xs font-extrabold text-sky-600 dark:text-sky-400 mb-2 flex items-center gap-1.5">
-                                                                                        <span className="px-2 py-0.5 bg-sky-50 dark:bg-sky-950/40 rounded-md border border-sky-100/50 dark:border-sky-900/30">
-                                                                                            {language === 'vi' ? `Chương ${quiz.chapter}` : `Chapter ${quiz.chapter}`}
-                                                                                        </span>
-                                                                                        {quiz.chapterName && <span className="truncate max-w-[150px]">— {quiz.chapterName}</span>}
-                                                                                    </div>
-                                                                                )}
-                                                                                <CardTitle className="text-xl font-bold line-clamp-2 leading-tight min-h-[56px] group-hover:text-sky-600 transition-colors">
-                                                                                    {quiz.title}
-                                                                                </CardTitle>
-                                                                            </CardHeader>
-                                                                            <CardContent className="px-8 pt-0 flex-1">
-                                                                                <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-3 leading-relaxed mb-6">
-                                                                                    {quiz.description || (language === 'vi' ? "Khóa học này chưa có mô tả chi tiết từ tác giả." : "This course doesn't have a detailed description yet.")}
-                                                                                </p>
-                                                                                <div className="flex items-center gap-2 mb-4">
-                                                                                    <div className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold">
-                                                                                        {quiz.authorName?.[0] || 'A'}
-                                                                                    </div>
-                                                                                    <span className="text-xs text-zinc-400 font-medium">{language === 'vi' ? 'Tác giả' : 'Author'}: {quiz.authorName || (language === 'vi' ? "Ẩn danh" : "Anonymous")}</span>
-                                                                                </div>
-                                                                            </CardContent>
-                                                                            <CardFooter className="p-8 pt-0 flex gap-3">
-                                                                                <Button
-                                                                                    variant="secondary"
-                                                                                    className="flex-1 h-12 rounded-2xl font-bold"
-                                                                                    onClick={() => {
-                                                                                        setSelectedQuiz(quiz);
-                                                                                        setIsDetailsOpen(true);
-                                                                                    }}
-                                                                                >
-                                                                                    {t.common.details}
-                                                                                </Button>
-                                                                                <Link href={`/courses/${quiz.id}`} className="flex-[1.5]">
-                                                                                    <Button className="w-full h-12 gap-2 rounded-2xl bg-sky-600 hover:bg-sky-700 font-bold shadow-lg shadow-sky-500/20">
-                                                                                        {language === 'vi' ? 'Làm bài' : 'Start'} <ArrowRight className="h-4 w-4" />
-                                                                                    </Button>
-                                                                                </Link>
-                                                                            </CardFooter>
-                                                                        </Card>
-                                                                    </motion.div>
-                                                                ))}
-                                                            </AnimatePresence>
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                                {/* Body */}
+                                                <div className="p-6 md:p-8 overflow-y-auto bg-zinc-50/50 dark:bg-zinc-950/50 flex-1">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                        {[...modalSubject.quizzes].sort((a, b) => {
+                                                            const aVal = a.chapter !== undefined && a.chapter !== null && (a.chapter as any) !== "" ? Number(a.chapter) : Infinity;
+                                                            const bVal = b.chapter !== undefined && b.chapter !== null && (b.chapter as any) !== "" ? Number(b.chapter) : Infinity;
+                                                            if (aVal === bVal) return (a.title || "").localeCompare(b.title || "");
+                                                            return aVal - bVal;
+                                                        }).map(quiz => (
+                                                            <Card key={quiz.id} className="border-none shadow-md hover:shadow-xl transition-all duration-300 bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden group hover:ring-2 ring-sky-500/50 flex flex-col relative">
+                                                                {/* Course Thumbnail */}
+                                                                <div 
+                                                                    className="h-32 w-full bg-cover bg-center relative"
+                                                                    style={{ backgroundImage: `url('${quiz.imageUrl || `https://picsum.photos/seed/${quiz.id || encodeURIComponent(quiz.title)}/400/200`}')` }}
+                                                                >
+                                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                                                                    <div className="absolute bottom-3 left-4 right-4 flex justify-between items-end">
+                                                                        {quiz.chapter !== undefined && quiz.chapter !== null && (quiz.chapter as any) !== "" && (
+                                                                            <span className="px-3 py-1 bg-sky-500/90 backdrop-blur-sm text-white text-xs font-black rounded-lg shadow-sm">
+                                                                                {language === 'vi' ? 'CHƯƠNG' : 'CH'} {quiz.chapter}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="px-3 py-1 bg-zinc-900/80 backdrop-blur-sm text-white text-xs font-bold rounded-lg ml-auto shadow-sm">
+                                                                            {quiz.questions?.length || 0} {language === 'vi' ? 'CÂU' : 'QS'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="p-5 flex-1 flex flex-col">
+                                                                    <div className="flex justify-between items-start mb-2">
+                                                                        <h3 className="font-bold text-lg line-clamp-2 leading-snug group-hover:text-sky-600 transition-colors">
+                                                                            {quiz.title}
+                                                                        </h3>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-zinc-400 hover:text-sky-600 hover:bg-sky-50 rounded-full shrink-0 -mt-1 -mr-1"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                quiz.id && handleShare(quiz.id);
+                                                                            }}
+                                                                        >
+                                                                            <Share2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                    <p className="text-sm text-zinc-500 line-clamp-2 mb-4 flex-1">
+                                                                        {quiz.description || (language === 'vi' ? "Không có mô tả" : "No description")}
+                                                                    </p>
+                                                                    <div className="flex gap-2 mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800/50">
+                                                                        <Button 
+                                                                            variant="secondary" 
+                                                                            className="flex-1 rounded-xl text-sm h-10 font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                                                                            onClick={() => {
+                                                                                setSelectedQuiz(quiz);
+                                                                                setIsDetailsOpen(true);
+                                                                            }}
+                                                                        >
+                                                                            {t.common.details}
+                                                                        </Button>
+                                                                        <Link href={`/courses/${quiz.id}`} className="flex-[1.5]">
+                                                                            <Button className="w-full rounded-xl text-sm h-10 bg-sky-600 hover:bg-sky-700 text-white font-bold shadow-md shadow-sky-500/20">
+                                                                                {language === 'vi' ? 'Làm bài' : 'Start'}
+                                                                            </Button>
+                                                                        </Link>
+                                                                    </div>
+                                                                </div>
+                                                            </Card>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </>
                         )}
                     </>
                 )}

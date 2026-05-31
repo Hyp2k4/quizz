@@ -49,6 +49,7 @@ export interface QuizData {
   chapter?: number; // Order/Number of the chapter
   chapterName?: string; // Chapter name
   shuffleOptions?: boolean; // Whether to shuffle options during practice/exam
+  imageUrl?: string; // Cover image URL
 }
 
 
