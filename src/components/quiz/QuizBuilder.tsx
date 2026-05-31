@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Card, CardContent } from "@/components/ui/Card";
 import * as mammoth from "mammoth";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { uploadImageToCloudinary } from "@/services/cloudinaryService";
 import {
     saveQuizToFirestore,
     getQuizById,
@@ -727,12 +728,36 @@ export default function QuizBuilder() {
                         placeholder={t.builder.descPlaceholder}
                         rows={1}
                     />
-                    <Input
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        className="w-full text-center sm:text-left rounded-2xl bg-white dark:bg-zinc-800/80 border-sky-100 dark:border-sky-900/30 focus:ring-sky-500 text-sm font-medium"
-                        placeholder={language === 'vi' ? "URL ảnh bìa (tuỳ chọn)..." : "Cover image URL (optional)..."}
-                    />
+                    <div className="flex items-center gap-2">
+  <Input
+    value={imageUrl}
+    onChange={(e) => setImageUrl(e.target.value)}
+    className="flex-1 text-center sm:text-left rounded-2xl bg-white dark:bg-zinc-800/80 border-sky-100 dark:border-sky-900/30 focus:ring-sky-500 text-sm font-medium"
+    placeholder={language === 'vi' ? "URL ảnh bìa (tuỳ chọn)..." : "Cover image URL (optional)..."}
+  />
+  <label htmlFor="coverImageUpload" className="cursor-pointer">
+    <Upload className="h-5 w-5 text-sky-600" />
+    <input
+      id="coverImageUpload"
+      type="file"
+      accept="image/*"
+      className="hidden"
+      onChange={async (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          try {
+            const url = await uploadImageToCloudinary(file);
+            setImageUrl(url);
+            toast.success(language === 'vi' ? 'Tải ảnh lên thành công!' : 'Image uploaded successfully!');
+          } catch (err) {
+            console.error(err);
+            toast.error(language === 'vi' ? 'Lỗi tải ảnh lên' : 'Upload failed');
+          }
+        }
+      }}
+    />
+  </label>
+</div>
                     <div className="flex items-center gap-2 px-3 pt-2">
                         <input
                             type="checkbox"
