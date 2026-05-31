@@ -20,7 +20,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import {
     Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle,
-    BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap, Check, Lightbulb
+    BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap, Check, Lightbulb, ChevronDown
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
@@ -273,6 +273,17 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [unansweredCount, setUnansweredCount] = useState(0);
+
+    const STORAGE_KEY = `practice_list_open_${subject}`;
+    const [isListOpen, setIsListOpen] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        const stored = localStorage.getItem(STORAGE_KEY);
+        return stored === null ? false : stored === 'true';
+    });
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, String(isListOpen));
+    }, [isListOpen, STORAGE_KEY]);
 
     useEffect(() => {
         async function fetch() {
@@ -561,81 +572,111 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                                            {language === 'vi' ? `Danh sách chương (${quizzes.length})` : `Chapter List (${quizzes.length})`}
-                                        </p>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                if (allSelected) {
-                                                    const noneSelected: Record<string, boolean> = {};
-                                                    quizzes.forEach(q => { if (q.id) noneSelected[q.id] = false; });
-                                                    setSelectedQuizzes(noneSelected);
-                                                } else {
-                                                    const allSelected: Record<string, boolean> = {};
-                                                    quizzes.forEach(q => { if (q.id) allSelected[q.id] = true; });
-                                                    setSelectedQuizzes(allSelected);
-                                                }
-                                            }}
-                                            className="text-xs font-bold text-sky-600 hover:text-sky-700 h-8 px-3 rounded-xl hover:bg-sky-50 dark:hover:bg-sky-950/20"
-                                        >
-                                            {allSelected
-                                                ? (language === 'vi' ? 'Bỏ chọn tất cả' : 'Deselect All')
-                                                : (language === 'vi' ? 'Chọn tất cả' : 'Select All')}
-                                        </Button>
-                                    </div>
-
-                                    {/* Chapters Checklist */}
-                                    <div className="max-h-[300px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800">
-                                        {quizzes.map((quiz) => {
-                                            const validCount = quiz.questions?.filter((q: any) =>
-                                                q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
-                                            ).length || 0;
-                                            const isChecked = !!selectedQuizzes[quiz.id!];
-
-                                            return (
-                                                <motion.div
-                                                    key={quiz.id}
-                                                    whileHover={{ scale: 1.01 }}
-                                                    onClick={() => {
-                                                        setSelectedQuizzes(prev => ({
-                                                            ...prev,
-                                                            [quiz.id!]: !prev[quiz.id!]
-                                                        }));
+                                    {/* Collapsible header */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsListOpen(prev => !prev)}
+                                        className="w-full flex items-center justify-between group rounded-2xl px-4 py-3 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all border border-zinc-100 dark:border-zinc-800"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <BookOpen className="h-4 w-4 text-sky-500" />
+                                            <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
+                                                {language === 'vi' ? `Danh sách chương (${selectedCount}/${quizzes.length} đã chọn)` : `Chapters (${selectedCount}/${quizzes.length} selected)`}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {isListOpen && (
+                                                <span
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (allSelected) {
+                                                            const noneSelected: Record<string, boolean> = {};
+                                                            quizzes.forEach(q => { if (q.id) noneSelected[q.id] = false; });
+                                                            setSelectedQuizzes(noneSelected);
+                                                        } else {
+                                                            const allSel: Record<string, boolean> = {};
+                                                            quizzes.forEach(q => { if (q.id) allSel[q.id] = true; });
+                                                            setSelectedQuizzes(allSel);
+                                                        }
                                                     }}
-                                                    className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer select-none ${isChecked
-                                                            ? 'border-sky-500 bg-sky-50/50 dark:bg-sky-900/20'
-                                                            : 'border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
-                                                        }`}
+                                                    className="text-xs font-bold text-sky-600 hover:text-sky-700 px-3 py-1 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-950/20 transition-all"
                                                 >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${isChecked
-                                                                ? 'bg-sky-500 border-sky-500 text-white'
-                                                                : 'border-zinc-300 dark:border-zinc-700'
-                                                            }`}>
-                                                            {isChecked && <Check className="w-4 h-4 stroke-[3px]" />}
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <BookOpen className="h-4 w-4 text-sky-500 shrink-0" />
-                                                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100 line-clamp-1 flex items-center gap-1">
-                                                                {quiz.chapter !== undefined && quiz.chapter !== null && (quiz.chapter as any) !== "" ? (
-                                                                    <span className="text-sky-600 dark:text-sky-400 font-extrabold mr-1 shrink-0">
-                                                                        [{language === 'vi' ? `Chương ${quiz.chapter}` : `Ch ${quiz.chapter}`}]
-                                                                    </span>
-                                                                ) : null}
-                                                                <span>{quiz.title}</span>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-xs font-semibold px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 rounded-lg shrink-0">
-                                                        {validCount} {language === 'vi' ? 'câu' : 'qs'}
-                                                    </span>
-                                                </motion.div>
-                                            );
-                                        })}
-                                    </div>
+                                                    {allSelected
+                                                        ? (language === 'vi' ? 'Bỏ tất cả' : 'Deselect All')
+                                                        : (language === 'vi' ? 'Chọn tất cả' : 'Select All')}
+                                                </span>
+                                            )}
+                                            <motion.div
+                                                animate={{ rotate: isListOpen ? 180 : 0 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                <ChevronDown className="h-4 w-4 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors" />
+                                            </motion.div>
+                                        </div>
+                                    </button>
+
+                                    {/* Chapters Checklist — collapsible */}
+                                    <AnimatePresence initial={false}>
+                                        {isListOpen && (
+                                            <motion.div
+                                                key="chapter-list"
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                                style={{ overflow: 'hidden' }}
+                                            >
+                                                <div className="max-h-[300px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800">
+                                                    {quizzes.map((quiz) => {
+                                                        const validCount = quiz.questions?.filter((q: any) =>
+                                                            q.type === 'open' || (q.correctAnswer && q.correctAnswer.length > 0)
+                                                        ).length || 0;
+                                                        const isChecked = !!selectedQuizzes[quiz.id!];
+
+                                                        return (
+                                                            <motion.div
+                                                                key={quiz.id}
+                                                                whileHover={{ scale: 1.01 }}
+                                                                onClick={() => {
+                                                                    setSelectedQuizzes(prev => ({
+                                                                        ...prev,
+                                                                        [quiz.id!]: !prev[quiz.id!]
+                                                                    }));
+                                                                }}
+                                                                className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer select-none ${isChecked
+                                                                        ? 'border-sky-500 bg-sky-50/50 dark:bg-sky-900/20'
+                                                                        : 'border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-zinc-200 dark:hover:border-zinc-700'
+                                                                    }`}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${isChecked
+                                                                            ? 'bg-sky-500 border-sky-500 text-white'
+                                                                            : 'border-zinc-300 dark:border-zinc-700'
+                                                                        }`}>
+                                                                        {isChecked && <Check className="w-4 h-4 stroke-[3px]" />}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <BookOpen className="h-4 w-4 text-sky-500 shrink-0" />
+                                                                        <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100 line-clamp-1 flex items-center gap-1">
+                                                                            {quiz.chapter !== undefined && quiz.chapter !== null && (quiz.chapter as any) !== "" ? (
+                                                                                <span className="text-sky-600 dark:text-sky-400 font-extrabold mr-1 shrink-0">
+                                                                                    [{language === 'vi' ? `Chương ${quiz.chapter}` : `Ch ${quiz.chapter}`}]
+                                                                                </span>
+                                                                            ) : null}
+                                                                            <span>{quiz.title}</span>
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <span className="text-xs font-semibold px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 rounded-lg shrink-0">
+                                                                    {validCount} {language === 'vi' ? 'câu' : 'qs'}
+                                                                </span>
+                                                            </motion.div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
 
                                     {/* Selection Info Box */}
                                     <div className="p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-100 dark:border-zinc-800 space-y-3">
