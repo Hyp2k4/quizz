@@ -25,6 +25,8 @@ import {
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 import { Character, Expression } from "@/components/character/Character";
+import { getOpenGradingConfig } from "@/services/openGradingService";
+import { gradeOpenAnswer } from "@/utils/openGrading";
 
 // Helper to compare arrays
 const arraysEqual = (a: any[], b: any[]) => {
@@ -62,22 +64,8 @@ function PracticeQuestion({
     const isCorrect = isRevealed ? (() => {
         if (isMultiple) return arraysEqual(selected, question.correctAnswer);
         if (!isOpen) return (question.correctAnswer || []).includes(selected);
-
-        const uStr = (selected as string || "").trim().toLowerCase();
         const cStr = Array.isArray(question.correctAnswer) ? (question.correctAnswer[0] || "") : (question.correctAnswer || "");
-        const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-        const cWords = cStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-        if (cWords.length === 0) return uWords.length === 0;
-        let matches = 0;
-        const cWordsTemp = [...cWords];
-        uWords.forEach(w => {
-            const idx = cWordsTemp.indexOf(w);
-            if (idx !== -1) {
-                matches++;
-                cWordsTemp.splice(idx, 1);
-            }
-        });
-        return (matches / cWords.length) >= 0.5;
+        return gradeOpenAnswer((selected as string) || "", cStr, (question.__openCfg as any) || undefined).isCorrect;
     })() : undefined;
 
     return (
@@ -112,7 +100,10 @@ function PracticeQuestion({
                                                     {(() => {
                                                         const uStr = selected as string || "";
                                                         const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
-                                                        const cWords = cStr.toLowerCase().split(/\s+/).filter(Boolean);
+                                                        const res = gradeOpenAnswer(uStr, cStr, (question.__openCfg as any) || undefined);
+                                                        const cWords = res.matchedModelTokens.length || res.missingModelTokens.length
+                                                            ? [...res.matchedModelTokens, ...res.missingModelTokens]
+                                                            : [];
                                                         if (!uStr.trim()) return <span className="italic text-zinc-400">{language === 'vi' ? '(Không có câu trả lời)' : '(No answer)'}</span>;
                                                         return uStr.split(/(\s+)/).map((wordOrSpace, idx) => {
                                                             if (!wordOrSpace.trim()) return <span key={idx}>{wordOrSpace}</span>;
@@ -130,15 +121,8 @@ function PracticeQuestion({
                                                     {language === 'vi' ? 'Tỉ lệ khớp:' : 'Match rate:'} {(() => {
                                                         const uStr = selected as string || "";
                                                         const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
-                                                        const cWords = cStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                                                        const uWords = uStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                                                        let matches = 0;
-                                                        const cWordsTemp = [...cWords];
-                                                        uWords.forEach(w => {
-                                                            const idx = cWordsTemp.indexOf(w);
-                                                            if (idx !== -1) { matches++; cWordsTemp.splice(idx, 1); }
-                                                        });
-                                                        return cWords.length > 0 ? Math.round((matches / cWords.length) * 100) : 0;
+                                                        const res = gradeOpenAnswer(uStr, cStr, (question.__openCfg as any) || undefined);
+                                                        return Math.round(res.matchRatio * 100);
                                                     })()}%
                                                 </p>
                                             </div>
@@ -297,6 +281,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [unansweredCount, setUnansweredCount] = useState(0);
+    const [openGradingCfg, setOpenGradingCfg] = useState<any>(null);
 
     const STORAGE_KEY = `practice_list_open_${subject}`;
     const [isListOpen, setIsListOpen] = useState<boolean>(() => {
@@ -308,6 +293,10 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, String(isListOpen));
     }, [isListOpen, STORAGE_KEY]);
+
+    useEffect(() => {
+        getOpenGradingConfig().then(setOpenGradingCfg).catch(() => {});
+    }, []);
 
     useEffect(() => {
         async function fetch() {
@@ -373,7 +362,8 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
         // Take 40 questions (or less if total is less than 40)
         const practiceQuestions = shuffled.slice(0, 40);
 
-        setQuestions(practiceQuestions.filter(Boolean));
+        // attach open grading config for open questions (so PracticeQuestion can access without prop drilling)
+        setQuestions(practiceQuestions.filter(Boolean).map(q => q?.type === 'open' ? ({ ...q, __openCfg: openGradingCfg }) : q));
         setIsStarted(true);
     };
 
@@ -387,24 +377,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
         if (q.type === 'multiple') isCorrect = arraysEqual(userAns as string[], correctArr);
         else if (q.type === 'single') isCorrect = correctArr.includes(userAns as string);
         else {
-            const uStr = (userAns as string || "").trim().toLowerCase();
-            const cStr = (correctArr[0] as string || "").trim().toLowerCase();
-            const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-            const cWords = cStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-            if (cWords.length === 0) {
-                isCorrect = uWords.length === 0;
-            } else {
-                let matches = 0;
-                const cWordsTemp = [...cWords];
-                uWords.forEach(w => {
-                    const idx = cWordsTemp.indexOf(w);
-                    if (idx !== -1) {
-                        matches++;
-                        cWordsTemp.splice(idx, 1);
-                    }
-                });
-                isCorrect = (matches / cWords.length) >= 0.5;
-            }
+            isCorrect = gradeOpenAnswer((userAns as string) || "", (correctArr[0] as string) || "", openGradingCfg || undefined).isCorrect;
         }
 
         setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }));
@@ -441,24 +414,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
             if (q.type === 'multiple') isCorrect = arraysEqual(userAns as string[], correctArr);
             else if (q.type === 'single') isCorrect = correctArr.includes(userAns as string);
             else {
-                const uStr = (userAns as string || "").trim().toLowerCase();
-                const cStr = (correctArr[0] as string || "").trim().toLowerCase();
-                const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                const cWords = cStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                if (cWords.length === 0) {
-                    isCorrect = uWords.length === 0;
-                } else {
-                    let matches = 0;
-                    const cWordsTemp = [...cWords];
-                    uWords.forEach(w => {
-                        const idx = cWordsTemp.indexOf(w);
-                        if (idx !== -1) {
-                            matches++;
-                            cWordsTemp.splice(idx, 1);
-                        }
-                    });
-                    isCorrect = (matches / cWords.length) >= 0.5;
-                }
+                isCorrect = gradeOpenAnswer((userAns as string) || "", (correctArr[0] as string) || "", openGradingCfg || undefined).isCorrect;
             }
 
             if (isCorrect) {
@@ -481,24 +437,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                 if (q.type === 'multiple') isCorrect = arraysEqual(userAns as string[], correctArr);
                 else if (q.type === 'single') isCorrect = correctArr.includes(userAns as string);
                 else {
-                    const uStr = (userAns as string || "").trim().toLowerCase();
-                    const cStr = (correctArr[0] as string || "").trim().toLowerCase();
-                    const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                    const cWords = cStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                    if (cWords.length === 0) {
-                        isCorrect = uWords.length === 0;
-                    } else {
-                        let matches = 0;
-                        const cWordsTemp = [...cWords];
-                        uWords.forEach(w => {
-                            const idx = cWordsTemp.indexOf(w);
-                            if (idx !== -1) {
-                                matches++;
-                                cWordsTemp.splice(idx, 1);
-                            }
-                        });
-                        isCorrect = (matches / cWords.length) >= 0.5;
-                    }
+                    isCorrect = gradeOpenAnswer((userAns as string) || "", (correctArr[0] as string) || "", openGradingCfg || undefined).isCorrect;
                 }
                 return { question: q, isCorrect };
             });

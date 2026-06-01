@@ -16,6 +16,8 @@ import { Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle, Flame, Zap, Lock
 import confetti from "canvas-confetti";
 import { Character, Expression } from "@/components/character/Character";
 import { motion, AnimatePresence } from "framer-motion";
+import { getOpenGradingConfig } from "@/services/openGradingService";
+import { gradeOpenAnswer } from "@/utils/openGrading";
 
 
 import { doc, updateDoc } from "firebase/firestore";
@@ -408,6 +410,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const [wrongQuestionIndices, setWrongQuestionIndices] = useState<number[]>([]);
     const [isRetakeMode, setIsRetakeMode] = useState(false);
     const [originalQuestions, setOriginalQuestions] = useState<any[]>([]);
+    const [openGradingCfg, setOpenGradingCfg] = useState<any>(null);
 
     // Access Check
     const hasAccess = !!user || !!guestName;
@@ -416,6 +419,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     useEffect(() => {
         async function fetch() {
             try {
+                // load open grading config once per page
+                getOpenGradingConfig().then(setOpenGradingCfg).catch(() => {});
                 if (id) {
                     const data = await getQuizById(id);
                     if (data) {
@@ -567,7 +572,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             } else if (q.type === 'single') {
                 isItemCorrect = correctArr.includes(userAns as string);
             } else {
-                isItemCorrect = (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+                const res = gradeOpenAnswer(
+                    (userAns as string) || "",
+                    (correctArr[0] as string) || "",
+                    openGradingCfg || undefined
+                );
+                isItemCorrect = res.isCorrect;
             }
 
             if (isItemCorrect) {
@@ -1048,7 +1058,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                             } else if (q.type === 'single') {
                                                 return correctArr.includes(userAns as string);
                                             } else {
-                                                return (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+                                                return gradeOpenAnswer(
+                                                    (userAns as string) || "",
+                                                    (correctArr[0] as string) || "",
+                                                    openGradingCfg || undefined
+                                                ).isCorrect;
                                             }
                                         })()}
                                         onReport={() => {
@@ -1114,7 +1128,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             } else if (q.type === 'single') {
                                 isCorrect = correctArr.includes(userAns as string);
                             } else {
-                                isCorrect = (userAns as string || "").trim().toLowerCase() === (correctArr[0] as string || "").trim().toLowerCase();
+                                isCorrect = gradeOpenAnswer(
+                                    (userAns as string) || "",
+                                    (correctArr[0] as string) || "",
+                                    openGradingCfg || undefined
+                                ).isCorrect;
                             }
 
                             return (

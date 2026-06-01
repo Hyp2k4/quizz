@@ -11,6 +11,7 @@ import {
     getCountFromServer
 } from "firebase/firestore";
 import { QuizData } from "./quizService";
+import { OpenGradingConfig, DEFAULT_OPEN_GRADING_CONFIG } from "@/utils/openGrading";
 
 export interface UserProfile {
     uid: string;
@@ -55,4 +56,31 @@ export const getSystemStats = async () => {
         totalQuizzes: quizzesCount.data().count,
         totalResults: resultsCount.data().count
     };
+};
+
+const OPEN_GRADING_DOC_PATH = { col: "system_config", doc: "open_grading" } as const;
+
+export const getOpenGradingConfigAdmin = async (): Promise<OpenGradingConfig> => {
+    const ref = doc(db, OPEN_GRADING_DOC_PATH.col, OPEN_GRADING_DOC_PATH.doc);
+    const snap = await (await import("firebase/firestore")).getDoc(ref);
+    if (!snap.exists()) return DEFAULT_OPEN_GRADING_CONFIG;
+    const data = snap.data() as Partial<OpenGradingConfig>;
+    return { ...DEFAULT_OPEN_GRADING_CONFIG, ...data };
+};
+
+export const updateOpenGradingConfigAdmin = async (config: Partial<OpenGradingConfig>) => {
+    const ref = doc(db, OPEN_GRADING_DOC_PATH.col, OPEN_GRADING_DOC_PATH.doc);
+    const { setDoc, serverTimestamp } = await import("firebase/firestore");
+    await setDoc(ref, { ...config, updatedAt: serverTimestamp() } as any, { merge: true });
+};
+
+export const ensureOpenGradingConfigAdmin = async () => {
+    const ref = doc(db, OPEN_GRADING_DOC_PATH.col, OPEN_GRADING_DOC_PATH.doc);
+    const { getDoc, setDoc, serverTimestamp } = await import("firebase/firestore");
+    const snap = await getDoc(ref);
+    if (snap.exists()) return;
+    await setDoc(ref, {
+        ...DEFAULT_OPEN_GRADING_CONFIG,
+        updatedAt: serverTimestamp()
+    } as any);
 };

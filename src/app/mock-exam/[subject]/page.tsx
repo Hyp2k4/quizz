@@ -23,6 +23,8 @@ import {
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 import { Character, Expression } from "@/components/character/Character";
+import { getOpenGradingConfig } from "@/services/openGradingService";
+import { gradeOpenAnswer } from "@/utils/openGrading";
 
 // Helper to format time for countdown (MM:SS)
 const formatCountdown = (seconds: number) => {
@@ -205,6 +207,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
     const [score, setScore] = useState(0);
     const [leaderboard, setLeaderboard] = useState<any[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [openGradingCfg, setOpenGradingCfg] = useState<any>(null);
 
     const allSelected = quizzes.length > 0 && quizzes.every(q => selectedQuizzes[q.id!]);
     const selectedCount = Object.values(selectedQuizzes).filter(Boolean).length;
@@ -259,6 +262,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
         async function fetch() {
             setLoading(true);
             try {
+                getOpenGradingConfig().then(setOpenGradingCfg).catch(() => {});
                 const subjectQuizzes = await getQuizzesBySubject(subject, undefined, 100);
                 const sortedQuizzes = [...subjectQuizzes].sort((a, b) => {
                     const aVal = a.chapter !== undefined && a.chapter !== null && (a.chapter as any) !== "" ? Number(a.chapter) : Infinity;
@@ -309,26 +313,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
             if (q.type === 'multiple') isItemCorrect = arraysEqual(userAns as string[], correctArr);
             else if (q.type === 'single') isItemCorrect = correctArr.includes(userAns as string);
             else {
-                const uStr = (userAns as string || "").trim().toLowerCase();
-                const cStr = (correctArr[0] as string || "").trim().toLowerCase();
-                const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                const cWords = cStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                
-                if (cWords.length === 0) {
-                    isItemCorrect = uWords.length === 0;
-                } else {
-                    let matches = 0;
-                    const cWordsTemp = [...cWords];
-                    uWords.forEach(w => {
-                        const idx = cWordsTemp.indexOf(w);
-                        if (idx !== -1) {
-                            matches++;
-                            cWordsTemp.splice(idx, 1);
-                        }
-                    });
-                    const ratio = matches / cWords.length;
-                    isItemCorrect = ratio >= 0.5; // Consider correct if >= 50% words match
-                }
+                isItemCorrect = gradeOpenAnswer((userAns as string) || "", (correctArr[0] as string) || "", openGradingCfg || undefined).isCorrect;
             }
 
             if (isItemCorrect) calculatedScore++;
@@ -640,21 +625,9 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                             isCorrect={isSubmitted ? (() => {
                                 if (q.type === 'multiple') return arraysEqual(answers[i], q.correctAnswer);
                                 if (q.type === 'single') return (q.correctAnswer || []).includes(answers[i]);
-                                const uStr = (answers[i] || "").trim().toLowerCase();
+                                const uStr = (answers[i] || "");
                                 const cStr = Array.isArray(q.correctAnswer) ? (q.correctAnswer[0] || "") : (q.correctAnswer || "");
-                                const uWords = uStr.replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                                const cWords = cStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
-                                if (cWords.length === 0) return uWords.length === 0;
-                                let matches = 0;
-                                const cWordsTemp = [...cWords];
-                                uWords.forEach((w: string) => {
-                                    const idx = cWordsTemp.indexOf(w);
-                                    if (idx !== -1) {
-                                        matches++;
-                                        cWordsTemp.splice(idx, 1);
-                                    }
-                                });
-                                return (matches / cWords.length) >= 0.5;
+                                return gradeOpenAnswer(uStr, cStr, openGradingCfg || undefined).isCorrect;
                             })() : undefined}
                             language={language}
                         />

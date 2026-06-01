@@ -11,6 +11,9 @@ import {
     getSystemStats,
     updateUserRole,
     deleteUserAdmin,
+    ensureOpenGradingConfigAdmin,
+    getOpenGradingConfigAdmin,
+    updateOpenGradingConfigAdmin,
     UserProfile
 } from "@/services/adminService";
 import { deleteQuiz, QuizData } from "@/services/quizService";
@@ -32,18 +35,21 @@ import {
     UserCircle
 } from "lucide-react";
 import { toast } from "sonner";
+import { OpenGradingConfig } from "@/utils/openGrading";
 
 export default function AdminDashboardPage() {
     const { user, isAdmin, loading: authLoading } = useAuth();
     const { t, language } = useLanguage();
     const router = useRouter();
 
-    const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'quizzes'>('stats');
+    const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'quizzes' | 'grading'>('stats');
     const [stats, setStats] = useState<any>(null);
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [quizzes, setQuizzes] = useState<QuizData[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [openCfg, setOpenCfg] = useState<OpenGradingConfig | null>(null);
+    const [savingCfg, setSavingCfg] = useState(false);
 
     useEffect(() => {
         if (!authLoading && (!user || !isAdmin)) {
@@ -57,6 +63,7 @@ export default function AdminDashboardPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
+            await ensureOpenGradingConfigAdmin();
             const [s, u, q] = await Promise.all([
                 getSystemStats(),
                 getAllUsers(),
@@ -65,6 +72,14 @@ export default function AdminDashboardPage() {
             setStats(s);
             setUsers(u);
             setQuizzes(q);
+
+            // Load grading config (admin-only)
+            try {
+                const cfg = await getOpenGradingConfigAdmin();
+                setOpenCfg(cfg);
+            } catch (e) {
+                console.error(e);
+            }
         } catch (error) {
             console.error("Error fetching admin data:", error);
             toast.error("Failed to load dashboard data");
@@ -157,6 +172,12 @@ export default function AdminDashboardPage() {
                             {t.admin.quizzes}
                         </button>
                         <button
+                            onClick={() => setActiveTab('grading')}
+                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'grading' ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                        >
+                            {language === 'vi' ? 'Chấm tự luận' : 'Open grading'}
+                        </button>
+                        <button
                             onClick={() => router.push('/admin/chat')}
                             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800`}
                         >
@@ -207,6 +228,195 @@ export default function AdminDashboardPage() {
                                     </div>
                                     Learning progress
                                 </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {activeTab === 'grading' && (
+                    <div className="max-w-3xl">
+                        <Card className="border-none bg-white dark:bg-zinc-900/70 rounded-[32px] shadow-xl">
+                            <CardContent className="p-8 space-y-8">
+                                <div className="space-y-2">
+                                    <h2 className="text-2xl font-black">
+                                        {language === 'vi' ? 'Cấu hình chấm câu tự luận' : 'Open-ended grading settings'}
+                                    </h2>
+                                    <p className="text-sm text-[rgb(var(--muted-foreground))]">
+                                        {language === 'vi'
+                                            ? 'Thiết lập mức độ “gần đúng” cho câu tự luận (áp dụng toàn hệ thống).'
+                                            : 'Tune how “close enough” open answers are (system-wide).'}
+                                    </p>
+                                </div>
+
+                                {!openCfg ? (
+                                    <div className="text-sm text-zinc-500">{t.common.loading}</div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                                                    {language === 'vi' ? 'Chế độ' : 'Mode'}
+                                                </label>
+                                                <select
+                                                    value={openCfg.mode}
+                                                    onChange={(e) => setOpenCfg(prev => prev ? ({ ...prev, mode: e.target.value as any }) : prev)}
+                                                    className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border border-[rgb(var(--border))] font-bold outline-none focus:ring-2 ring-sky-500/20"
+                                                >
+                                                    <option value="strict">{language === 'vi' ? 'Khắt khe (strict)' : 'Strict'}</option>
+                                                    <option value="normal">{language === 'vi' ? 'Bình thường (normal)' : 'Normal'}</option>
+                                                    <option value="lenient">{language === 'vi' ? 'Dễ (lenient)' : 'Lenient'}</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                                                    {language === 'vi' ? 'Ngưỡng đúng (match ratio)' : 'Correct threshold (match ratio)'}
+                                                </label>
+                                                <div className="flex items-center gap-4">
+                                                    <input
+                                                        type="range"
+                                                        min={0.1}
+                                                        max={0.95}
+                                                        step={0.05}
+                                                        value={openCfg.matchRatioThreshold}
+                                                        onChange={(e) => setOpenCfg(prev => prev ? ({ ...prev, matchRatioThreshold: Number(e.target.value) }) : prev)}
+                                                        className="flex-1"
+                                                    />
+                                                    <span className="w-16 text-right font-mono font-black text-sky-600">
+                                                        {Math.round(openCfg.matchRatioThreshold * 100)}%
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-[rgb(var(--muted-foreground))]">
+                                                    {language === 'vi'
+                                                        ? 'Tỉ lệ từ/ý khớp so với đáp án mẫu để tính là đúng.'
+                                                        : 'How much should match the model answer to be considered correct.'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-3">
+                                                <label className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                                                    {language === 'vi' ? 'Chuẩn hoá tiếng Việt' : 'Vietnamese normalization'}
+                                                </label>
+                                                <label className="flex items-center gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border border-[rgb(var(--border))]">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={openCfg.ignoreDiacritics}
+                                                        onChange={(e) => setOpenCfg(prev => prev ? ({ ...prev, ignoreDiacritics: e.target.checked }) : prev)}
+                                                        className="w-4 h-4"
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="font-black text-sm">{language === 'vi' ? 'Bỏ dấu khi so khớp' : 'Ignore diacritics'}</p>
+                                                        <p className="text-xs text-[rgb(var(--muted-foreground))] truncate">
+                                                            {language === 'vi' ? 'Ví dụ: "quy dong" ≈ "quy đồng"' : 'Example: "quy dong" ≈ "quy đồng"'}
+                                                        </p>
+                                                    </div>
+                                                </label>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <label className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                                                    {language === 'vi' ? 'Fuzzy chính tả' : 'Typo tolerance'}
+                                                </label>
+                                                <label className="flex items-center gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border border-[rgb(var(--border))]">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={openCfg.enableFuzzy}
+                                                        onChange={(e) => setOpenCfg(prev => prev ? ({ ...prev, enableFuzzy: e.target.checked }) : prev)}
+                                                        className="w-4 h-4"
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="font-black text-sm">{language === 'vi' ? 'Cho phép sai chính tả nhẹ' : 'Allow small typos'}</p>
+                                                        <p className="text-xs text-[rgb(var(--muted-foreground))]">
+                                                            {language === 'vi' ? 'Chỉ áp dụng cho từ dài.' : 'Only applied to longer tokens.'}
+                                                        </p>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                                                    {language === 'vi' ? 'Sai tối đa (edit distance)' : 'Max edit distance'}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={2}
+                                                    step={1}
+                                                    value={openCfg.maxEditDistance}
+                                                    onChange={(e) => setOpenCfg(prev => prev ? ({ ...prev, maxEditDistance: Number(e.target.value) }) : prev)}
+                                                    className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border border-[rgb(var(--border))] font-bold outline-none focus:ring-2 ring-sky-500/20"
+                                                    disabled={!openCfg.enableFuzzy}
+                                                />
+                                                <p className="text-xs text-[rgb(var(--muted-foreground))]">
+                                                    {language === 'vi' ? '0 = không fuzzy, 1 = sai 1 ký tự.' : '0 disables fuzzy, 1 allows 1 char off.'}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                                                    {language === 'vi' ? 'Chỉ fuzzy với từ dài ≥' : 'Only fuzzy if token length ≥'}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min={3}
+                                                    max={12}
+                                                    step={1}
+                                                    value={openCfg.minTokenLengthForFuzzy}
+                                                    onChange={(e) => setOpenCfg(prev => prev ? ({ ...prev, minTokenLengthForFuzzy: Number(e.target.value) }) : prev)}
+                                                    className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border border-[rgb(var(--border))] font-bold outline-none focus:ring-2 ring-sky-500/20"
+                                                    disabled={!openCfg.enableFuzzy}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-end gap-3 pt-2">
+                                            <Button
+                                                variant="outline"
+                                                className="rounded-2xl h-12 px-6 font-black"
+                                                onClick={async () => {
+                                                    try {
+                                                        const cfg = await getOpenGradingConfigAdmin();
+                                                        setOpenCfg(cfg);
+                                                        toast.success(language === 'vi' ? "Đã tải lại cấu hình" : "Config reloaded");
+                                                    } catch {
+                                                        toast.error(language === 'vi' ? "Không tải được cấu hình" : "Failed to reload");
+                                                    }
+                                                }}
+                                            >
+                                                {language === 'vi' ? 'Tải lại' : 'Reload'}
+                                            </Button>
+                                            <Button
+                                                className="rounded-2xl h-12 px-8 font-black bg-sky-600 hover:bg-sky-700"
+                                                disabled={savingCfg}
+                                                onClick={async () => {
+                                                    if (!openCfg) return;
+                                                    setSavingCfg(true);
+                                                    try {
+                                                        await updateOpenGradingConfigAdmin({
+                                                            mode: openCfg.mode,
+                                                            matchRatioThreshold: openCfg.matchRatioThreshold,
+                                                            ignoreDiacritics: openCfg.ignoreDiacritics,
+                                                            enableFuzzy: openCfg.enableFuzzy,
+                                                            maxEditDistance: openCfg.maxEditDistance,
+                                                            minTokenLengthForFuzzy: openCfg.minTokenLengthForFuzzy
+                                                        });
+                                                        toast.success(language === 'vi' ? "Đã lưu cấu hình chấm tự luận" : "Saved open grading config");
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                        toast.error(language === 'vi' ? "Lưu thất bại" : "Save failed");
+                                                    } finally {
+                                                        setSavingCfg(false);
+                                                    }
+                                                }}
+                                            >
+                                                {savingCfg ? (language === 'vi' ? 'Đang lưu...' : 'Saving...') : (language === 'vi' ? 'Lưu cấu hình' : 'Save')}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </div>
