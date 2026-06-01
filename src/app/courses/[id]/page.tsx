@@ -219,9 +219,11 @@ function QuestionTaker({
                                                 checked={!!isSelected}
                                                 onChange={() => {
                                                     if (!showResult) {
-                                                        onChange(opt);
-                                                        if (!isMultiple && onCheck) {
-                                                            onCheck(opt);
+                                                        if (isMultiple) {
+                                                            handleMultiChange(opt, !isSelected);
+                                                        } else {
+                                                            onChange(opt);
+                                                            if (onCheck) onCheck(opt);
                                                         }
                                                     }
                                                 }}
@@ -242,6 +244,27 @@ function QuestionTaker({
                                 })
                             )}
                         </div>
+
+                        {showResult && !isOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-6 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
+                            >
+                                <div className="flex items-center gap-2 mb-2 text-indigo-600 dark:text-indigo-400 font-bold text-sm">
+                                    <AlertCircle className="h-4 w-4" />
+                                    {language === 'vi' ? 'Đáp án đúng' : 'Correct answer'}
+                                </div>
+                                <div className="text-sm space-y-2">
+                                    <p className="font-semibold">
+                                        {Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : question.correctAnswer}
+                                    </p>
+                                    {question.explanation && (
+                                        <p className="text-zinc-600 dark:text-zinc-400 italic">"{question.explanation}"</p>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
 
                         {question.hint && !showResult && (
                             <div className="mt-4">
@@ -798,8 +821,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 <h2 className="text-2xl font-black mb-2">{language === 'vi' ? 'Bạn đã sẵn sàng chưa?' : 'Are you ready?'}</h2>
                 <p className="text-[rgb(var(--muted-foreground))] leading-relaxed">
                     {language === 'vi'
-                        ? `Bài trắc nghiệm "${quiz.title}" đang chờ bạn chinh phục. Bạn sẽ biết ngay kết quả sau mỗi câu trả lời!`
-                        : `The quiz "${quiz.title}" is waiting for you. You will see the results after each answer!`
+                        ? `Bài trắc nghiệm "${quiz.title}" đang chờ bạn chinh phục. Kết quả đúng/sai sẽ hiển thị sau khi bạn nộp bài.`
+                        : `The quiz "${quiz.title}" is waiting for you. Correct/incorrect results will be shown after you submit.`
                     }
                 </p>
             </div>
@@ -1012,11 +1035,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                             handleAnswer(currentQuestionIndex, val);
                                         }}
                                         readOnly={isSubmitted}
-                                        isRevealed={revealed[currentQuestionIndex]}
+                                        isRevealed={!!revealed[currentQuestionIndex]}
                                         isCorrect={(() => {
                                             const q = quiz.questions[currentQuestionIndex];
                                             const userAns = answers[currentQuestionIndex];
-                                            if (userAns === undefined) return undefined;
+                                            const shouldShow = isSubmitted || !!revealed[currentQuestionIndex];
+                                            if (!shouldShow) return undefined;
+                                            if (userAns === undefined) return false;
                                             const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
                                             if (q.type === 'multiple') {
                                                 return arraysEqual(userAns as string[], correctArr);
@@ -1052,10 +1077,18 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     
                                     {currentQuestionIndex < quiz.questions.length - 1 ? (
                                         <Button
-                                            onClick={() => setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1))}
+                                            onClick={() => {
+                                                if (!revealed[currentQuestionIndex]) {
+                                                    setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }));
+                                                    return;
+                                                }
+                                                setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1));
+                                            }}
                                             className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
                                         >
-                                            {language === 'vi' ? 'Tiếp theo' : 'Next'}
+                                            {!revealed[currentQuestionIndex]
+                                                ? (language === 'vi' ? 'Tiếp theo (hiện đáp án)' : 'Next (show answer)')
+                                                : (language === 'vi' ? 'Tiếp theo' : 'Next')}
                                             <ArrowLeft className="h-5 w-5 ml-1 rotate-180 hidden sm:block" />
                                         </Button>
                                     ) : (

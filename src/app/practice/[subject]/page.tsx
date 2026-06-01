@@ -104,31 +104,30 @@ function PracticeQuestion({
                             {isOpen ? (
                                 <div className="space-y-3">
                                     {isRevealed ? (
-                                        <div className="w-full p-4 rounded-xl border bg-white dark:bg-black/20 min-h-[120px]">
-                                            <p className="mb-4 text-zinc-800 dark:text-zinc-200 text-base leading-relaxed">
-                                                {(() => {
-                                                    const uStr = selected as string || "";
-                                                    const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
-                                                    const cWords = cStr.toLowerCase().split(/\s+/).filter(Boolean);
-
-                                                    return uStr.split(/(\s+)/).map((wordOrSpace, idx) => {
-                                                        if (!wordOrSpace.trim()) return <span key={idx}>{wordOrSpace}</span>;
-
-                                                        const cleanWord = wordOrSpace.toLowerCase().replace(/[.,!?;:()]/g, "");
-                                                        const isMatch = cWords.some((cw: string) => cw.replace(/[.,!?;:()]/g, "") === cleanWord);
-
-                                                        return (
-                                                            <span key={idx} className={isMatch ? "text-green-600 font-bold bg-green-100 dark:bg-green-900/30 px-1 rounded" : ""}>
-                                                                {wordOrSpace}
-                                                            </span>
-                                                        );
-                                                    });
-                                                })()}
-                                            </p>
-
-                                            <div className="mt-4 p-4 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/50 rounded-xl">
-                                                <p className="text-sm mt-3 font-medium text-sky-700 dark:text-sky-300 bg-white dark:bg-black/20 inline-block px-3 py-1 rounded-lg">
-                                                    Tỉ lệ khớp: {(() => {
+                                        <div className="w-full rounded-xl border bg-white dark:bg-black/20 overflow-hidden">
+                                            {/* Bài làm của học sinh có highlight từ khớp */}
+                                            <div className="p-4 border-b border-zinc-100 dark:border-zinc-800">
+                                                <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">{language === 'vi' ? 'Bài làm của bạn' : 'Your Answer'}</p>
+                                                <p className="text-zinc-800 dark:text-zinc-200 text-base leading-relaxed">
+                                                    {(() => {
+                                                        const uStr = selected as string || "";
+                                                        const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
+                                                        const cWords = cStr.toLowerCase().split(/\s+/).filter(Boolean);
+                                                        if (!uStr.trim()) return <span className="italic text-zinc-400">{language === 'vi' ? '(Không có câu trả lời)' : '(No answer)'}</span>;
+                                                        return uStr.split(/(\s+)/).map((wordOrSpace, idx) => {
+                                                            if (!wordOrSpace.trim()) return <span key={idx}>{wordOrSpace}</span>;
+                                                            const cleanWord = wordOrSpace.toLowerCase().replace(/[.,!?;:()]/g, "");
+                                                            const isMatch = cWords.some((cw: string) => cw.replace(/[.,!?;:()]/g, "") === cleanWord);
+                                                            return (
+                                                                <span key={idx} className={isMatch ? "text-green-600 font-bold bg-green-100 dark:bg-green-900/30 px-1 rounded" : ""}>
+                                                                    {wordOrSpace}
+                                                                </span>
+                                                            );
+                                                        });
+                                                    })()}
+                                                </p>
+                                                <p className="text-xs font-semibold mt-2 text-zinc-400">
+                                                    {language === 'vi' ? 'Tỉ lệ khớp:' : 'Match rate:'} {(() => {
                                                         const uStr = selected as string || "";
                                                         const cStr = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || "");
                                                         const cWords = cStr.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
@@ -137,14 +136,26 @@ function PracticeQuestion({
                                                         const cWordsTemp = [...cWords];
                                                         uWords.forEach(w => {
                                                             const idx = cWordsTemp.indexOf(w);
-                                                            if (idx !== -1) {
-                                                                matches++;
-                                                                cWordsTemp.splice(idx, 1);
-                                                            }
+                                                            if (idx !== -1) { matches++; cWordsTemp.splice(idx, 1); }
                                                         });
                                                         return cWords.length > 0 ? Math.round((matches / cWords.length) * 100) : 0;
                                                     })()}%
                                                 </p>
+                                            </div>
+                                            {/* Đáp án mẫu hiện ngay */}
+                                            <div className={`p-4 ${isCorrect ? 'bg-green-50 dark:bg-green-900/15' : 'bg-red-50 dark:bg-red-900/15'}`}>
+                                                <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${isCorrect ? 'text-green-600' : 'text-red-500'}`}>
+                                                    {isCorrect
+                                                        ? (language === 'vi' ? '✓ Đúng – Đáp án mẫu' : '✓ Correct – Model Answer')
+                                                        : (language === 'vi' ? '✗ Chưa đúng – Đáp án mẫu' : '✗ Incorrect – Model Answer')}
+                                                </p>
+                                                <p
+                                                    className="text-sm font-medium text-zinc-800 dark:text-zinc-100 leading-relaxed"
+                                                    dangerouslySetInnerHTML={{ __html: Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : (question.correctAnswer || '') }}
+                                                />
+                                                {question.answerImageUrl && (
+                                                    <img src={question.answerImageUrl} alt="Answer" className="mt-3 max-h-[250px] w-auto rounded-xl object-contain" />
+                                                )}
                                             </div>
                                         </div>
                                     ) : (
@@ -229,7 +240,7 @@ function PracticeQuestion({
                             </div>
                         )}
 
-                        {isRevealed && (
+                        {isRevealed && !isOpen && (
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -243,6 +254,19 @@ function PracticeQuestion({
                                     <p><span className="font-bold">{language === 'vi' ? 'Đáp án đúng' : 'Correct Answer'}:</span> {Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : question.correctAnswer}</p>
                                     {question.explanation && <p className="text-zinc-600 dark:text-zinc-400 italic">"{question.explanation}"</p>}
                                 </div>
+                            </motion.div>
+                        )}
+                        {isRevealed && isOpen && question.explanation && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-3 p-3 rounded-2xl bg-sky-50 dark:bg-sky-900/10 border border-sky-100 dark:border-sky-800"
+                            >
+                                <div className="flex items-center gap-2 mb-1 text-sky-600 dark:text-sky-400 font-bold text-xs">
+                                    <AlertCircle className="h-3.5 w-3.5" />
+                                    {language === 'vi' ? 'Giải thích' : 'Explanation'}
+                                </div>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400 italic">"{question.explanation}"</p>
                             </motion.div>
                         )}
                     </div>
@@ -882,8 +906,9 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                 index={currentQuestionIndex}
                                 question={questions[currentQuestionIndex]}
                                 selected={answers[currentQuestionIndex] || (questions[currentQuestionIndex]?.type === 'multiple' ? [] : "")}
-                                onChange={(val: any) => { setAnswers(prev => ({ ...prev, [currentQuestionIndex]: val })); setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true })); }}
-                                isRevealed={revealed[currentQuestionIndex]}
+                                onChange={(val: any) => { setAnswers(prev => ({ ...prev, [currentQuestionIndex]: val })); }}
+                                onReveal={() => setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }))}
+                                isRevealed={!!revealed[currentQuestionIndex]}
                                 language={language}
                             />
 
@@ -903,7 +928,23 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                 </span>
 
                                 <div className="flex gap-2">
-                                    {mode === 'wrong' && !revealed[currentQuestionIndex] && (
+                                    {/* With essay/open questions: require "Check" before Next */}
+                                    {questions[currentQuestionIndex]?.type === 'open' && !revealed[currentQuestionIndex] && (
+                                        <Button
+                                            onClick={handleCheckCurrent}
+                                            disabled={
+                                                answers[currentQuestionIndex] === undefined ||
+                                                (Array.isArray(answers[currentQuestionIndex]) && answers[currentQuestionIndex].length === 0) ||
+                                                String(answers[currentQuestionIndex] ?? "").trim() === ""
+                                            }
+                                            className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-yellow-500 text-white hover:bg-yellow-600 shadow-lg shadow-yellow-500/20"
+                                        >
+                                            {language === 'vi' ? 'Kiểm tra' : 'Check'}
+                                        </Button>
+                                    )}
+
+                                    {/* Keep "Check" button for wrong-question review mode (MCQ too) */}
+                                    {mode === 'wrong' && questions[currentQuestionIndex]?.type !== 'open' && !revealed[currentQuestionIndex] && (
                                         <Button
                                             onClick={handleCheckCurrent}
                                             disabled={answers[currentQuestionIndex] === undefined || (Array.isArray(answers[currentQuestionIndex]) && answers[currentQuestionIndex].length === 0) || answers[currentQuestionIndex] === ""}
@@ -914,7 +955,13 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                     )}
                                     {currentQuestionIndex < questions.length - 1 ? (
                                         <Button
-                                            onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                                            onClick={() => {
+                                                const currentQ = questions[currentQuestionIndex];
+                                                // Essay/open questions must be checked (revealed) before moving on
+                                                if (currentQ?.type === 'open' && !revealed[currentQuestionIndex]) return;
+                                                setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1));
+                                            }}
+                                            disabled={questions[currentQuestionIndex]?.type === 'open' && !revealed[currentQuestionIndex]}
                                             className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-sky-600 text-white hover:bg-sky-700 shadow-lg shadow-sky-500/20"
                                         >
                                             {language === 'vi' ? 'Tiếp theo' : 'Next'}
