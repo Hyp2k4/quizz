@@ -49,7 +49,9 @@ const shuffleArray = <T,>(array: T[]): T[] => {
     return shuffled;
 };
 
-const shuffleQuestionsAndOptions = (questions: any[]) => {
+const shuffleQuestionsAndOptions = (questions: any[], shouldShuffle: boolean) => {
+    if (!shouldShuffle) return questions;
+
     const shuffled = shuffleArray(questions);
     return shuffled.map(q => {
         if (q.options && q.options.length > 0) {
@@ -444,7 +446,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             }
                         }
 
-                        setQuiz({ ...data, questions: shuffleQuestionsAndOptions(finalQuestions) });
+                        setQuiz({ ...data, questions: shuffleQuestionsAndOptions(finalQuestions, data.shuffleOptions ?? false) });
                         
                         // Check if access is automatically granted
                         const isOwner = user && data.userId === user.uid;
@@ -666,7 +668,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         
         const wrongQuestions = quiz.questions.filter((_, i) => wrongQuestionIndices.includes(i));
         
-        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(wrongQuestions) } : null);
+        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(wrongQuestions, prev.shuffleOptions ?? false) } : null);
         setAnswers({});
         setIsSubmitted(false);
         setScore(0);
@@ -680,7 +682,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
     const handleRestartFull = () => {
         if (!quiz) return;
-        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(originalQuestions) } : null);
+        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(originalQuestions, prev.shuffleOptions ?? false) } : null);
         setAnswers({});
         setIsSubmitted(false);
         setScore(0);
