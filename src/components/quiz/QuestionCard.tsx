@@ -133,7 +133,13 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
             }`}
             style={{ fontSize: question.answerFontSize ? `${question.answerFontSize}px` : undefined }}
           />
-          <Button variant="ghost" size="icon" onClick={() => removeOption(idx)} className="h-8 w-8 opacity-0 group-hover/opt:opacity-100 transition-opacity shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => removeOption(idx)}
+            disabled={(question.type === 'single' || question.type === 'mixed') && question.options.length <= 4}
+            className="h-8 w-8 opacity-0 group-hover/opt:opacity-100 transition-opacity shrink-0 disabled:opacity-30"
+          >
             <Trash2 className="h-4 w-4 text-zinc-400 hover:text-red-500" />
           </Button>
         </div>
@@ -159,10 +165,16 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
     };
 
     const addOption = () => {
+        if (question.type === 'single' || question.type === 'mixed') {
+            if (question.options.length >= 4) return;
+        }
         onUpdate(question.id, { options: [...question.options, ""] });
     };
 
     const removeOption = (optIndex: number) => {
+        if (question.type === 'single' || question.type === 'mixed') {
+            if (question.options.length <= 4) return;
+        }
         const optionToRemove = question.options[optIndex];
         const newOptions = question.options.filter((_, i) => i !== optIndex);
         const newCorrect = question.correctAnswer.filter(a => a !== optionToRemove);
@@ -254,7 +266,16 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                 <div className="flex items-center gap-2 w-full sm:w-auto bg-zinc-50 dark:bg-zinc-900/50 p-1 sm:p-0 rounded-xl sm:bg-transparent sm:dark:bg-transparent">
                     <Select
                         value={question.type}
-                        onChange={(e) => onUpdate(question.id, { type: e.target.value as QuestionType, correctAnswer: [] })}
+                        onChange={(e) => {
+                            const type = e.target.value as QuestionType;
+                            if (type === 'single' || type === 'mixed') {
+                                const options = [...question.options].slice(0, 4);
+                                while (options.length < 4) options.push("");
+                                onUpdate(question.id, { type, options, correctAnswer: [] });
+                            } else {
+                                onUpdate(question.id, { type, correctAnswer: [] });
+                            }
+                        }}
                         className="flex-1 sm:w-40 h-9 sm:h-8 text-xs font-black uppercase tracking-wider bg-white dark:bg-zinc-800 border-zinc-200/50 dark:border-white/5"
                     >
                         <option value="single">{t.builder.types.single}</option>
@@ -357,7 +378,13 @@ export function QuestionCard({ question, index, activeEditors = [], onUpdate, on
                             {question.options.map((opt, idx) => renderOption(opt, idx))}
                         </div>
                         <div className="flex gap-2 mt-2">
-                            <Button variant="outline" size="sm" onClick={addOption} className="flex-1 border-dashed hover:border-[rgb(var(--primary))] hover:text-[rgb(var(--primary))]">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={addOption}
+                                disabled={(question.type === "single" || question.type === "mixed") && question.options.length >= 4}
+                                className="flex-1 border-dashed hover:border-[rgb(var(--primary))] hover:text-[rgb(var(--primary))]"
+                            >
                                 <Plus className="mr-2 h-4 w-4" /> {t.builder.addOption}
                             </Button>
                             <Button

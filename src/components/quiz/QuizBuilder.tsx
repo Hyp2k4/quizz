@@ -27,6 +27,179 @@ import { toast } from "sonner";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
+type DraftQuestion = Partial<Question> & {
+    pendingAnswerIndex?: number;
+    optionStyle?: "letter" | "number";
+};
+
+/** A → 0 … D → 3, hoặc số 1–4 → chỉ số lựa chọn. */
+function answerTokenToIndex(token: string): number {
+    const t = token.trim().toUpperCase();
+    if (/^[A-D]$/.test(t)) return t.charCodeAt(0) - 65;
+    if (/^[1-4]$/.test(t)) return parseInt(t, 10) - 1;
+    return -1;
+}
+
+/** Bỏ nhãn A. / B) / [C] đứng đầu nội dung lựa chọn 1–4. */
+function stripLeadingLetterLabel(raw: string): string {
+    const stripped = raw.replace(
+        /^((?:\s|<\/?(?:u|ins|b|strong|mark)\b[^>]*>|\*|[\(\[])*)[a-dA-D][\.\:\/\-\)\]\*]{1,3}\s*/i,
+        "$1"
+    ).trim();
+    return stripped || raw.trim();
+}
+
+type AnswerAssignment = { qIdx: number; letterIndex: number; content: string };
+
+function answerKeyPlainText(raw: string): string {
+    return raw
+        .replace(/<\/tr>/gi, "\n")
+        .replace(/<\/t[dh]>/gi, "\t")
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/p>/gi, "\n")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&amp;/gi, "&")
+        .replace(/[ \t]+\n/g, "\n");
+}
+
+/** Tách bảng đáp án: 1A, 1.A, "Câu 1  A", hoặc nội dung đáp án theo số câu. */
+function parseAnswerKey(raw: string): AnswerAssignment[] {
+    const lines = answerKeyPlainText(raw).split(/\n/).map(l => l.trim()).filter(Boolean);
+    const numbered: AnswerAssignment[] = [];
+    const sequentialLetters: number[] = [];
+    let sawNumbered = false;
+    const pairSource = "(?:(?:câu|question|q)\\s*)?(\\d+)\\s*[\\.\\:\\\\)\\-]?\\s*(?:(?:đáp án|answer|ans|đa)\\s*[:\\-]?\\s*)?([a-dA-D])\\b";
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].replace(/^(?:bảng\s+)?(?:đáp án|answer key|answers|key)\s*[:\-]?\s*/i, "").trim();
+        if (!line) continue;
+
+        const pairs = [...line.matchAll(new RegExp(pairSource, "gi"))];
+        if (pairs.length > 0) {
+            const leftover = line
+                .replace(new RegExp(pairSource, "gi"), " ")
+                .replace(/[\s,;|./\\\-–—:]+/g, " ")
+                .trim();
+            const pure = leftover.length === 0 || (pairs.length >= 2 && leftover.length < 8);
+            sawNumbered = true;
+            if (pure) {
+                for (const p of pairs) {
+                    numbered.push({
+                        qIdx: parseInt(p[1], 10) - 1,
+                        letterIndex: answerTokenToIndex(p[2]),
+                        content: ""
+                    });
+                }
+            } else if (pairs.length === 1) {
+                numbered.push({
+                    qIdx: parseInt(pairs[0][1], 10) - 1,
+                    letterIndex: answerTokenToIndex(pairs[0][2]),
+                    content: leftover
+                });
+            }
+            continue;
+        }
+
+        const contentLine = line.match(/^(?:(?:câu|question|q)\s*)?(\d+)\s*[\.\:\)\-]\s+(.+)$/i);
+        if (contentLine) {
+            sawNumbered = true;
+            const body = contentLine[2].trim();
+            const choiceNo = body.match(/^([1-4])$/);
+            const embedded = body.match(/^([a-dA-D])[\.\:\-\)\s]+(.*)$/i);
+            numbered.push({
+                qIdx: parseInt(contentLine[1], 10) - 1,
+                letterIndex: choiceNo
+                    ? answerTokenToIndex(choiceNo[1])
+                    : embedded
+                        ? answerTokenToIndex(embedded[1])
+                        : -1,
+                content: choiceNo ? "" : embedded ? embedded[2].trim() : body
+            });
+            continue;
+        }
+
+        if (/^[a-dA-D]$/i.test(line)) {
+            const prev = lines[i - 1]?.replace(/^(?:bảng\s+)?(?:đáp án|answer key|answers|key)\s*[:\-]?\s*/i, "").trim() ?? "";
+            const prevNo = prev.match(/^(?:(?:câu|question|q)\s*)?(\d+)$/i);
+            if (prevNo) {
+                sawNumbered = true;
+                numbered.push({
+                    qIdx: parseInt(prevNo[1], 10) - 1,
+                    letterIndex: answerTokenToIndex(line),
+                    content: ""
+                });
+            } else {
+                sequentialLetters.push(answerTokenToIndex(line));
+            }
+        }
+    }
+
+    if (!sawNumbered && sequentialLetters.length > 0) {
+        return sequentialLetters.map((letterIndex, qIdx) => ({ qIdx, letterIndex, content: "" }));
+    }
+    return numbered;
+}
+
+function bestOptionIndex(options: string[], content: string): number {
+    const normalize = (str: string) => str
+        .toLowerCase()
+        .replace(/<[^>]+>/g, " ")
+        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const normalizedKey = normalize(stripLeadingLetterLabel(content));
+    if (!normalizedKey) return -1;
+
+    let best = -1;
+    let maxSimilarity = 0;
+    options.forEach((opt, optIdx) => {
+        const normalizedOpt = normalize(stripLeadingLetterLabel(opt));
+        if (!normalizedOpt) return;
+        let similarity = 0;
+        if (normalizedOpt === normalizedKey) similarity = 1;
+        else if (normalizedKey.includes(normalizedOpt) || normalizedOpt.includes(normalizedKey)) {
+            similarity = Math.min(normalizedOpt.length, normalizedKey.length) / Math.max(normalizedOpt.length, normalizedKey.length);
+        }
+        if (similarity > maxSimilarity) {
+            maxSimilarity = similarity;
+            best = optIdx;
+        }
+    });
+    return maxSimilarity > 0.6 ? best : -1;
+}
+
+function applyAnswerKeyText(questions: Question[], raw: string): { next: Question[]; count: number } {
+    const next = questions.map(q => ({ ...q, options: [...q.options], correctAnswer: [...q.correctAnswer] }));
+    const seen = new Set<number>();
+
+    for (const assignment of parseAnswerKey(raw)) {
+        const target = next[assignment.qIdx];
+        if (!target) continue;
+
+        let slot = assignment.content ? bestOptionIndex(target.options, assignment.content) : -1;
+        if (slot < 0) slot = assignment.letterIndex;
+        const opt = slot >= 0 ? target.options[slot] : "";
+        if (!opt) continue;
+
+        target.correctAnswer = [opt];
+        seen.add(assignment.qIdx);
+    }
+
+    return { next, count: seen.size };
+}
+
+function stripAnswerMarker(raw: string): { text: string; answerIndex?: number } {
+    const re = /(?:Đáp án(?:\s+đúng)?|Answer|Ans|ĐA)\s*[:：\-]\s*([a-dA-D1-4])\b/i;
+    const m = raw.match(re);
+    if (!m || m.index == null) return { text: raw };
+    const after = raw.slice(m.index + m[0].length).replace(/<[^>]+>/g, "").trim();
+    if (after.length > 12) return { text: raw };
+    const text = `${raw.slice(0, m.index)} ${raw.slice(m.index + m[0].length)}`.replace(/\s+/g, " ").trim();
+    const answerIndex = answerTokenToIndex(m[1]);
+    return answerIndex >= 0 ? { text, answerIndex } : { text: raw };
+}
+
 export default function QuizBuilder() {
     const { t, language } = useLanguage();
     const { user, login } = useAuth();
@@ -39,7 +212,7 @@ export default function QuizBuilder() {
             id: "1",
             text: "",
             type: "single",
-            options: ["", ""],
+            options: ["", "", "", ""],
             correctAnswer: [],
             hint: "",
             explanation: "",
@@ -82,7 +255,17 @@ export default function QuizBuilder() {
                     setChapterName(data.chapterName || "");
                     setShuffleOptions(data.shuffleOptions ?? false);
                     setImageUrl(data.imageUrl || "");
-                    setQuestions(data.questions);
+                    setQuestions(data.questions.map(q =>
+                        q.type === "single" || q.type === "mixed"
+                            ? {
+                                ...q,
+                                options: [...q.options].slice(0, 4).concat(
+                                    Array(Math.max(0, 4 - q.options.length)).fill("")
+                                ),
+                                correctAnswer: q.correctAnswer.length > 0 ? [q.correctAnswer[0]] : [],
+                            }
+                            : q
+                    ));
                     
                     // Scroll to specific question if requested
                     const targetQId = searchParams.get("questionId");
@@ -130,7 +313,7 @@ export default function QuizBuilder() {
             id: Math.random().toString(36).substr(2, 9),
             text: "",
             type: "single",
-            options: ["", ""],
+            options: ["", "", "", ""],
             correctAnswer: [],
             hint: "",
             explanation: "",
@@ -142,6 +325,16 @@ export default function QuizBuilder() {
         setQuestions(
             questions.map((q) => (q.id === id ? { ...q, ...updates } : q))
         );
+    };
+
+    const ensureFourChoiceOptions = (question: Question): Question => {
+        if (question.type !== "single" && question.type !== "mixed") return question;
+        const options = [...question.options].slice(0, 4);
+        while (options.length < 4) options.push("");
+        const correctAnswer = question.correctAnswer.length > 0
+            ? [question.correctAnswer[0]]
+            : [];
+        return { ...question, options, correctAnswer };
     };
 
     const deleteQuestion = (id: string) => {
@@ -170,7 +363,7 @@ export default function QuizBuilder() {
             id: "1",
             text: "",
             type: "single",
-            options: ["", ""],
+            options: ["", "", "", ""],
             correctAnswer: [],
             hint: "",
             explanation: "",
@@ -270,62 +463,79 @@ export default function QuizBuilder() {
 
         const lines = answerKeyPaste.split('\n').map(l => l.trim()).filter(l => l !== "");
 
+        const applyLetterSlot = (targetQ: Question, letterIndex: number) => {
+            const opt = targetQ.options[letterIndex];
+            if (!opt) return false;
+            targetQ.correctAnswer = [opt];
+            return true;
+        };
+
         lines.forEach((line, index) => {
-            // 1. Phân tích dòng để lấy số câu (nếu có) và nội dung
-            const numberedMatch = line.match(/^(\d+)[\.\:\-\)\s]*(.*)/i);
+            // 1A / 1.A / 1: B / 1) C. nội dung → bỏ nhãn A–D, gán vào lựa chọn 1–4
+            const numberedLetter = line.match(/^(\d+)\s*[\.\:\-\)]?\s*([a-dA-D1-4])\b[\.\:\-\)\s]*(.*)$/i);
             const rawLabelMatch = line.match(/^([a-dA-D])[\.\:\-\)\s]*(.*)/i);
+            const numberedContent = line.match(/^(\d+)[\.\:\-\)\s]+(.*)/i);
 
             let qIdx = index;
             let contentToMatch = line;
+            let letterIndex = -1;
 
-            if (numberedMatch) {
-                qIdx = parseInt(numberedMatch[1]) - 1;
-                contentToMatch = numberedMatch[2];
+            if (numberedLetter) {
+                qIdx = parseInt(numberedLetter[1], 10) - 1;
+                letterIndex = answerTokenToIndex(numberedLetter[2]);
+                contentToMatch = numberedLetter[3].trim();
+            } else if (numberedContent) {
+                qIdx = parseInt(numberedContent[1], 10) - 1;
+                contentToMatch = numberedContent[2];
+                const embedded = contentToMatch.match(/^([a-dA-D])[\.\:\-\)\s]+(.*)$/i);
+                if (embedded) {
+                    letterIndex = answerTokenToIndex(embedded[1]);
+                    contentToMatch = embedded[2].trim();
+                }
             } else if (rawLabelMatch) {
-                contentToMatch = rawLabelMatch[2];
+                letterIndex = answerTokenToIndex(rawLabelMatch[1]);
+                contentToMatch = rawLabelMatch[2].trim();
             }
 
-            if (newQuestions[qIdx]) {
-                const targetQ = newQuestions[qIdx];
-                const normalizedKey = normalize(contentToMatch);
+            const targetQ = newQuestions[qIdx];
+            if (!targetQ) return;
 
-                if (!normalizedKey) return;
+            if (!contentToMatch) {
+                if (letterIndex >= 0 && applyLetterSlot(targetQ, letterIndex)) count++;
+                return;
+            }
 
-                let bestMatchIdx = -1;
-                let maxSimilarity = 0;
+            const normalizedKey = normalize(stripLeadingLetterLabel(contentToMatch));
+            if (!normalizedKey) {
+                if (letterIndex >= 0 && applyLetterSlot(targetQ, letterIndex)) count++;
+                return;
+            }
 
-                // 2. So khớp nội dung với từng option của câu hỏi đó
-                targetQ.options.forEach((opt, optIdx) => {
-                    const normalizedOpt = normalize(opt);
-                    if (!normalizedOpt) return;
+            let bestMatchIdx = -1;
+            let maxSimilarity = 0;
 
-                    // Tính toán độ tương đồng đơn giản (chứa nhau hoặc bằng nhau)
-                    let similarity = 0;
-                    if (normalizedOpt === normalizedKey) {
-                        similarity = 1.0;
-                    } else if (normalizedKey.includes(normalizedOpt) || normalizedOpt.includes(normalizedKey)) {
-                        // Tính theo tỉ lệ độ dài nếu có chứa nhau
-                        similarity = Math.min(normalizedOpt.length, normalizedKey.length) / Math.max(normalizedOpt.length, normalizedKey.length);
-                    }
+            targetQ.options.forEach((opt, optIdx) => {
+                const normalizedOpt = normalize(stripLeadingLetterLabel(opt));
+                if (!normalizedOpt) return;
 
-                    if (similarity > maxSimilarity) {
-                        maxSimilarity = similarity;
-                        bestMatchIdx = optIdx;
-                    }
-                });
-
-                // Nếu độ tương đồng đủ cao (trên 60%), hoặc khớp hoàn toàn nhãn A,B,C,D nếu nội dung ngắn
-                if (maxSimilarity > 0.6) {
-                    targetQ.correctAnswer = [targetQ.options[bestMatchIdx]];
-                    count++;
-                } else if (rawLabelMatch) {
-                    // Fallback: Nếu không khớp nội dung nhưng có label A,B,C,D rõ ràng
-                    const charCode = rawLabelMatch[1].toUpperCase().charCodeAt(0) - 65;
-                    if (targetQ.options[charCode]) {
-                        targetQ.correctAnswer = [targetQ.options[charCode]];
-                        count++;
-                    }
+                let similarity = 0;
+                if (normalizedOpt === normalizedKey) {
+                    similarity = 1.0;
+                } else if (normalizedKey.includes(normalizedOpt) || normalizedOpt.includes(normalizedKey)) {
+                    similarity = Math.min(normalizedOpt.length, normalizedKey.length) / Math.max(normalizedOpt.length, normalizedKey.length);
                 }
+
+                if (similarity > maxSimilarity) {
+                    maxSimilarity = similarity;
+                    bestMatchIdx = optIdx;
+                }
+            });
+
+            if (maxSimilarity > 0.6) {
+                targetQ.correctAnswer = [targetQ.options[bestMatchIdx]];
+                count++;
+            } else if (letterIndex >= 0 && applyLetterSlot(targetQ, letterIndex)) {
+                count++;
             }
         });
 
@@ -340,21 +550,54 @@ export default function QuizBuilder() {
     };
 
     function finalizeQuestion(q: Partial<Question>): Question {
-        return {
+        const finalized: Question = {
             id: q.id!,
             text: q.text?.trim() || "",
             type: (q.correctAnswer?.length || 0) > 1 ? "multiple" : (q.type as any || "single"),
-            options: q.options?.length ? q.options : ["Lựa chọn A", "Lựa chọn B"],
-            correctAnswer: q.correctAnswer || [],
+            options: q.options?.length ? q.options : ["Lựa chọn A", "Lựa chọn B", "Lựa chọn C", "Lựa chọn D"],
+            correctAnswer: q.correctAnswer?.slice(0, 1) || [],
             hint: q.hint || "",
             explanation: q.explanation || ""
         };
+        if (finalized.type === "single" || finalized.type === "mixed") {
+            finalized.options = [...finalized.options].slice(0, 4);
+            while (finalized.options.length < 4) finalized.options.push("");
+        }
+        return finalized;
     }
 
     const parseTextToQuestions = (text: string) => {
         const lines = text.split('\n').map(l => l.trim());
         const newQuestions: Question[] = [];
-        let currentQ: Partial<Question> | null = null;
+        const draft: { current: DraftQuestion | null } = { current: null };
+
+        const isSequentialNumberedChoice = (num: number) => {
+            const currentQ = draft.current;
+            if (!currentQ || currentQ.optionStyle === "letter") return false;
+            if (num < 1 || num > 4) return false;
+            const count = currentQ.options?.length || 0;
+            if (count === 0) return num === 1;
+            return num === count + 1;
+        };
+
+        const rememberAnswer = (answerIndex: number) => {
+            const currentQ = draft.current;
+            if (!currentQ || answerIndex < 0) return;
+            const opt = currentQ.options?.[answerIndex];
+            if (opt) currentQ.correctAnswer = [opt];
+            else currentQ.pendingAnswerIndex = answerIndex;
+        };
+
+        const pushCurrent = () => {
+            const currentQ = draft.current;
+            if (!currentQ) return;
+            if ((currentQ.correctAnswer?.length || 0) === 0 && currentQ.pendingAnswerIndex != null) {
+                const opt = currentQ.options?.[currentQ.pendingAnswerIndex];
+                if (opt) currentQ.correctAnswer = [opt];
+            }
+            newQuestions.push(finalizeQuestion(currentQ));
+            draft.current = null;
+        };
 
         // Giai đoạn 1: Tách câu hỏi và lựa chọn
         for (let i = 0; i < lines.length; i++) {
@@ -372,60 +615,101 @@ export default function QuizBuilder() {
                 .replace(/__u__|__b__/g, "")
                 .trim();
 
-            const questionMatch = line.match(/^(Câu|Question|Q)?\s*(\d+)[\.\:\/\-)]\s*(.*)/i);
-            // Hỗ trợ A., B), [A], *A., **A.**
-            const optionMatch = line.match(/^[\*\(\[]?([a-dA-D])[\.\:\/\-\)\]\*]{1,3}\s*(.*)/i);
-            const answerLineMatch = line.match(/^(Đáp án|Answer|Ans)\s*[\:\-]?\s*([a-dA-D])/i);
+            // Bảng đáp án ("Đáp án", "Đáp án: 1A 2B"). "Đáp án: B" vẫn là đáp án của câu hiện tại.
+            const keyHeader = line.match(/^(?:Bảng đáp án|Answer Key|Answers|Key|Đáp án)\s*[:\-]?\s*(.*)$/i);
+            if (keyHeader) {
+                const rest = keyHeader[1].trim();
+                const isTable = !rest || /(\d+)\s*[\.\:\-\)]?\s*[a-dA-D]\b/i.test(rest);
+                if (isTable) {
+                    pushCurrent();
+                    break;
+                }
+            }
 
-            if (questionMatch) {
-                if (currentQ) newQuestions.push(finalizeQuestion(currentQ));
-                currentQ = {
+            const explicitQuestionMatch = line.match(/^(?:Câu|Question|Q)\s*(\d+)[\.\:\/\-)]\s*(.*)/i);
+            const letterOptionMatch = line.match(/^[\*\(\[]?([a-dA-D])[\.\:\/\-\)\]\*]{1,3}\s*(.*)/i);
+            const numberedChoiceMatch = line.match(/^[\*\(\[]?([1-4])[\.\:\/\-\)\]\*]{1,3}\s*(.*)/i);
+            const implicitQuestionMatch = line.match(/^(\d+)[\.\:\/\-)]\s*(.*)/i);
+            const answerLineMatch = line.match(/^(?:Đáp án(?:\s+đúng)?|Answer|Ans|ĐA)\s*[:\-]?\s*([a-dA-D1-4])\b/i);
+
+            const startQuestion = (rawText: string) => {
+                pushCurrent();
+                const pulled = stripAnswerMarker(rawText);
+                draft.current = {
                     id: Math.random().toString(36).substr(2, 9),
-                    text: originalLine.trim(),
+                    text: pulled.text,
                     type: "single",
                     options: [],
                     correctAnswer: [],
                     hint: "",
-                    explanation: ""
+                    explanation: "",
+                    pendingAnswerIndex: pulled.answerIndex
                 };
-            } else if (currentQ) {
-                if (optionMatch) {
-                    // Nhận diện đáp án đúng inline: *A, [A], **A**, Gạch chân, In đậm, Highlight
-                    const isInlineCorrect = line.startsWith('*') ||
-                        line.includes('**') ||
-                        (line.startsWith('[') && line.includes(']')) ||
-                        isUnderlined || isBold || isHighlighted;
-                    const optText = optionMatch[2];
-                    // Preserve HTML formatting for option text
-                    const formattedOpt = originalLine.substring(originalLine.indexOf(optionMatch[2]));
-                    currentQ.options?.push(formattedOpt);
-                    if (isInlineCorrect) {
-                        if (!currentQ.correctAnswer) currentQ.correctAnswer = [];
-                        if (!currentQ.correctAnswer.includes(optText)) {
-                            currentQ.correctAnswer.push(optText);
-                        }
+            };
+
+            const currentQ = draft.current;
+            const questionMatch = explicitQuestionMatch || (
+                !(letterOptionMatch && currentQ) &&
+                !(numberedChoiceMatch && isSequentialNumberedChoice(parseInt(numberedChoiceMatch?.[1] || "0", 10))) &&
+                implicitQuestionMatch
+            );
+
+            if (questionMatch) {
+                startQuestion(originalLine.trim());
+            } else if (currentQ && (letterOptionMatch || (numberedChoiceMatch && isSequentialNumberedChoice(parseInt(numberedChoiceMatch[1], 10))))) {
+                const optionMatch = letterOptionMatch || numberedChoiceMatch!;
+                const isNumbered = !letterOptionMatch;
+                currentQ.optionStyle = isNumbered ? "number" : "letter";
+
+                const isInlineCorrect = line.startsWith('*') ||
+                    line.includes('**') ||
+                    (line.startsWith('[') && line.includes(']')) ||
+                    isUnderlined || isBold || isHighlighted;
+
+                const bodyStart = originalLine.indexOf(optionMatch[2]);
+                let formattedOpt = bodyStart >= 0 ? originalLine.substring(bodyStart) : optionMatch[2];
+                if (isNumbered) formattedOpt = stripLeadingLetterLabel(formattedOpt);
+
+                currentQ.options?.push(formattedOpt);
+                if (isInlineCorrect) {
+                    if (!currentQ.correctAnswer) currentQ.correctAnswer = [];
+                    if (!currentQ.correctAnswer.includes(formattedOpt)) {
+                        currentQ.correctAnswer.push(formattedOpt);
                     }
-                } else if (answerLineMatch) {
-                    const ansChar = answerLineMatch[2].toUpperCase();
-                    const charCode = ansChar.charCodeAt(0) - 65;
-                    if (currentQ.options && currentQ.options[charCode]) {
-                        currentQ.correctAnswer = [currentQ.options[charCode]];
-                    }
-                } else {
-                    currentQ.text += "\n" + line;
+                    currentQ.pendingAnswerIndex = undefined;
                 }
+            } else if (currentQ && answerLineMatch) {
+                rememberAnswer(answerTokenToIndex(answerLineMatch[1]));
+            } else if (currentQ) {
+                const pulled = stripAnswerMarker(line);
+                currentQ.text += "\n" + pulled.text;
+                if (pulled.answerIndex != null) rememberAnswer(pulled.answerIndex);
             }
         }
-        if (currentQ) newQuestions.push(finalizeQuestion(currentQ));
+        pushCurrent();
 
         // Giai đoạn 2: Tìm bảng đáp án ở cuối (nếu có)
         // Tìm đoạn text bắt đầu bằng "Đáp án", "Bảng đáp án", "Answer Key"
-        const answerKeyIndex = lines.findIndex(l => l.match(/^(Đáp án|Bảng đáp án|Answer Key|Key)/i));
+        const answerKeyIndex = lines.findIndex(l => {
+            const plain = l
+                .replace(/<\/?(?:u|ins|b|strong|mark)\b[^>]*>/g, "")
+                .replace(/__u__|__b__/g, "")
+                .trim();
+            const header = plain.match(/^(?:Bảng đáp án|Answer Key|Answers|Key|Đáp án)\s*[:\-]?\s*(.*)$/i);
+            if (!header) return false;
+            const rest = header[1].trim();
+            return !rest || /(\d+)\s*[\.\:\-\)]?\s*[a-dA-D]\b/i.test(rest);
+        });
         if (answerKeyIndex !== -1) {
-            const answerKeyLines = lines.slice(answerKeyIndex + 1);
+            const headerPlain = lines[answerKeyIndex]
+                .replace(/<\/?(?:u|ins|b|strong|mark)\b[^>]*>/g, "")
+                .replace(/__u__|__b__/g, "")
+                .trim();
+            const inlineKey = headerPlain.replace(/^(?:Bảng đáp án|Answer Key|Answers|Key|Đáp án)\s*[:\-]?\s*/i, "");
+            const answerKeyLines = [inlineKey, ...lines.slice(answerKeyIndex + 1)].filter(l => l.trim());
             answerKeyLines.forEach(line => {
                 // Khớp định dạng: "1.A", "2: B", "3-C", "4) D", "5A", "6 B"
-                const matches = line.matchAll(/(\d+)[\.\:\-\)\s]*([a-dA-D])/gi);
+                const matches = line.matchAll(/(\d+)[\.\:\-\)\s]*([a-dA-D])\b/gi);
                 for (const match of matches) {
                     const qIdx = parseInt(match[1]) - 1;
                     const ansChar = match[2].toUpperCase();
@@ -520,6 +804,12 @@ export default function QuizBuilder() {
         setIsSaving(true);
         let savedQuizId = editId;
         try {
+            const normalizedQuestions = questions.map(q =>
+                q.type === "single" || q.type === "mixed"
+                    ? ensureFourChoiceOptions(q)
+                    : q
+            );
+            setQuestions(normalizedQuestions);
             const quizData: Partial<QuizData> = {
                 title,
                 description,
@@ -528,7 +818,7 @@ export default function QuizBuilder() {
                 chapterName: chapterName.trim() || undefined,
                 shuffleOptions,
                 imageUrl: imageUrl.trim() || undefined,
-                questions,
+                questions: normalizedQuestions,
             };
 
             if (editId) {
@@ -557,7 +847,7 @@ export default function QuizBuilder() {
             }
 
             // Create notification for missing answers
-            const missingIdx = questions.map((q, i) => q.correctAnswer.length === 0 ? i + 1 : null).filter(n => n !== null);
+            const missingIdx = normalizedQuestions.map((q, i) => q.correctAnswer.length === 0 ? i + 1 : null).filter(n => n !== null);
             if (missingIdx.length > 0 && savedQuizId) {
                 await createNotification({
                     userId: user.uid,
