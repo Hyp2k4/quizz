@@ -253,7 +253,7 @@ export default function QuizBuilder() {
                     setSubject(data.subject || "");
                     setChapter(data.chapter !== undefined && data.chapter !== null ? data.chapter : "");
                     setChapterName(data.chapterName || "");
-                    setShuffleOptions(data.shuffleOptions ?? false);
+                    setShuffleOptions(data.shuffleOptions ?? true);
                     setImageUrl(data.imageUrl || "");
                     setQuestions(data.questions.map(q =>
                         q.type === "single" || q.type === "mixed"

@@ -9,6 +9,7 @@ import {
     syncSubjectWrongQuestions
 } from "@/services/quizService";
 import { Navbar } from "@/components/layout/Navbar";
+import { AnswerRevealModeSelector, type AnswerRevealMode } from "@/components/quiz/AnswerRevealModeSelector";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -279,6 +280,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
     const [score, setScore] = useState(0);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [answerRevealMode, setAnswerRevealMode] = useState<AnswerRevealMode>("after-submit");
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [unansweredCount, setUnansweredCount] = useState(0);
     const [openGradingCfg, setOpenGradingCfg] = useState<any>(null);
@@ -367,10 +369,10 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
         setIsStarted(true);
     };
 
-    const handleCheckCurrent = async () => {
+    const handleCheckCurrent = async (answerOverride?: any) => {
         const q = questions[currentQuestionIndex];
         if (!q) return;
-        const userAns = answers[currentQuestionIndex];
+        const userAns = answerOverride ?? answers[currentQuestionIndex];
         const correctArr = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer || ""];
         let isCorrect = false;
 
@@ -671,6 +673,11 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
 
                                     {/* Start & Back Buttons */}
                                     <div className="flex flex-col gap-3 pt-2">
+                                        <AnswerRevealModeSelector
+                                            value={answerRevealMode}
+                                            onChange={setAnswerRevealMode}
+                                            language={language}
+                                        />
                                         <Button
                                             onClick={handleStartPractice}
                                             disabled={selectedCount === 0 || totalSelected === 0}
@@ -729,9 +736,16 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                 {language === 'vi' ? 'Quay lại trang Ôn tập' : 'Back to Review'}
                             </Button>
                         ) : (
-                            <Button onClick={() => setIsStarted(true)} className="w-full h-16 rounded-3xl bg-sky-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-sky-500/20">
-                                {language === 'vi' ? 'Bắt đầu ôn tập' : 'Start Review'}
-                            </Button>
+                            <>
+                                <AnswerRevealModeSelector
+                                    value={answerRevealMode}
+                                    onChange={setAnswerRevealMode}
+                                    language={language}
+                                />
+                                <Button onClick={() => setIsStarted(true)} className="w-full h-16 rounded-3xl bg-sky-600 text-xl font-bold hover:scale-105 transition-transform shadow-xl shadow-sky-500/20">
+                                    {language === 'vi' ? 'Bắt đầu ôn tập' : 'Start Review'}
+                                </Button>
+                            </>
                         )}
                         <Button variant="ghost" onClick={() => router.back()} className="text-zinc-400">Quay lại</Button>
                     </Card>
@@ -742,6 +756,10 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
 
     const answeredCount = Object.keys(answers).length;
     const progress = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
+    const activeAnswer = answers[currentQuestionIndex];
+    const hasActiveAnswer = Array.isArray(activeAnswer)
+        ? activeAnswer.length > 0
+        : String(activeAnswer ?? "").trim() !== "";
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -845,7 +863,12 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                 index={currentQuestionIndex}
                                 question={questions[currentQuestionIndex]}
                                 selected={answers[currentQuestionIndex] || (questions[currentQuestionIndex]?.type === 'multiple' ? [] : "")}
-                                onChange={(val: any) => { setAnswers(prev => ({ ...prev, [currentQuestionIndex]: val })); }}
+                                onChange={(val: any) => {
+                                    setAnswers(prev => ({ ...prev, [currentQuestionIndex]: val }));
+                                    if (answerRevealMode === "immediate" && questions[currentQuestionIndex]?.type === "single") {
+                                        void handleCheckCurrent(val);
+                                    }
+                                }}
                                 onReveal={() => setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }))}
                                 isRevealed={!!revealed[currentQuestionIndex]}
                                 language={language}
@@ -867,10 +890,12 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                 </span>
 
                                 <div className="flex gap-2">
-                                    {/* With essay/open questions: require "Check" before Next */}
-                                    {questions[currentQuestionIndex]?.type === 'open' && !revealed[currentQuestionIndex] && (
+                                    {/* Open and multiple-answer questions need an explicit check for immediate feedback. */}
+                                    {answerRevealMode === "immediate" &&
+                                        (questions[currentQuestionIndex]?.type === 'open' || questions[currentQuestionIndex]?.type === 'multiple') &&
+                                        !revealed[currentQuestionIndex] && (
                                         <Button
-                                            onClick={handleCheckCurrent}
+                                            onClick={() => handleCheckCurrent()}
                                             disabled={
                                                 answers[currentQuestionIndex] === undefined ||
                                                 (Array.isArray(answers[currentQuestionIndex]) && answers[currentQuestionIndex].length === 0) ||
@@ -882,25 +907,23 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                         </Button>
                                     )}
 
-                                    {/* Keep "Check" button for wrong-question review mode (MCQ too) */}
-                                    {mode === 'wrong' && questions[currentQuestionIndex]?.type !== 'open' && !revealed[currentQuestionIndex] && (
-                                        <Button
-                                            onClick={handleCheckCurrent}
-                                            disabled={answers[currentQuestionIndex] === undefined || (Array.isArray(answers[currentQuestionIndex]) && answers[currentQuestionIndex].length === 0) || answers[currentQuestionIndex] === ""}
-                                            className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-yellow-500 text-white hover:bg-yellow-600 shadow-lg shadow-yellow-500/20"
-                                        >
-                                            {language === 'vi' ? 'Kiểm tra' : 'Check'}
-                                        </Button>
-                                    )}
                                     {currentQuestionIndex < questions.length - 1 ? (
                                         <Button
                                             onClick={() => {
                                                 const currentQ = questions[currentQuestionIndex];
-                                                // Essay/open questions must be checked (revealed) before moving on
-                                                if (currentQ?.type === 'open' && !revealed[currentQuestionIndex]) return;
+                                                if (
+                                                    answerRevealMode === "immediate" &&
+                                                    !revealed[currentQuestionIndex] &&
+                                                    (currentQ?.type === 'open' || (currentQ?.type === 'multiple' && hasActiveAnswer))
+                                                ) return;
                                                 setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1));
                                             }}
-                                            disabled={questions[currentQuestionIndex]?.type === 'open' && !revealed[currentQuestionIndex]}
+                                            disabled={
+                                                answerRevealMode === "immediate" &&
+                                                !revealed[currentQuestionIndex] &&
+                                                (questions[currentQuestionIndex]?.type === 'open' ||
+                                                    (questions[currentQuestionIndex]?.type === 'multiple' && hasActiveAnswer))
+                                            }
                                             className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-sky-600 text-white hover:bg-sky-700 shadow-lg shadow-sky-500/20"
                                         >
                                             {language === 'vi' ? 'Tiếp theo' : 'Next'}

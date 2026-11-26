@@ -3,6 +3,7 @@
 import { useEffect, useState, use, useRef } from "react";
 import { getQuizById, saveQuizResult, QuizData, QuizResult, createNotification, getQuizLeaderboard, verifyQuizAccessCode, reportQuestionIssue, recordQuizView, getQuizzesBySubject, getQuizResultById, syncSubjectWrongQuestions, getSubjectWrongQuestions } from "@/services/quizService";
 import { ReportDialog } from "@/components/quiz/ReportDialog";
+import { AnswerRevealModeSelector, type AnswerRevealMode } from "@/components/quiz/AnswerRevealModeSelector";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
@@ -395,6 +396,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const [isReadyToStart, setIsReadyToStart] = useState(false);
     const [leaderboardVersion, setLeaderboardVersion] = useState(0);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [answerRevealMode, setAnswerRevealMode] = useState<AnswerRevealMode>("after-submit");
 
     const [subjectWrongQuestions, setSubjectWrongQuestions] = useState<any[]>([]);
 
@@ -446,7 +448,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             }
                         }
 
-                        setQuiz({ ...data, questions: shuffleQuestionsAndOptions(finalQuestions, data.shuffleOptions ?? false) });
+                        setQuiz({ ...data, questions: shuffleQuestionsAndOptions(finalQuestions, data.shuffleOptions ?? true) });
                         
                         // Check if access is automatically granted
                         const isOwner = user && data.userId === user.uid;
@@ -668,7 +670,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         
         const wrongQuestions = quiz.questions.filter((_, i) => wrongQuestionIndices.includes(i));
         
-        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(wrongQuestions, prev.shuffleOptions ?? false) } : null);
+        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(wrongQuestions, prev.shuffleOptions ?? true) } : null);
         setAnswers({});
         setIsSubmitted(false);
         setScore(0);
@@ -682,7 +684,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
     const handleRestartFull = () => {
         if (!quiz) return;
-        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(originalQuestions, prev.shuffleOptions ?? false) } : null);
+        setQuiz(prev => prev ? { ...prev, questions: shuffleQuestionsAndOptions(originalQuestions, prev.shuffleOptions ?? true) } : null);
         setAnswers({});
         setIsSubmitted(false);
         setScore(0);
@@ -833,12 +835,17 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 <h2 className="text-2xl font-black mb-2">{language === 'vi' ? 'Bạn đã sẵn sàng chưa?' : 'Are you ready?'}</h2>
                 <p className="text-[rgb(var(--muted-foreground))] leading-relaxed">
                     {language === 'vi'
-                        ? `Bài trắc nghiệm "${quiz.title}" đang chờ bạn chinh phục. Kết quả đúng/sai sẽ hiển thị sau khi bạn nộp bài.`
-                        : `The quiz "${quiz.title}" is waiting for you. Correct/incorrect results will be shown after you submit.`
+                        ? `Bài trắc nghiệm "${quiz.title}" đang chờ bạn chinh phục. ${answerRevealMode === "immediate" ? "Đáp án đúng/sai sẽ hiển thị sau mỗi câu trả lời." : "Kết quả đúng/sai sẽ hiển thị sau khi bạn nộp bài."}`
+                        : `The quiz "${quiz.title}" is waiting for you. ${answerRevealMode === "immediate" ? "Answers will be shown after each response." : "Results will be shown after you submit."}`
                     }
                 </p>
             </div>
             <div className="flex flex-col gap-3">
+                <AnswerRevealModeSelector
+                    value={answerRevealMode}
+                    onChange={setAnswerRevealMode}
+                    language={language}
+                />
                 <Button
                     size="lg"
                     className="w-full rounded-full py-6 text-lg font-bold shadow-lg shadow-indigo-500/40 hover:scale-[1.02] transition-transform"
@@ -1048,6 +1055,10 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                         }}
                                         readOnly={isSubmitted}
                                         isRevealed={!!revealed[currentQuestionIndex]}
+                                        onCheck={answerRevealMode === "immediate" ? val => {
+                                            if (val !== undefined) handleAnswer(currentQuestionIndex, val);
+                                            setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }));
+                                        } : undefined}
                                         isCorrect={(() => {
                                             const q = quiz.questions[currentQuestionIndex];
                                             const userAns = answers[currentQuestionIndex];
@@ -1094,7 +1105,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     {currentQuestionIndex < quiz.questions.length - 1 ? (
                                         <Button
                                             onClick={() => {
-                                                if (!revealed[currentQuestionIndex]) {
+                                                const currentAnswer = answers[currentQuestionIndex];
+                                                const hasAnswer = Array.isArray(currentAnswer)
+                                                    ? currentAnswer.length > 0
+                                                    : String(currentAnswer ?? "").trim() !== "";
+                                                if (answerRevealMode === "immediate" && hasAnswer && !revealed[currentQuestionIndex]) {
                                                     setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }));
                                                     return;
                                                 }
@@ -1102,8 +1117,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                             }}
                                             className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
                                         >
-                                            {!revealed[currentQuestionIndex]
-                                                ? (language === 'vi' ? 'Tiếp theo (hiện đáp án)' : 'Next (show answer)')
+                                            {answerRevealMode === "immediate" && !revealed[currentQuestionIndex] && answers[currentQuestionIndex] !== undefined
+                                                ? (language === 'vi' ? 'Hiện đáp án' : 'Show answer')
                                                 : (language === 'vi' ? 'Tiếp theo' : 'Next')}
                                             <ArrowLeft className="h-5 w-5 ml-1 rotate-180 hidden sm:block" />
                                         </Button>

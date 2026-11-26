@@ -9,6 +9,7 @@ import {
     getQuizzesBySubject
 } from "@/services/quizService";
 import { Navbar } from "@/components/layout/Navbar";
+import { AnswerRevealModeSelector, type AnswerRevealMode } from "@/components/quiz/AnswerRevealModeSelector";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -48,6 +49,7 @@ function ExamQuestion({
     index,
     selected,
     onChange,
+    onCheck,
     readOnly = false,
     isCorrect = undefined,
     language = 'vi'
@@ -136,13 +138,22 @@ function ExamQuestion({
                                         </div>
                                     </div>
                                 ) : (
-                                    <textarea
-                                        className="w-full p-4 rounded-xl border-2 border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black/20 min-h-[120px] focus:border-indigo-500 outline-none transition-all"
-                                        placeholder={language === 'vi' ? "Nhập câu trả lời..." : "Type answer..."}
-                                        value={selected as string || ''}
-                                        onChange={(e) => !readOnly && onChange(e.target.value)}
-                                        disabled={readOnly}
-                                    />
+                                    <>
+                                        <textarea
+                                            className="w-full p-4 rounded-xl border-2 border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black/20 min-h-[120px] focus:border-indigo-500 outline-none transition-all"
+                                            placeholder={language === 'vi' ? "Nhập câu trả lời..." : "Type answer..."}
+                                            value={selected as string || ''}
+                                            onChange={(e) => !readOnly && onChange(e.target.value)}
+                                            disabled={readOnly}
+                                        />
+                                        {!readOnly && onCheck && String(selected || "").trim() !== "" && (
+                                            <div className="flex justify-end">
+                                                <Button size="sm" onClick={onCheck} className="rounded-full">
+                                                    {language === 'vi' ? 'Kiểm tra đáp án' : 'Check answer'}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </>
                                 )
                             ) : (
                                 question.options?.map((opt: string, i: number) => {
@@ -179,6 +190,13 @@ function ExamQuestion({
                                     );
                                 })
                             )}
+                            {!readOnly && onCheck && isMultiple && Array.isArray(selected) && selected.length > 0 && (
+                                <div className="flex justify-end pt-2">
+                                    <Button size="sm" onClick={onCheck} className="rounded-full">
+                                        {language === 'vi' ? 'Kiểm tra đáp án' : 'Check answer'}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -204,6 +222,8 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
     const [timeLeft, setTimeLeft] = useState(3600); // 60 minutes
     const [totalTimeLimit, setTotalTimeLimit] = useState(3600);
     const [answers, setAnswers] = useState<Record<number, any>>({});
+    const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+    const [answerRevealMode, setAnswerRevealMode] = useState<AnswerRevealMode>("after-submit");
     const [score, setScore] = useState(0);
     const [leaderboard, setLeaderboard] = useState<any[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -548,6 +568,11 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                             </div>
                         )}
 
+                        <AnswerRevealModeSelector
+                            value={answerRevealMode}
+                            onChange={setAnswerRevealMode}
+                            language={language}
+                        />
                         <Button
                             onClick={handleStartExam}
                             disabled={selectedCount === 0 || totalSelectedQuestionsCount === 0}
@@ -620,9 +645,15 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                             index={i}
                             question={q}
                             selected={answers[i]}
-                            onChange={(val: any) => setAnswers(prev => ({ ...prev, [i]: val }))}
-                            readOnly={isSubmitted}
-                            isCorrect={isSubmitted ? (() => {
+                            onChange={(val: any) => {
+                                setAnswers(prev => ({ ...prev, [i]: val }));
+                                if (answerRevealMode === "immediate" && q.type === "single") {
+                                    setRevealed(prev => ({ ...prev, [i]: true }));
+                                }
+                            }}
+                            onCheck={answerRevealMode === "immediate" ? () => setRevealed(prev => ({ ...prev, [i]: true })) : undefined}
+                            readOnly={isSubmitted || !!revealed[i]}
+                            isCorrect={isSubmitted || revealed[i] ? (() => {
                                 if (q.type === 'multiple') return arraysEqual(answers[i], q.correctAnswer);
                                 if (q.type === 'single') return (q.correctAnswer || []).includes(answers[i]);
                                 const uStr = (answers[i] || "");
