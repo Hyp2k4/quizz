@@ -356,15 +356,46 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
             } else if (event.key === "ArrowLeft") {
                 event.preventDefault();
                 setCurrentQuestionIndex(index => Math.max(0, index - 1));
-            } else if (/^[1-4]$/.test(event.key) && Number(event.key) <= questionCount) {
+            } else if (/^[1-4]$/.test(event.key)) {
+                if (answerRevealMode === "immediate" && revealed[currentQuestionIndex]) return;
+                const question = questions[currentQuestionIndex];
+                const option = question?.options?.[Number(event.key) - 1];
+                if (!question || question.type === "open" || option === undefined) return;
+
                 event.preventDefault();
-                setCurrentQuestionIndex(Number(event.key) - 1);
+                if (question.type === "multiple") {
+                    setAnswers(prev => {
+                        const selected = Array.isArray(prev[currentQuestionIndex])
+                            ? prev[currentQuestionIndex] as string[]
+                            : [];
+                        return {
+                            ...prev,
+                            [currentQuestionIndex]: selected.includes(option)
+                                ? selected.filter(answer => answer !== option)
+                                : [...selected, option]
+                        };
+                    });
+                } else {
+                    setAnswers(prev => ({ ...prev, [currentQuestionIndex]: option }));
+                    if (answerRevealMode === "immediate") {
+                        setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }));
+                        if (mode === "wrong" && user && subject) {
+                            const correctAnswers = Array.isArray(question.correctAnswer)
+                                ? question.correctAnswer
+                                : [question.correctAnswer || ""];
+                            void syncSubjectWrongQuestions(user.uid, subject, [{
+                                question,
+                                isCorrect: correctAnswers.includes(option)
+                            }]);
+                        }
+                    }
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [questions.length, isStarted, isSubmitted, confirmOpen]);
+    }, [questions, currentQuestionIndex, answerRevealMode, revealed, isStarted, isSubmitted, confirmOpen, mode, user, subject]);
 
     const handleStartPractice = () => {
         const selectedIds = Object.keys(selectedQuizzes).filter(id => selectedQuizzes[id]);
@@ -916,7 +947,9 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
 
                                 <span className="font-extrabold text-sm md:text-base text-zinc-500 dark:text-zinc-400">
                                     <span className="text-zinc-900 dark:text-zinc-100">{currentQuestionIndex + 1}</span> / {questions.length}
-                                    <span className="block text-[10px] font-medium text-zinc-400">← → · 1–4</span>
+                                    <span className="block text-[10px] font-medium text-zinc-400">
+                                        {language === "vi" ? "← → · 1–4: đáp án A–D" : "← → · 1–4: answers A–D"}
+                                    </span>
                                 </span>
 
                                 <div className="flex gap-2">

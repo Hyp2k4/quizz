@@ -640,28 +640,62 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
 
                 <div className="space-y-6 pt-20">
                     {questions.map((q, i) => (
-                        <ExamQuestion
+                        <div
                             key={i}
-                            index={i}
-                            question={q}
-                            selected={answers[i]}
-                            onChange={(val: any) => {
-                                setAnswers(prev => ({ ...prev, [i]: val }));
-                                if (answerRevealMode === "immediate" && q.type === "single") {
-                                    setRevealed(prev => ({ ...prev, [i]: true }));
+                            onKeyDown={event => {
+                                const target = event.target;
+                                if (
+                                    target instanceof HTMLElement &&
+                                    target.closest("textarea, select, [contenteditable='true'], input:not([type='radio']):not([type='checkbox'])")
+                                ) {
+                                    return;
+                                }
+
+                                if (isSubmitted || revealed[i] || q.type === "open" || !/^[1-4]$/.test(event.key)) return;
+                                const option = q.options?.[Number(event.key) - 1];
+                                if (option === undefined) return;
+
+                                event.preventDefault();
+                                if (q.type === "multiple") {
+                                    setAnswers(prev => {
+                                        const selected = Array.isArray(prev[i]) ? prev[i] as string[] : [];
+                                        return {
+                                            ...prev,
+                                            [i]: selected.includes(option)
+                                                ? selected.filter(answer => answer !== option)
+                                                : [...selected, option]
+                                        };
+                                    });
+                                } else {
+                                    setAnswers(prev => ({ ...prev, [i]: option }));
+                                    if (answerRevealMode === "immediate") {
+                                        setRevealed(prev => ({ ...prev, [i]: true }));
+                                    }
                                 }
                             }}
-                            onCheck={answerRevealMode === "immediate" ? () => setRevealed(prev => ({ ...prev, [i]: true })) : undefined}
-                            readOnly={isSubmitted || !!revealed[i]}
-                            isCorrect={isSubmitted || revealed[i] ? (() => {
-                                if (q.type === 'multiple') return arraysEqual(answers[i], q.correctAnswer);
-                                if (q.type === 'single') return (q.correctAnswer || []).includes(answers[i]);
-                                const uStr = (answers[i] || "");
-                                const cStr = Array.isArray(q.correctAnswer) ? (q.correctAnswer[0] || "") : (q.correctAnswer || "");
-                                return gradeOpenAnswer(uStr, cStr, openGradingCfg || undefined).isCorrect;
-                            })() : undefined}
-                            language={language}
-                        />
+                        >
+                            <ExamQuestion
+                                index={i}
+                                question={q}
+                                selected={answers[i]}
+                                onChange={(val: any) => {
+                                    setAnswers(prev => ({ ...prev, [i]: val }));
+                                    if (answerRevealMode === "immediate" && q.type === "single") {
+                                        setRevealed(prev => ({ ...prev, [i]: true }));
+                                    }
+                                }}
+                                onCheck={answerRevealMode === "immediate" ? () => setRevealed(prev => ({ ...prev, [i]: true })) : undefined}
+                                readOnly={isSubmitted || !!revealed[i]}
+                                isCorrect={isSubmitted || revealed[i] ? (() => {
+                                    if (q.type === 'multiple') return arraysEqual(answers[i], q.correctAnswer);
+                                    if (q.type === 'single') return (q.correctAnswer || []).includes(answers[i]);
+                                    const uStr = (answers[i] || "");
+                                    const cStr = Array.isArray(q.correctAnswer) ? (q.correctAnswer[0] || "") : (q.correctAnswer || "");
+                                    return gradeOpenAnswer(uStr, cStr, openGradingCfg || undefined).isCorrect;
+                                })() : undefined}
+                                language={language}
+                            />
+                        </div>
                     ))}
                 </div>
 

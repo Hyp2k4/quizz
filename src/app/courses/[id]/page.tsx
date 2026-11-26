@@ -535,15 +535,37 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             } else if (event.key === "ArrowLeft") {
                 event.preventDefault();
                 setCurrentQuestionIndex(index => Math.max(0, index - 1));
-            } else if (/^[1-4]$/.test(event.key) && Number(event.key) <= questionCount) {
+            } else if (/^[1-4]$/.test(event.key)) {
+                if (answerRevealMode === "immediate" && revealed[currentQuestionIndex]) return;
+                const question = quiz?.questions[currentQuestionIndex];
+                const option = question?.options?.[Number(event.key) - 1];
+                if (!question || question.type === "open" || option === undefined) return;
+
                 event.preventDefault();
-                setCurrentQuestionIndex(Number(event.key) - 1);
+                if (question.type === "multiple") {
+                    setAnswers(prev => {
+                        const selected = Array.isArray(prev[currentQuestionIndex])
+                            ? prev[currentQuestionIndex] as string[]
+                            : [];
+                        return {
+                            ...prev,
+                            [currentQuestionIndex]: selected.includes(option)
+                                ? selected.filter(answer => answer !== option)
+                                : [...selected, option]
+                        };
+                    });
+                } else {
+                    setAnswers(prev => ({ ...prev, [currentQuestionIndex]: option }));
+                    if (answerRevealMode === "immediate") {
+                        setRevealed(prev => ({ ...prev, [currentQuestionIndex]: true }));
+                    }
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [quiz?.questions.length, hasAccess, isReadyToStart, isSubmitted, confirmOpen]);
+    }, [quiz, currentQuestionIndex, answerRevealMode, revealed, hasAccess, isReadyToStart, isSubmitted, confirmOpen]);
 
 
 
@@ -1131,7 +1153,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     
                                     <span className="font-extrabold text-sm md:text-base text-zinc-500 dark:text-zinc-400">
                                         <span className="text-zinc-900 dark:text-zinc-100">{currentQuestionIndex + 1}</span> / {quiz.questions.length}
-                                        <span className="block text-[10px] font-medium text-zinc-400">← → · 1–4</span>
+                                        <span className="block text-[10px] font-medium text-zinc-400">
+                                            {language === "vi" ? "← → · 1–4: đáp án A–D" : "← → · 1–4: answers A–D"}
+                                        </span>
                                     </span>
                                     
                                     {currentQuestionIndex < quiz.questions.length - 1 ? (
