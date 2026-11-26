@@ -21,7 +21,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import {
     Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle,
-    BookOpen, LogIn, ArrowRight, Home, LayoutGrid, Zap, Check, Lightbulb, ChevronDown
+    BookOpen, LogIn, ArrowLeft, ArrowRight, Home, LayoutGrid, Zap, Check, Lightbulb, ChevronDown
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
@@ -70,11 +70,11 @@ function PracticeQuestion({
     })() : undefined;
 
     return (
-        <Card className={`mb-6 border-l-4 transition-all duration-300 ${isRevealed ? (isCorrect ? 'border-l-green-500 bg-green-50/5' : 'border-l-red-500 bg-red-50/5') : 'border-l-sky-500'}`}>
+        <Card className={`mb-6 border-l-4 shadow-md transition-colors ${isRevealed ? (isCorrect ? 'border-l-green-500 bg-green-50/5' : 'border-l-red-500 bg-red-50/5') : 'border-l-indigo-500'}`}>
             <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm ${isRevealed ? (isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-sky-100 text-sky-700'}`}>
-                        {isRevealed ? (isCorrect ? <CheckCircle className="h-6 w-6" /> : <XCircle className="h-6 w-6" />) : index + 1}
+                <div className="flex gap-4">
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold shrink-0 ${isRevealed ? (isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-indigo-100 text-indigo-700'}`}>
+                        {isRevealed ? (isCorrect ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />) : index + 1}
                     </div>
                     <div className="w-full">
                         <h3
@@ -145,7 +145,7 @@ function PracticeQuestion({
                                         </div>
                                     ) : (
                                         <textarea
-                                            className="w-full p-4 rounded-xl border bg-white dark:bg-black/20 min-h-[120px] outline-none focus:ring-2 ring-sky-500/20 transition-all"
+                                            className="w-full p-3 rounded-lg border bg-white dark:bg-black/20 min-h-[100px] outline-none focus:ring-2 ring-indigo-500/20 transition-all"
                                             placeholder={language === 'vi' ? "Nhập câu trả lời của bạn..." : "Type your answer..."}
                                             value={selected as string || ''}
                                             onChange={(e) => onChange(e.target.value)}
@@ -158,14 +158,14 @@ function PracticeQuestion({
                                         const isSelected = isMultiple ? (selected as string[])?.includes(opt) : selected === opt;
                                         const isActuallyCorrect = isRevealed && (isMultiple ? question.correctAnswer?.includes(opt) : question.correctAnswer?.[0] === opt);
 
-                                        let optionClass = `flex items-start gap-3 p-4 rounded-2xl border-2 transition-all ${isRevealed ? 'cursor-default' : 'cursor-pointer hover:bg-sky-50/50 dark:hover:bg-zinc-800/50'}`;
+                                        let optionClass = `flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isRevealed ? 'cursor-default' : 'hover:bg-indigo-50 dark:hover:bg-zinc-800'}`;
 
                                         if (isRevealed) {
                                             if (isActuallyCorrect) optionClass += " border-green-500 bg-green-50 dark:bg-green-900/20";
                                             else if (isSelected) optionClass += " border-red-500 bg-red-50 dark:bg-red-900/20";
                                             else optionClass += " border-transparent opacity-60";
                                         } else if (isSelected) {
-                                            optionClass += " border-sky-500 bg-sky-50 dark:bg-sky-900/20";
+                                            optionClass += " border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20";
                                         } else {
                                             optionClass += " border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900";
                                         }
@@ -177,7 +177,7 @@ function PracticeQuestion({
                                                     checked={!!isSelected}
                                                     onChange={() => !isRevealed && (isMultiple ? handleMultiChange(opt, !isSelected) : onChange(opt))}
                                                     disabled={isRevealed}
-                                                    className="mt-1 w-4 h-4 text-sky-600"
+                                                    className="mt-0.5 w-4 h-4 text-indigo-600 shrink-0"
                                                 />
                                                 <span
                                                     className="text-sm font-medium"
@@ -229,9 +229,9 @@ function PracticeQuestion({
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="mt-6 p-4 rounded-2xl bg-sky-50 dark:bg-sky-900/10 border border-sky-100 dark:border-sky-800"
+                                className="mt-6 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
                             >
-                                <div className="flex items-center gap-2 mb-2 text-sky-600 dark:text-sky-400 font-bold text-sm">
+                                <div className="flex items-center gap-2 mb-2 text-indigo-600 dark:text-indigo-400 font-bold text-sm">
                                     <AlertCircle className="h-4 w-4" />
                                     {language === 'vi' ? 'Giải thích & Đáp án' : 'Explanation & Answer'}
                                 </div>
@@ -814,8 +814,12 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
         );
     }
 
-    const answeredCount = Object.keys(answers).length;
-    const progress = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
+    const answeredCount = questions.filter((_, index) => {
+        const answer = answers[index];
+        return answer !== undefined && (Array.isArray(answer)
+            ? answer.length > 0
+            : String(answer).trim() !== "");
+    }).length;
     const activeAnswer = answers[currentQuestionIndex];
     const hasActiveAnswer = Array.isArray(activeAnswer)
         ? activeAnswer.length > 0
@@ -827,57 +831,46 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
 
 
 
-            <main className="pt-32 px-6 max-w-4xl mx-auto pb-32 space-y-6">
-                {/* Sticky Progress Bar */}
+            <main className="pt-24 md:pt-32 px-4 md:px-6 max-w-4xl mx-auto pb-20 space-y-6">
                 <div className="flex flex-col sm:flex-row justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 p-3 md:p-4 rounded-xl sticky top-20 z-10 backdrop-blur-md shadow-sm gap-2 sm:gap-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-sky-100 dark:bg-sky-900/30 text-sky-600 rounded-[1.25rem] flex items-center justify-center shrink-0">
-                            <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <div className="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                            <LayoutGrid className="h-5 w-5" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-300 uppercase tracking-widest leading-none mb-1">Đang luyện tập môn</p>
-                            <p className="text-sm font-black truncate max-w-[150px] sm:max-w-none text-zinc-900 dark:text-zinc-50">{subject}</p>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest leading-none mb-1">
+                                {language === 'vi' ? 'Đang luyện tập môn' : 'Practicing'}
+                            </p>
+                            <p className="text-sm font-black truncate max-w-[180px] text-zinc-900 dark:text-zinc-50">{subject}</p>
                         </div>
                     </div>
-                    <div className="flex flex-1 sm:max-w-[400px] w-full items-center gap-4">
-                        <div className="flex-1 h-3 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${progress}%` }}
-                                className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 transition-all duration-500 ease-out"
-                            />
+                    {!isSubmitted && (
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-[rgb(var(--muted-foreground))]">
+                                {answeredCount} / {questions.length}
+                            </span>
+                            <Button
+                                size="sm"
+                                onClick={onPreSubmit}
+                                className="rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold h-8 px-3"
+                            >
+                                {language === 'vi' ? 'Nộp bài' : 'Submit'}
+                            </Button>
                         </div>
-                        <div className="text-right shrink-0">
-                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-300 uppercase tracking-widest leading-none mb-1">Tiến độ</p>
-                            <p className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400">{answeredCount} <span className="text-zinc-400 text-xs">/ {questions.length}</span></p>
-                        </div>
-                    </div>
+                    )}
                 </div>
 
-
-
-                {!isSubmitted && (
-                    <div className="flex items-center gap-3 pt-6 mb-4">
-                        <Button
-                            onClick={onPreSubmit}
-                            className="rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold h-10 px-6 shadow-md shadow-green-500/20 w-full sm:w-auto"
-                        >
-                            {language === 'vi' ? 'Nộp bài' : 'Submit'}
-                        </Button>
-                    </div>
-                )}
-
                 {isSubmitted && (
-                    <div className="mt-8 mb-8 p-8 md:p-10 bg-sky-50 dark:bg-sky-900/10 rounded-[3rem] text-center space-y-6 border border-sky-100 dark:border-sky-800 shadow-lg animation-scale-in">
+                    <div className="mt-8 mb-8 p-8 md:p-10 bg-indigo-50 dark:bg-indigo-900/10 rounded-[2rem] text-center space-y-6 border border-indigo-100 dark:border-indigo-800 shadow-lg animation-scale-in">
                         <div className="h-20 w-20 bg-yellow-100 text-yellow-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner transform -rotate-6">
                             <Trophy className="h-10 w-10" />
                         </div>
                         <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50">{language === 'vi' ? 'Hoàn thành Luyện tập!' : 'Practice Completed!'}</h2>
-                        <div className="text-5xl font-black text-sky-600 dark:text-sky-400">
+                        <div className="text-5xl font-black text-indigo-600 dark:text-indigo-400">
                             {score} <span className="text-2xl text-zinc-400">/ {questions.length}</span>
                         </div>
                         <div className="flex justify-center gap-4 pt-4">
-                            <Button onClick={() => window.location.reload()} className="h-12 rounded-2xl px-8 font-bold bg-sky-600 hover:bg-sky-700">
+                            <Button onClick={() => window.location.reload()} className="h-12 rounded-2xl px-8 font-bold bg-indigo-600 hover:bg-indigo-700">
                                 {language === 'vi' ? 'Luyện tập lại' : 'Practice Again'}
                             </Button>
                             <Button variant="outline" onClick={() => router.push('/courses')} className="h-12 rounded-2xl px-8 font-bold">
@@ -894,6 +887,9 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                             <div className="p-4 md:p-6 bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-150 dark:border-zinc-800 shadow-sm space-y-4">
                                 <div className="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-widest">
                                     <span>{language === 'vi' ? 'Bản đồ câu hỏi' : 'Question Map'}</span>
+                                    <span className="text-indigo-600 dark:text-indigo-400">
+                                        {answeredCount} / {questions.length} {language === 'vi' ? 'đã làm' : 'answered'}
+                                    </span>
                                 </div>
                                 <div className="flex flex-wrap gap-2 md:gap-3">
                                     {questions.map((_, idx) => {
@@ -905,11 +901,11 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                                 key={idx}
                                                 onClick={() => setCurrentQuestionIndex(idx)}
                                                 className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl font-bold text-sm md:text-base transition-all flex items-center justify-center border-2 ${isActive
-                                                        ? 'border-sky-500 bg-sky-600 text-white shadow-lg shadow-sky-500/30 scale-110 z-10'
-                                                        : isAnswered
-                                                            ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-400 hover:border-sky-300'
-                                                            : 'border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400 hover:border-zinc-300'
-                                                    }`}
+                                                    ? 'border-indigo-500 bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110 z-10'
+                                                    : isAnswered
+                                                        ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-400 hover:border-indigo-300'
+                                                        : 'border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400 hover:border-zinc-300'
+                                                }`}
                                             >
                                                 {idx + 1}
                                             </button>
@@ -942,6 +938,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                     onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                                     className="rounded-2xl px-4 md:px-6 font-bold h-12"
                                 >
+                                    <ArrowLeft className="h-5 w-5 mr-1 hidden sm:block" />
                                     {language === 'vi' ? 'Quay lại' : 'Previous'}
                                 </Button>
 
@@ -987,9 +984,10 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
                                                 (questions[currentQuestionIndex]?.type === 'open' ||
                                                     (questions[currentQuestionIndex]?.type === 'multiple' && hasActiveAnswer))
                                             }
-                                            className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-sky-600 text-white hover:bg-sky-700 shadow-lg shadow-sky-500/20"
+                                            className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
                                         >
                                             {language === 'vi' ? 'Tiếp theo' : 'Next'}
+                                            <ArrowRight className="h-5 w-5 ml-1 hidden sm:block" />
                                         </Button>
                                     ) : (
                                         <Button

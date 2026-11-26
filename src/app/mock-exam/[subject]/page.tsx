@@ -19,7 +19,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 import {
     Trophy, CheckCircle, XCircle, AlertCircle, PlayCircle,
-    Timer, Sparkles, BookOpen, LogIn, ArrowRight, Home, Check
+    Timer, Sparkles, BookOpen, LogIn, ArrowLeft, ArrowRight, Home, Check
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
@@ -68,30 +68,29 @@ function ExamQuestion({
     };
 
     return (
-        <Card className={`mb-6 border-l-4 transition-all ${readOnly ? (isCorrect ? 'border-l-green-500 bg-green-50/10' : 'border-l-red-500 bg-red-50/10') : 'border-l-indigo-500'}`}>
-            <CardContent className="p-4 sm:p-6">
-                <div className="flex flex-col sm:flex-row gap-4">
+        <Card className={`mb-6 border-l-4 shadow-md transition-colors ${readOnly ? (isCorrect ? 'border-l-green-500 bg-green-50/10' : 'border-l-red-500 bg-red-50/10') : 'border-l-indigo-500'}`}>
+            <CardContent className="pt-6">
+                <div className="flex gap-4">
                     <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm ${readOnly ? (isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-indigo-100 text-indigo-700'}`}>
                         {readOnly ? (isCorrect ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />) : index + 1}
                     </div>
                     <div className="w-full min-w-0">
-                        <h3 
-                            className="font-semibold text-base sm:text-lg mb-4 text-zinc-800 dark:text-zinc-100 break-words"
+                        <h3
+                            className="font-semibold text-lg mb-4 text-zinc-800 dark:text-zinc-100 break-words"
                             style={{ fontSize: question.fontSize ? `${question.fontSize}px` : undefined, lineHeight: 1.5 }}
-                        >
-                            {question.text}
-                        </h3>
+                            dangerouslySetInnerHTML={{ __html: question.text }}
+                        />
 
                         {question.imageUrl && (
                             <div className="mb-6 rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-100 dark:border-zinc-800">
-                                <img src={question.imageUrl} alt="Question" className="max-h-[300px] w-auto mx-auto object-contain" />
+                                <img src={question.imageUrl} alt="Question" className="max-h-[400px] w-auto mx-auto object-contain" />
                             </div>
                         )}
 
                         <div className="grid grid-cols-1 gap-3">
                             {isOpen ? (
                                 readOnly ? (
-                                    <div className="w-full p-4 rounded-xl border-2 border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black/20 min-h-[120px]">
+                                    <div className="w-full p-3 rounded-lg border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black/20 min-h-[100px]">
                                         <p className="mb-4 text-zinc-800 dark:text-zinc-200 text-base leading-relaxed">
                                             {(() => {
                                                 const uStr = selected as string || "";
@@ -140,7 +139,7 @@ function ExamQuestion({
                                 ) : (
                                     <>
                                         <textarea
-                                            className="w-full p-4 rounded-xl border-2 border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black/20 min-h-[120px] focus:border-indigo-500 outline-none transition-all"
+                                            className="w-full p-3 rounded-lg border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-black/20 min-h-[100px] focus:border-indigo-500 outline-none transition-all"
                                             placeholder={language === 'vi' ? "Nhập câu trả lời..." : "Type answer..."}
                                             value={selected as string || ''}
                                             onChange={(e) => !readOnly && onChange(e.target.value)}
@@ -160,7 +159,7 @@ function ExamQuestion({
                                     const isSelected = isMultiple ? (selected as string[])?.includes(opt) : selected === opt;
                                     const isActuallyCorrect = readOnly && (isMultiple ? question.correctAnswer?.includes(opt) : question.correctAnswer?.[0] === opt);
 
-                                    let optionClass = `flex items-start gap-3 p-4 rounded-2xl border-2 transition-all ${readOnly ? 'cursor-default' : 'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`;
+                                    let optionClass = `flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${readOnly ? 'cursor-default' : 'hover:bg-indigo-50 dark:hover:bg-zinc-800'}`;
                                     if (readOnly) {
                                         if (isActuallyCorrect) optionClass += " border-green-500 bg-green-50 dark:bg-green-900/20";
                                         else if (isSelected) optionClass += " border-red-500 bg-red-50 dark:bg-red-900/20";
@@ -178,14 +177,13 @@ function ExamQuestion({
                                                 checked={!!isSelected}
                                                 onChange={() => !readOnly && (isMultiple ? handleMultiChange(opt, !isSelected) : onChange(opt))}
                                                 disabled={readOnly}
-                                                className="mt-1 w-4 h-4 text-indigo-600"
+                                                className="mt-0.5 w-4 h-4 text-indigo-600 shrink-0"
                                             />
-                                            <span 
-                                                className="text-sm font-medium"
+                                            <span
+                                                className="text-sm break-words"
+                                                dangerouslySetInnerHTML={{ __html: opt }}
                                                 style={{ fontSize: question.answerFontSize ? `${question.answerFontSize}px` : undefined }}
-                                            >
-                                                {opt}
-                                            </span>
+                                            />
                                         </label>
                                     );
                                 })
@@ -225,6 +223,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
     const [revealed, setRevealed] = useState<Record<number, boolean>>({});
     const [answerRevealMode, setAnswerRevealMode] = useState<AnswerRevealMode>("after-submit");
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+    const previousActiveQuestionIndex = useRef(0);
     const [score, setScore] = useState(0);
     const [leaderboard, setLeaderboard] = useState<any[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -340,10 +339,6 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                     ? Math.min(questions.length - 1, activeQuestionIndex + 1)
                     : Math.max(0, activeQuestionIndex - 1);
                 setActiveQuestionIndex(nextIndex);
-                document.getElementById(`mock-question-${nextIndex}`)?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center"
-                });
                 return;
             }
 
@@ -377,6 +372,17 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isStarted, isSubmitted, confirmOpen, questions, activeQuestionIndex, answerRevealMode, revealed]);
+
+    useEffect(() => {
+        if (!isStarted || isSubmitted) return;
+        if (previousActiveQuestionIndex.current !== activeQuestionIndex) {
+            document.getElementById(`mock-question-${activeQuestionIndex}`)?.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+        }
+        previousActiveQuestionIndex.current = activeQuestionIndex;
+    }, [isStarted, isSubmitted, activeQuestionIndex]);
 
     const handleSubmit = async () => {
         if (isSubmitted) return;
@@ -447,6 +453,11 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
     const triggerConfetti = () => {
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
     };
+
+    const answeredCount = questions.filter((_, index) => {
+        const answer = answers[index];
+        return answer !== undefined && (Array.isArray(answer) ? answer.length > 0 : String(answer).trim() !== "");
+    }).length;
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading exam...</div>;
 
@@ -670,93 +681,187 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
             <Navbar />
 
-            <main className="pt-32 px-6 max-w-4xl mx-auto pb-32">
-                {/* Fixed Header with Timer */}
-                <div className="fixed top-20 sm:top-24 left-0 right-0 z-40 px-4 sm:px-6 pointer-events-none">
-                    <div className="max-w-4xl mx-auto flex justify-between items-center bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md p-3 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-xl pointer-events-auto">
-                        <div className="flex items-center gap-3 sm:gap-4">
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-xl sm:rounded-2xl flex items-center justify-center">
-                                <BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[8px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-widest truncate">{language === 'vi' ? 'Đang thi thử' : 'Exam in progress'}</p>
-                                <p className="text-xs sm:text-sm font-black truncate max-w-[80px] md:max-w-none">{subject}</p>
-                                <p className="text-[8px] text-zinc-400">← → {language === "vi" ? "câu · 1–4 đáp án A–D" : "questions · 1–4 answers A–D"}</p>
-                            </div>
+            <main className="pt-24 md:pt-32 px-4 md:px-6 max-w-4xl mx-auto pb-20">
+                <div className="flex flex-col sm:flex-row justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 p-3 md:p-4 rounded-xl sticky top-20 z-10 backdrop-blur-md shadow-sm gap-2 sm:gap-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-xl flex items-center justify-center">
+                            <BookOpen className="h-5 w-5" />
                         </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest leading-none mb-1">
+                                {language === 'vi' ? 'Đang thi thử môn' : 'Mock exam'}
+                            </p>
+                            <p className="text-sm font-black truncate max-w-[180px] text-zinc-900 dark:text-zinc-50">{subject}</p>
+                        </div>
+                    </div>
 
-                        <div className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl ${timeLeft < 300 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-indigo-50 text-indigo-600'}`}>
-                            <Timer className="h-4 w-4 sm:h-5 sm:w-5" />
-                            <span className="text-lg sm:text-2xl font-black font-mono">{formatCountdown(timeLeft)}</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-zinc-400 text-[10px] sm:text-sm font-bold">
-                            <span className="hidden xs:inline">{Object.keys(answers).length} / {questions.length}</span>
-                        </div>
+                    <div className="flex items-center gap-4">
+                        <span className={`flex items-center gap-2 rounded-xl px-3 py-1.5 font-mono text-lg font-bold ${timeLeft < 300 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400'}`}>
+                            <Timer className="h-4 w-4" />
+                            {formatCountdown(timeLeft)}
+                        </span>
+                        {!isSubmitted && (
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm text-[rgb(var(--muted-foreground))]">
+                                    {answeredCount} / {questions.length}
+                                </span>
+                                <Button
+                                    size="sm"
+                                    onClick={() => setConfirmOpen(true)}
+                                    className="rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold h-8 px-3"
+                                >
+                                    {language === 'vi' ? 'Nộp bài' : 'Submit'}
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <div className="space-y-6 pt-20">
-                    {questions.map((q, i) => (
+                {!isSubmitted && questions.length > 0 && (
+                    <div className="space-y-6 pt-6">
+                        <div className="p-4 md:p-6 bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-150 dark:border-zinc-800 shadow-sm space-y-4">
+                            <div className="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                <span>{language === 'vi' ? 'Bản đồ câu hỏi' : 'Question Map'}</span>
+                                <span className="text-indigo-600 dark:text-indigo-400">
+                                    {answeredCount} / {questions.length} {language === 'vi' ? 'đã làm' : 'answered'}
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 md:gap-3">
+                                {questions.map((_, index) => {
+                                    const answer = answers[index];
+                                    const isAnswered = answer !== undefined && (Array.isArray(answer)
+                                        ? answer.length > 0
+                                        : String(answer).trim() !== "");
+                                    const isActive = index === activeQuestionIndex;
+                                    return (
+                                        <button
+                                            key={index}
+                                            onClick={() => setActiveQuestionIndex(index)}
+                                            className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl font-bold text-sm md:text-base transition-all flex items-center justify-center border-2 ${
+                                                isActive
+                                                    ? 'border-indigo-500 bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110 z-10'
+                                                    : isAnswered
+                                                        ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-400 hover:border-indigo-300'
+                                                        : 'border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400 hover:border-zinc-300'
+                                            }`}
+                                        >
+                                            {index + 1}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                         <div
-                            key={i}
-                    id={`mock-question-${i}`}
-                    className={activeQuestionIndex === i && !isSubmitted
-                        ? "rounded-2xl ring-2 ring-indigo-500 ring-offset-2 ring-offset-zinc-50 dark:ring-offset-zinc-950"
-                        : ""}
-                    onClick={() => setActiveQuestionIndex(i)}
-                    onFocusCapture={() => setActiveQuestionIndex(i)}
+                            id={`mock-question-${activeQuestionIndex}`}
+                            className="transition-all duration-300"
                         >
                             <ExamQuestion
-                                index={i}
-                                question={q}
-                                selected={answers[i]}
+                                index={activeQuestionIndex}
+                                question={questions[activeQuestionIndex]}
+                                selected={answers[activeQuestionIndex]}
                                 onChange={(val: any) => {
-                                    setAnswers(prev => ({ ...prev, [i]: val }));
-                                    if (answerRevealMode === "immediate" && q.type === "single") {
-                                        setRevealed(prev => ({ ...prev, [i]: true }));
+                                    setAnswers(prev => ({ ...prev, [activeQuestionIndex]: val }));
+                                    if (answerRevealMode === "immediate" && questions[activeQuestionIndex]?.type === "single") {
+                                        setRevealed(prev => ({ ...prev, [activeQuestionIndex]: true }));
                                     }
                                 }}
-                                onCheck={answerRevealMode === "immediate" ? () => setRevealed(prev => ({ ...prev, [i]: true })) : undefined}
-                                readOnly={isSubmitted || !!revealed[i]}
-                                isCorrect={isSubmitted || revealed[i] ? (() => {
-                                    if (q.type === 'multiple') return arraysEqual(answers[i], q.correctAnswer);
-                                    if (q.type === 'single') return (q.correctAnswer || []).includes(answers[i]);
-                                    const uStr = (answers[i] || "");
-                                    const cStr = Array.isArray(q.correctAnswer) ? (q.correctAnswer[0] || "") : (q.correctAnswer || "");
-                                    return gradeOpenAnswer(uStr, cStr, openGradingCfg || undefined).isCorrect;
+                                onCheck={answerRevealMode === "immediate" ? () => setRevealed(prev => ({ ...prev, [activeQuestionIndex]: true })) : undefined}
+                                readOnly={isSubmitted || !!revealed[activeQuestionIndex]}
+                                isCorrect={revealed[activeQuestionIndex] ? (() => {
+                                    const q = questions[activeQuestionIndex];
+                                    if (q.type === 'multiple') return arraysEqual(answers[activeQuestionIndex], q.correctAnswer);
+                                    if (q.type === 'single') return (q.correctAnswer || []).includes(answers[activeQuestionIndex]);
+                                    const userAnswer = answers[activeQuestionIndex] || "";
+                                    const correctAnswer = Array.isArray(q.correctAnswer) ? (q.correctAnswer[0] || "") : (q.correctAnswer || "");
+                                    return gradeOpenAnswer(userAnswer, correctAnswer, openGradingCfg || undefined).isCorrect;
                                 })() : undefined}
                                 language={language}
                             />
                         </div>
-                    ))}
-                </div>
 
-                {!isSubmitted && (
-                    <div className="fixed bottom-6 sm:bottom-10 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 sm:px-6 z-40">
-                        <Button
-                            onClick={() => setConfirmOpen(true)}
-                            className="w-full h-14 sm:h-16 rounded-2xl sm:rounded-3xl bg-indigo-600 text-lg sm:text-xl font-bold shadow-2xl shadow-indigo-500/40 hover:scale-[1.02] transition-transform active:scale-95"
-                        >
-                            Nộp bài thi
-                        </Button>
+                        <div className="flex justify-between items-center bg-white dark:bg-zinc-900 p-4 md:p-6 rounded-[2rem] border border-zinc-150 dark:border-zinc-800 shadow-md">
+                            <Button
+                                variant="outline"
+                                disabled={activeQuestionIndex === 0}
+                                onClick={() => setActiveQuestionIndex(index => Math.max(0, index - 1))}
+                                className="rounded-2xl px-4 md:px-6 font-bold h-12"
+                            >
+                                <ArrowLeft className="h-5 w-5 mr-1 hidden sm:block" />
+                                {language === 'vi' ? 'Quay lại' : 'Previous'}
+                            </Button>
+
+                            <span className="font-extrabold text-sm md:text-base text-zinc-500 dark:text-zinc-400 text-center">
+                                <span className="text-zinc-900 dark:text-zinc-100">{activeQuestionIndex + 1}</span> / {questions.length}
+                                <span className="block text-[10px] font-medium text-zinc-400">
+                                    {language === "vi" ? "← → · 1–4: đáp án A–D" : "← → · 1–4: answers A–D"}
+                                </span>
+                            </span>
+
+                            {activeQuestionIndex < questions.length - 1 ? (
+                                <Button
+                                    onClick={() => setActiveQuestionIndex(index => Math.min(questions.length - 1, index + 1))}
+                                    className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
+                                >
+                                    {language === 'vi' ? 'Tiếp theo' : 'Next'}
+                                    <ArrowRight className="h-5 w-5 ml-1 hidden sm:block" />
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={() => setConfirmOpen(true)}
+                                    className="rounded-2xl px-4 md:px-6 font-bold h-12 bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/25"
+                                >
+                                    {language === 'vi' ? 'Nộp bài' : 'Submit'}
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 )}
 
                 {isSubmitted && (
-                    <div className="mt-12 p-10 bg-white dark:bg-zinc-900 rounded-[3rem] text-center space-y-8 shadow-2xl border-2 border-indigo-500/20">
-                        <div className="mx-auto w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center">
-                            <Trophy className="h-10 w-10" />
+                    <>
+                        <div className="mt-6 p-8 md:p-10 bg-indigo-900/10 border border-indigo-500/20 rounded-[2rem] text-center space-y-6">
+                            <div className="mx-auto w-16 h-16 bg-yellow-100 text-yellow-600 rounded-2xl flex items-center justify-center">
+                                <Trophy className="h-8 w-8" />
+                            </div>
+                            <h2 className="text-2xl font-black">{language === 'vi' ? 'Kết quả thi thử' : 'Mock Exam Result'}</h2>
+                            <p className="text-5xl font-black text-indigo-600">
+                                {score} <span className="text-2xl text-zinc-400">/ {questions.length}</span>
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                <Button variant="outline" onClick={() => window.location.reload()} className="h-12 rounded-2xl px-8 font-bold">
+                                    {language === 'vi' ? 'Thử lại bài mới' : 'Try another exam'}
+                                </Button>
+                                <Button onClick={() => router.push('/courses')} className="h-12 rounded-2xl px-8 font-bold bg-indigo-600">
+                                    {language === 'vi' ? 'Về trang chủ' : 'Go to courses'}
+                                </Button>
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <h2 className="text-3xl font-black">Kết quả thi thử</h2>
-                            <p className="text-5xl font-black text-indigo-600">{score} <span className="text-2xl text-zinc-400">/ {questions.length}</span></p>
+                        <div className="space-y-6 pt-6">
+                            {questions.map((question, index) => {
+                                const isCorrect = (() => {
+                                    if (question.type === 'multiple') return arraysEqual(answers[index], question.correctAnswer);
+                                    if (question.type === 'single') return (question.correctAnswer || []).includes(answers[index]);
+                                    const userAnswer = answers[index] || "";
+                                    const correctAnswer = Array.isArray(question.correctAnswer)
+                                        ? (question.correctAnswer[0] || "")
+                                        : (question.correctAnswer || "");
+                                    return gradeOpenAnswer(userAnswer, correctAnswer, openGradingCfg || undefined).isCorrect;
+                                })();
+                                return (
+                                    <ExamQuestion
+                                        key={index}
+                                        index={index}
+                                        question={question}
+                                        selected={answers[index]}
+                                        readOnly
+                                        isCorrect={isCorrect}
+                                        language={language}
+                                    />
+                                );
+                            })}
                         </div>
-                        <div className="flex justify-center gap-4">
-                            <Button variant="outline" onClick={() => window.location.reload()} className="h-12 rounded-2xl px-8 font-bold">Thử lại bài mới</Button>
-                            <Button onClick={() => router.push('/courses')} className="h-12 rounded-2xl px-8 font-bold bg-indigo-600">Về trang chủ</Button>
-                        </div>
-                    </div>
+                    </>
                 )}
 
                 <ConfirmDialog
@@ -767,10 +872,10 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                         handleSubmit();
                     }}
                     title={language === 'vi' ? "Nộp bài thi?" : "Submit Exam?"}
-                    description={questions.length - Object.keys(answers).length > 0
+                    description={questions.length - answeredCount > 0
                         ? (language === 'vi'
-                            ? `Bạn còn ${questions.length - Object.keys(answers).length} câu hỏi chưa chọn đáp án. Bạn có chắc chắn muốn nộp bài thi không?`
-                            : `You have ${questions.length - Object.keys(answers).length} unanswered questions. Are you sure you want to submit the exam?`)
+                            ? `Bạn còn ${questions.length - answeredCount} câu hỏi chưa chọn đáp án. Bạn có chắc chắn muốn nộp bài thi không?`
+                            : `You have ${questions.length - answeredCount} unanswered questions. Are you sure you want to submit the exam?`)
                         : (language === 'vi'
                             ? "Bạn đã hoàn thành tất cả câu hỏi. Bạn có chắc chắn muốn nộp bài thi không?"
                             : "You have answered all questions. Are you sure you want to submit the exam?")
