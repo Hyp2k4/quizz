@@ -516,6 +516,35 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         return () => clearInterval(interval);
     }, [quiz, hasAccess, startTime, isSubmitted, isReadyToStart]);
 
+    useEffect(() => {
+        const questionCount = quiz?.questions.length ?? 0;
+        if (!hasAccess || !isReadyToStart || isSubmitted || confirmOpen || questionCount === 0) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target;
+            if (
+                target instanceof HTMLElement &&
+                target.closest("textarea, select, [contenteditable='true'], input:not([type='radio']):not([type='checkbox'])")
+            ) {
+                return;
+            }
+
+            if (event.key === "ArrowRight") {
+                event.preventDefault();
+                setCurrentQuestionIndex(index => Math.min(questionCount - 1, index + 1));
+            } else if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                setCurrentQuestionIndex(index => Math.max(0, index - 1));
+            } else if (/^[1-4]$/.test(event.key) && Number(event.key) <= questionCount) {
+                event.preventDefault();
+                setCurrentQuestionIndex(Number(event.key) - 1);
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [quiz?.questions.length, hasAccess, isReadyToStart, isSubmitted, confirmOpen]);
+
 
 
     const handleJoinAsGuest = () => {
@@ -678,6 +707,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         setStartTime(Date.now());
         setElapsedTime(0);
         setWrongQuestionIndices([]);
+        setCurrentQuestionIndex(0);
         setIsRetakeMode(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -692,6 +722,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         setStartTime(Date.now());
         setElapsedTime(0);
         setWrongQuestionIndices([]);
+        setCurrentQuestionIndex(0);
         setIsRetakeMode(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -1100,6 +1131,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                     
                                     <span className="font-extrabold text-sm md:text-base text-zinc-500 dark:text-zinc-400">
                                         <span className="text-zinc-900 dark:text-zinc-100">{currentQuestionIndex + 1}</span> / {quiz.questions.length}
+                                        <span className="block text-[10px] font-medium text-zinc-400">← → · 1–4</span>
                                     </span>
                                     
                                     {currentQuestionIndex < quiz.questions.length - 1 ? (

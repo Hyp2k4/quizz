@@ -337,6 +337,35 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
         }
     }, [subject, mode, user]);
 
+    useEffect(() => {
+        const questionCount = questions.length;
+        if (!isStarted || isSubmitted || confirmOpen || questionCount === 0) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target;
+            if (
+                target instanceof HTMLElement &&
+                target.closest("textarea, select, [contenteditable='true'], input:not([type='radio']):not([type='checkbox'])")
+            ) {
+                return;
+            }
+
+            if (event.key === "ArrowRight") {
+                event.preventDefault();
+                setCurrentQuestionIndex(index => Math.min(questionCount - 1, index + 1));
+            } else if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                setCurrentQuestionIndex(index => Math.max(0, index - 1));
+            } else if (/^[1-4]$/.test(event.key) && Number(event.key) <= questionCount) {
+                event.preventDefault();
+                setCurrentQuestionIndex(Number(event.key) - 1);
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [questions.length, isStarted, isSubmitted, confirmOpen]);
+
     const handleStartPractice = () => {
         const selectedIds = Object.keys(selectedQuizzes).filter(id => selectedQuizzes[id]);
         if (selectedIds.length === 0) {
@@ -887,6 +916,7 @@ function PracticeContent({ params }: { params: Promise<{ subject: string }> }) {
 
                                 <span className="font-extrabold text-sm md:text-base text-zinc-500 dark:text-zinc-400">
                                     <span className="text-zinc-900 dark:text-zinc-100">{currentQuestionIndex + 1}</span> / {questions.length}
+                                    <span className="block text-[10px] font-medium text-zinc-400">← → · 1–4</span>
                                 </span>
 
                                 <div className="flex gap-2">
