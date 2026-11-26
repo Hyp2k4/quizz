@@ -224,6 +224,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
     const [answers, setAnswers] = useState<Record<number, any>>({});
     const [revealed, setRevealed] = useState<Record<number, boolean>>({});
     const [answerRevealMode, setAnswerRevealMode] = useState<AnswerRevealMode>("after-submit");
+    const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
     const [score, setScore] = useState(0);
     const [leaderboard, setLeaderboard] = useState<any[]>([]);
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -320,6 +321,62 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
         }
         return () => clearInterval(timer);
     }, [isStarted, isSubmitted, timeLeft]);
+
+    useEffect(() => {
+        if (!isStarted || isSubmitted || confirmOpen || questions.length === 0) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target;
+            if (
+                target instanceof HTMLElement &&
+                target.closest("textarea, select, [contenteditable='true'], input:not([type='radio']):not([type='checkbox'])")
+            ) {
+                return;
+            }
+
+            if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                event.preventDefault();
+                const nextIndex = event.key === "ArrowRight"
+                    ? Math.min(questions.length - 1, activeQuestionIndex + 1)
+                    : Math.max(0, activeQuestionIndex - 1);
+                setActiveQuestionIndex(nextIndex);
+                document.getElementById(`mock-question-${nextIndex}`)?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+                return;
+            }
+
+            if (!/^[1-4]$/.test(event.key)) return;
+            const question = questions[activeQuestionIndex];
+            const option = question?.options?.[Number(event.key) - 1];
+            if (!question || question.type === "open" || option === undefined) return;
+            if (answerRevealMode === "immediate" && revealed[activeQuestionIndex]) return;
+
+            event.preventDefault();
+            if (question.type === "multiple") {
+                setAnswers(prev => {
+                    const selected = Array.isArray(prev[activeQuestionIndex])
+                        ? prev[activeQuestionIndex] as string[]
+                        : [];
+                    return {
+                        ...prev,
+                        [activeQuestionIndex]: selected.includes(option)
+                            ? selected.filter(answer => answer !== option)
+                            : [...selected, option]
+                    };
+                });
+            } else {
+                setAnswers(prev => ({ ...prev, [activeQuestionIndex]: option }));
+                if (answerRevealMode === "immediate") {
+                    setRevealed(prev => ({ ...prev, [activeQuestionIndex]: true }));
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isStarted, isSubmitted, confirmOpen, questions, activeQuestionIndex, answerRevealMode, revealed]);
 
     const handleSubmit = async () => {
         if (isSubmitted) return;
@@ -624,6 +681,7 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                             <div className="min-w-0">
                                 <p className="text-[8px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-widest truncate">{language === 'vi' ? 'Đang thi thử' : 'Exam in progress'}</p>
                                 <p className="text-xs sm:text-sm font-black truncate max-w-[80px] md:max-w-none">{subject}</p>
+                                <p className="text-[8px] text-zinc-400">← → {language === "vi" ? "câu · 1–4 đáp án A–D" : "questions · 1–4 answers A–D"}</p>
                             </div>
                         </div>
 
@@ -642,37 +700,12 @@ export default function MockExamPage({ params }: { params: Promise<{ subject: st
                     {questions.map((q, i) => (
                         <div
                             key={i}
-                            onKeyDown={event => {
-                                const target = event.target;
-                                if (
-                                    target instanceof HTMLElement &&
-                                    target.closest("textarea, select, [contenteditable='true'], input:not([type='radio']):not([type='checkbox'])")
-                                ) {
-                                    return;
-                                }
-
-                                if (isSubmitted || revealed[i] || q.type === "open" || !/^[1-4]$/.test(event.key)) return;
-                                const option = q.options?.[Number(event.key) - 1];
-                                if (option === undefined) return;
-
-                                event.preventDefault();
-                                if (q.type === "multiple") {
-                                    setAnswers(prev => {
-                                        const selected = Array.isArray(prev[i]) ? prev[i] as string[] : [];
-                                        return {
-                                            ...prev,
-                                            [i]: selected.includes(option)
-                                                ? selected.filter(answer => answer !== option)
-                                                : [...selected, option]
-                                        };
-                                    });
-                                } else {
-                                    setAnswers(prev => ({ ...prev, [i]: option }));
-                                    if (answerRevealMode === "immediate") {
-                                        setRevealed(prev => ({ ...prev, [i]: true }));
-                                    }
-                                }
-                            }}
+                    id={`mock-question-${i}`}
+                    className={activeQuestionIndex === i && !isSubmitted
+                        ? "rounded-2xl ring-2 ring-indigo-500 ring-offset-2 ring-offset-zinc-50 dark:ring-offset-zinc-950"
+                        : ""}
+                    onClick={() => setActiveQuestionIndex(i)}
+                    onFocusCapture={() => setActiveQuestionIndex(i)}
                         >
                             <ExamQuestion
                                 index={i}
